@@ -16,7 +16,9 @@
 #include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/init.h>
-
+#include <linux/serial_reg.h>
+#include <linux/serial_core.h>
+#include <linux/serial.h>
 #include <asm/io.h>
 #include <asm/ecard.h>
 #include <asm/string.h>
@@ -43,7 +45,8 @@ static int sw_serial[MAX_PORTS];
 #define UART_BASE_OS    (0x400)
 #define UARTx_BASE(x)   (UART_BASE + (x) * UART_BASE_OS)
 #define RESSIZE(res)    (((res)->end - (res)->start)+1)
-
+#define OFFSET			0xf0000000
+#define FCR_AW  0x0e1
 struct sw_serial_port {
     struct uart_port    port;
     char                name[16];
@@ -56,6 +59,76 @@ struct sw_serial_port {
     u32                 irq;
     struct platform_device* pdev;
 };
+typedef struct backup_reg_def{
+	u32 dll; 		/* 0x00	*/
+	u32 dlh;		/* 0x04 */
+	u32 ier;		/* 0x04 */
+	u32 fcr;		/* 0x08 */
+	u32 lcr;		/* 0x0C */
+	u32 mcr;		/* 0x10 */
+	u32 sch;		/* 0x1C */
+	u32 halt;		/* 0xA4 */
+} backup_reg_t;
+
+static backup_reg_t backup_reg[MAX_PORTS];
+void sunxi_8250_backup_reg(int port_num ,struct uart_port *port,u32 fcr)
+{
+	unsigned long port_base_addr;
+	port_base_addr = port->mapbase + OFFSET;
+	printk("\nport_base_addr is %x \n port->mapbase is %x\n",port_base_addr,port->mapbase);
+	backup_reg[port_num].lcr	= __raw_readl(port_base_addr + 0x0c);
+	backup_reg[port_num].mcr	= __raw_readl(port_base_addr + 0x10);
+	backup_reg[port_num].sch	= __raw_readl(port_base_addr + 0x1c);
+	backup_reg[port_num].halt	= __raw_readl(port_base_addr + 0xa4);
+	backup_reg[port_num].fcr	= FCR_AW;
+	        while (__raw_readl(port_base_addr + 0x7c)&1)
+                   __raw_readl(port_base_addr+0x00);
+	__raw_writel(backup_reg[port_num].lcr & 0x7f,port_base_addr + 0x0c);
+	printk("\n1: lcr is %x  \n backup_reg.lcr is %x\n",__raw_readl(port_base_addr + 0x0c),backup_reg[port_num].lcr);
+	backup_reg[port_num].ier	= __raw_readl(port_base_addr + 0x04);
+	printk("\norgin: lcr is %x mcr is %x sch is %x halt is %x ier is %x\n",__raw_readl(port_base_addr + 0x0c),__raw_readl(port_base_addr + 0x10),__raw_readl(port_base_addr + 0x1c),__raw_readl(port_base_addr + 0xa4),__raw_readl(port_base_addr + 0x04));
+	printk("\nback: lcr is %x mcr is %x sch is %x halt is %x ier is %x\n",backup_reg[port_num].lcr,backup_reg[port_num].mcr,backup_reg[port_num].sch,backup_reg[port_num].halt,backup_reg[port_num].ier);
+	while (__raw_readl(port_base_addr + 0x7c)&1)
+        __raw_readl(port_base_addr+0x00);
+	__raw_writel(backup_reg[port_num].lcr | 0x80,port_base_addr + 0x0c);
+
+	backup_reg[port_num].dll	= __raw_readl(port_base_addr + 0x00);
+	backup_reg[port_num].dlh	= __raw_readl(port_base_addr + 0x04);
+		while (__raw_readl(port_base_addr + 0x7c)&1)
+        __raw_readl(port_base_addr+0x00);
+	__raw_writel(backup_reg[port_num].lcr,port_base_addr + 0x0c);
+	printk("\n2: lcr is %x  \n backup_reg.lcr is %x\n",__raw_readl(port_base_addr + 0x0c),backup_reg[port_num].lcr);
+	printk("dll is %x dlh is %x",backup_reg[port_num].dll,backup_reg[port_num].dlh);
+}
+
+void sunxi_8250_comeback_reg(int port_num,struct uart_port *port)
+{
+	unsigned long port_base_addr;
+	port_base_addr = port->mapbase + OFFSET;
+	__raw_writel(backup_reg[port_num].halt,port_base_addr + 0xa4);
+	__raw_writel(backup_reg[port_num].sch,port_base_addr + 0x1c);
+	__raw_writel(backup_reg[port_num].halt,port_base_addr + 0xa4);
+	__raw_writel(backup_reg[port_num].mcr,port_base_addr + 0x10);
+	__raw_writel(backup_reg[port_num].fcr,port_base_addr + 0x08);
+			while (__raw_readl(port_base_addr + 0x7c)&1)
+        __raw_readl(port_base_addr+0x00);
+	__raw_writel(backup_reg[port_num].lcr & 0x7f,port_base_addr + 0x0c);
+	printk("dll is %x dlh is %x",backup_reg[port_num].dll,backup_reg[port_num].dlh);
+	printk("\n1: lcr is %x  \n backup_reg.lcr is %x\n",__raw_readl(port_base_addr + 0x0c),backup_reg[port_num].lcr);
+	__raw_writel(backup_reg[port_num].ier,port_base_addr + 0x04);
+	printk("\nback1: lcr is %x mcr is %x sch is %x halt is %x ier is %x\n",__raw_readl(port_base_addr + 0x0c),__raw_readl(port_base_addr + 0x10),__raw_readl(port_base_addr + 0x1c),__raw_readl(port_base_addr + 0xa4),__raw_readl(port_base_addr + 0x04));
+	while (__raw_readl(port_base_addr + 0x7c)&1)
+        __raw_readl(port_base_addr+0x00);
+	__raw_writel(backup_reg[port_num].lcr | 0x80,port_base_addr + 0x0c);
+	__raw_writel(backup_reg[port_num].dll,port_base_addr + 0x00);
+	__raw_writel(backup_reg[port_num].dlh,port_base_addr + 0x04);
+		while (__raw_readl(port_base_addr + 0x7c)&1)
+        __raw_readl(port_base_addr+0x00);
+	__raw_writel(backup_reg[port_num].lcr,port_base_addr + 0x0c);
+	printk("\nback1: lcr is %x mcr is %x sch is %x halt is %x ier is %x\n",__raw_readl(port_base_addr + 0x0c),__raw_readl(port_base_addr + 0x10),__raw_readl(port_base_addr + 0x1c),__raw_readl(port_base_addr + 0xa4),__raw_readl(port_base_addr + 0x04));
+	printk("\n2: lcr is %x  dll is  %x dlh is %x\n",__raw_readl(port_base_addr + 0x0c),__raw_readl(port_base_addr + 0x00),__raw_readl(port_base_addr + 0x04));
+	printk("\n3: lcr is %x  \n backup_reg.lcr is %x\n",__raw_readl(port_base_addr + 0x0c),backup_reg[port_num].lcr);
+}
 
 //static void sw_serial_print_reg(struct sw_serial_port *sport)
 //{
@@ -166,7 +239,7 @@ sw_serial_probe(struct platform_device *dev)
 {
     struct sw_serial_port *sport;
 	int ret;
-    
+    printk("this coming sw_serial_probe\n");
 	sport = kzalloc(sizeof(struct sw_serial_port), GFP_KERNEL);
 	if (!sport)
 		return -ENOMEM;
@@ -199,7 +272,9 @@ sw_serial_probe(struct platform_device *dev)
     sw_serial[sport->port_no] = serial8250_register_port(&sport->port);
     UART_MSG("serial probe %d, membase %p irq %d mapbase 0x%08x\n", 
              dev->id, sport->port.membase, sport->port.irq, sport->port.mapbase);
-    
+	printk("sport->pdev is %x \n &sport->pdev is ",sport->pdev,&sport->pdev);
+	printk("pdev.dev is %x \n &pdev.dev is ",sport->pdev->dev,&sport->pdev->dev);
+	printk("dev.dev is %x \n &dev.dev is ",dev->dev,&dev->dev);
 	return 0;
 free_dev:
     kfree(sport);
@@ -220,10 +295,85 @@ static int __devexit sw_serial_remove(struct platform_device *dev)
 	sport = NULL;
 	return 0;
 }
+static int sw_serial_suspend(struct platform_device *dev, pm_message_t state)
+{
+	int i;
+	struct uart_port *port;
+	printk("serial8250_resume uart suspend\n");
+	printk("&dev->dev is 0x%x\n",&dev->dev);
+#if 0
+		volatile __u32 loop_flag = 1;
+		while(1 == loop_flag);
+	
+#endif
+	for (i = 0; i < MAX_PORTS; i++) {
+		port=get_ports(i);
+		if (port->type != PORT_UNKNOWN){
+		printk("type is 0x%x  PORT_UNKNOWN is 0x%x\n",port->type,PORT_UNKNOWN);
+		printk("port.dev is 0x%x  &dev->dev is 0x%x\n",port->dev,&dev->dev);
+		}
+		
+		if ((port->type != PORT_UNKNOWN)&& (port->dev == &dev->dev)){
+			printk(" SUPER_STANDBY ");
+			//serial8250_suspend_port(i);
+				//if(NORMAL_STANDY == standby_type){
+				//printk(" NORMAL_STANDBY ");
+				//process for normal standby
+				//}else if(SUPER_STANDBY == standby_type){
+				printk(" SUPER_STANDBY ");
+				sunxi_8250_backup_reg(i,port,get_fcr(i));
+				//process for super standby
+				//}
+			}
+	}
+
+	return 0;
+}
+
+static int sw_serial_resume(struct platform_device *dev)
+{
+	struct uart_port *port;
+	int i;
+	printk("serial8250_resume SUPER_STANDBY resume\n");
+	printk("&dev->dev is 0x%x\n",&dev->dev);
+#if 0
+		volatile __u32 loop_flag = 1;
+		while(1 == loop_flag);
+	
+#endif	
+
+	for (i = 0; i < MAX_PORTS; i++) {
+		port=get_ports(i);
+		if (port->type != PORT_UNKNOWN){
+		printk("type is 0x%x  PORT_UNKNOWN is 0x%x\n",port->type,PORT_UNKNOWN);
+		printk("port.dev is 0x%x  &dev->dev is 0x%x\n",port->dev,&dev->dev);
+		}
+		if ((port->type != PORT_UNKNOWN) && (port->dev == &dev->dev)){
+			//	if(NORMAL_STANDY== standby_type){
+				//printk(" NORMAL_STANDBY ");
+				//process for normal standby
+				//}else if(SUPER_STANDBY == standby_type){
+				printk(" SUPER_STANDBY ");
+				sunxi_8250_comeback_reg(i,port);
+				//process for super standby
+			//	}
+			//serial8250_resume_port(i);
+			
+	}
+	}
+#if 0
+		//volatile __u32 loop_flag = 1;
+		while(1 == loop_flag);
+	
+#endif	
+	return 0;
+}
 
 static struct platform_driver sw_serial_driver = {
     .probe  = sw_serial_probe,
     .remove = sw_serial_remove,
+	.suspend	= sw_serial_suspend,
+	.resume		= sw_serial_resume,
     .driver = {
         .name    = "sunxi-uart",
         .owner    = THIS_MODULE,

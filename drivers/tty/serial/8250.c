@@ -38,10 +38,11 @@
 #include <linux/nmi.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
-
+#include <linux/pm.h>
 #include <asm/io.h>
 #include <asm/irq.h>
 #include "8250.h"
+#include <linux/sw-uart-dbg.h>
 
 #define UART_USR        31
 
@@ -3285,6 +3286,19 @@ static int serial8250_suspend(struct platform_device *dev, pm_message_t state)
 	return 0;
 }
 
+int *get_ports(int number)
+{
+	struct uart_8250_port *up = &serial8250_ports[number];
+	struct uart_port *port = &(up->port);
+	return (int *)port;
+}
+EXPORT_SYMBOL(get_ports);
+u32 get_fcr(int number)
+{
+	struct uart_8250_port *up = &serial8250_ports[number];
+	return 0x0e1;
+}
+EXPORT_SYMBOL(get_fcr);
 static int serial8250_resume(struct platform_device *dev)
 {
 	int i;
