@@ -336,7 +336,7 @@ static int sw_dmac_resume(struct platform_device *dev)
 		writel(regsave[1], dma_base + SW_DMA_DIRQPD);		
 			
 		for (channel = 0; channel < SW_DMA_CHANNELS;  channel++) {
-			cp[channel] = sw_chans[channel];
+			//cp[channel] = sw_chans[channel];
 			printk("cp[channel] = 0x%x. cp[channel].regsave_ctrl = 0x%x \n", cp[channel], cp[channel].regsave_ctrl);
 #if 0
 		volatile __u32 loop_flag = 1;
