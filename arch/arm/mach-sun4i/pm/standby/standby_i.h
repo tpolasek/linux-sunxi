@@ -18,6 +18,9 @@
 #ifndef __STANDBY_I_H__
 #define __STANDBY_I_H__
 
+#include "../pm_config.h"
+#include "../pm_types.h"
+#include "../pm.h"
 #include <linux/power/aw_pm.h>
 #include <mach/platform.h>
 

@@ -37,10 +37,10 @@ void standby_memcpy(void *dest, void *src, int n)
     char    *tmp_src = (char *)src;
     char    *tmp_dst = (char *)dest;
 
-    if(!dest || !src){
+  //  if(!dest || !src){
         /* parameter is invalid */
-        return;
-    }
+  //      return;
+ //   }
 
     for( ; n > 0; n--){
         *tmp_dst ++ = *tmp_src ++;

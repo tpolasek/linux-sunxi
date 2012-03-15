@@ -47,17 +47,20 @@ void DRAMC_enter_selfrefresh(void)
 	__u32 reg_val;
 
 	//disable all port
+	save_mem_status(RESUME1_START + 0x21);
 	for(i=0; i<31; i++)
 	{
 		DRAMC_hostport_on_off(i, 0x0);
 	}
 
+	save_mem_status(RESUME1_START + 0x22);
 	//disable auto-fresh
 	reg_val = mctl_read_w(SDR_DRR);
 	reg_val |= 0x1U<<31;
 	mctl_write_w(SDR_DRR, reg_val);
 
 	//issue prechage all command
+	save_mem_status(RESUME1_START + 0x23);
 	mctl_precharge_all();
 
 	//enter into self-refresh
@@ -65,8 +68,10 @@ void DRAMC_enter_selfrefresh(void)
 	reg_val &= ~(0x1fU<<27);
 	reg_val |= 0x12U<<27;
 	mctl_write_w(SDR_DCR, reg_val);
+	save_mem_status(RESUME1_START + 0x24);
 	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
 	standby_delay(0x100);
+	save_mem_status(RESUME1_START + 0x25);
 }
 void mctl_mode_exit(void)
 {
@@ -359,16 +364,22 @@ void dram_power_save_process(void)
 	__u32 reg_val;
 
 	//put external SDRAM into self-fresh state
+	save_mem_status(SUSPEND_START + 0x20);
 	DRAMC_enter_selfrefresh();
 
 	//disable ITM
+	save_mem_status(SUSPEND_START + 0x30);
 	mctl_itm_disable();
 
 	//dramc clock off
+	save_mem_status(SUSPEND_START + 0x40);
 	DRAMC_clock_output_en(0);
 
 	//disable and reset all DLL
+	save_mem_status(SUSPEND_START + 0x50);
 	mctl_disable_dll();
+	
+	save_mem_status(SUSPEND_START + 0x60);
 }
 __u32 dram_power_up_process(void)
 {

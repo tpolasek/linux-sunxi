@@ -74,7 +74,7 @@ int main(struct aw_pm_info *arg)
     /* copy standby parameter from dram */
     standby_memcpy(&pm_info, arg, sizeof(pm_info));
     /* copy standby code & data to load tlb */
-    standby_memcpy((char *)&__standby_end, (char *)&__standby_start, (char *)&__bss_end - (char *)&__bss_start);
+    //standby_memcpy((char *)&__standby_end, (char *)&__standby_start, (char *)&__bss_end - (char *)&__bss_start);
     /* backup dram traning area */
     standby_memcpy((char *)dram_traning_area_back, (char *)DRAM_BASE_ADDR, sizeof(__u32)*DRAM_TRANING_SIZE);
 
@@ -115,47 +115,62 @@ int main(struct aw_pm_info *arg)
             standby_enable_int(INT_SOURCE_TIMER0);
         }
     }
-
+//busy_waiting();
     /* save stack pointer registger, switch stack to sram */
     sp_backup = save_sp();
     /* enable dram enter into self-refresh */
     dram_power_save_process();
     /* process standby */
     standby();
+    save_mem_status(SUSPEND_START + 0x90);
     /* enable watch-dog to preserve dram training failed */
     standby_tmr_enable_watchdog();
+     save_mem_status(SUSPEND_START + 0x91);
     /* restore dram */
     dram_power_up_process();
+     save_mem_status(SUSPEND_START + 0x92);
     /* disable watch-dog    */
     standby_tmr_disable_watchdog();
-
+    
+//busy_waiting();
     /* restore stack pointer register, switch stack back to dram */
+     save_mem_status(SUSPEND_START + 0x93);
     restore_sp(sp_backup);
 
     /* exit standby module */
+    save_mem_status(SUSPEND_START + 0x94);
     if(pm_info.standby_para.event & SUSPEND_WAKEUP_SRC_USB){
         standby_usb_exit();
     }
+    save_mem_status(SUSPEND_START + 0x95);
     if(pm_info.standby_para.event & SUSPEND_WAKEUP_SRC_IR){
         standby_ir_exit();
     }
+    save_mem_status(SUSPEND_START + 0x96);
     if(pm_info.standby_para.event & SUSPEND_WAKEUP_SRC_ALARM){
         //standby_alarm_exit();
     }
+    save_mem_status(SUSPEND_START + 0x97);
     if(pm_info.standby_para.event & SUSPEND_WAKEUP_SRC_KEY){
         standby_key_exit();
     }
+    save_mem_status(SUSPEND_START + 0x98);
     standby_power_exit();
+    save_mem_status(SUSPEND_START + 0x99);
     standby_tmr_exit();
+    save_mem_status(SUSPEND_START + 0x9a);
     standby_int_exit();
+    save_mem_status(SUSPEND_START + 0x9b);
     standby_clk_exit();
 
     /* restore dram traning area */
+    save_mem_status(SUSPEND_START + 0x9c);
     standby_memcpy((char *)DRAM_BASE_ADDR, (char *)dram_traning_area_back, sizeof(__u32)*DRAM_TRANING_SIZE);
 
     /* report which wake source wakeup system */
     arg->standby_para.event = pm_info.standby_para.event;
-
+	save_mem_status(SUSPEND_START + 0x9d);
+	
     return 0;
 }
 
@@ -173,33 +188,41 @@ int main(struct aw_pm_info *arg)
 */
 static void standby(void)
 {
+	save_mem_status(SUSPEND_START + 0x80);
     /* gating off dram clock */
     standby_clk_dramgating(0);
 
+	save_mem_status(SUSPEND_START + 0x81);
     /* switch cpu clock to HOSC, and disable pll */
     standby_clk_core2hosc();
     standby_clk_plldisable();
 
+	save_mem_status(SUSPEND_START + 0x82);
     /* backup voltages */
     dcdc2 = standby_get_voltage(POWER_VOL_DCDC2);
     dcdc3 = standby_get_voltage(POWER_VOL_DCDC3);
 
+	save_mem_status(SUSPEND_START + 0x83);
     /* adjust voltage */
     standby_set_voltage(POWER_VOL_DCDC3, STANDBY_DCDC3_VOL);
     standby_set_voltage(POWER_VOL_DCDC2, STANDBY_DCDC2_VOL);
 
+	save_mem_status(SUSPEND_START + 0x84);
     /* set clock division cpu:axi:ahb:apb = 2:2:2:1 */
     standby_clk_getdiv(&clk_div);
     tmp_clk_div.axi_div = 0;
     tmp_clk_div.ahb_div = 0;
     tmp_clk_div.apb_div = 0;
     standby_clk_setdiv(&tmp_clk_div);
+    	save_mem_status(SUSPEND_START + 0x85);
     /* swtich apb1 to losc */
     standby_clk_apb2losc();
     standby_mdelay(10);
+    	save_mem_status(SUSPEND_START + 0x86);
     /* switch cpu to 32k */
     standby_clk_core2losc();
     #if(ALLOW_DISABLE_HOSC)
+	save_mem_status(SUSPEND_START + 0x87);
     // disable HOSC, and disable LDO
     standby_clk_hoscdisable();
     standby_clk_ldodisable();
@@ -208,6 +231,7 @@ static void standby(void)
     /* cpu enter sleep, wait wakeup by interrupt */
     asm("WFI");
 
+	save_mem_status(SUSPEND_START + 0x88);
     #if(ALLOW_DISABLE_HOSC)
     /* enable LDO, enable HOSC */
     standby_clk_ldoenable();
@@ -216,10 +240,12 @@ static void standby(void)
     standby_clk_hoscenable();
     standby_delay(1);
     #endif
+    	save_mem_status(SUSPEND_START + 0x89);
     /* swtich apb1 to hosc */
     standby_clk_apb2hosc();
     /* switch clock to hosc */
     standby_clk_core2hosc();
+    	save_mem_status(SUSPEND_START + 0x8a);
     /* restore clock division */
     standby_clk_setdiv(&clk_div);
 
@@ -232,11 +258,13 @@ static void standby(void)
     pm_info.standby_para.event |= standby_query_int(INT_SOURCE_ALARM)? 0:SUSPEND_WAKEUP_SRC_ALARM;
     pm_info.standby_para.event |= standby_query_int(INT_SOURCE_TIMER0)? 0:SUSPEND_WAKEUP_SRC_TIMEOFF;
 
+	save_mem_status(SUSPEND_START + 0x8b);
     /* restore voltage for exit standby */
     standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
     standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
     standby_mdelay(10);
 
+	save_mem_status(SUSPEND_START + 0x8c);
     /* enable pll */
     standby_clk_pllenable();
     standby_mdelay(10);
@@ -244,9 +272,10 @@ static void standby(void)
     standby_clk_core2pll();
     standby_mdelay(10);
 
+	save_mem_status(SUSPEND_START + 0x8d);
     /* gating on dram clock */
     standby_clk_dramgating(1);
-
+	save_mem_status(SUSPEND_START + 0x8e);
     return;
 }
 
