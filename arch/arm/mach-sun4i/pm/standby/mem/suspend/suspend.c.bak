@@ -1,0 +1,96 @@
+/*
+ * Contact: gqyang <gqyang <at> allwinnertech.com>                               
+ *                                                                                   
+ * License terms: GNU General Public License (GPL) version 2                         
+ */       
+/*
+ * the following code need be exceute in sram
+ * before dram enter self-refresh,cpu can not access dram.
+ */
+ 
+#include "./../mem_i.h"
+
+extern char *__bss_start;
+extern char *__bss_end;
+
+extern unsigned int save_sp(void);
+extern void restore_sp(unsigned int sp);
+extern void standby_flush_tlb(void);
+extern void standby_preload_tlb(void);
+
+
+/*
+*********************************************************************************************************
+*                                   SUPER STANDBY EXECUTE IN SRAM
+*
+* Description: super standby ,suspend to ram entry in sram.
+*
+* Arguments  : arg  pointer to the parameter that 
+*
+* Returns    : none
+*
+* Note       :
+*********************************************************************************************************
+*/
+
+int main(void)
+{
+	char    *tmpPtr = (char *)&__bss_start;
+	static __u32 sp_backup;
+	
+	save_mem_status(SUSPEND_START);
+
+	/* flush data and instruction tlb, there is 32 items of data tlb and 32 items of instruction tlb,
+	The TLB is normally allocated on a rotating basis. The oldest entry is always the next allocated */
+	standby_flush_tlb();
+	save_mem_status(SUSPEND_START + 0x01);	
+	/* preload tlb for standby */
+	standby_preload_tlb();
+	save_mem_status(SUSPEND_START + 0x02);	
+	
+	/* save stack pointer registger, switch stack to sram */
+	sp_backup = save_sp();
+	
+	save_mem_status(SUSPEND_START + 0x03);	
+	/* clear bss segment */
+	do{*tmpPtr ++ = 0;}while(tmpPtr <= (char *)&__bss_end);
+	
+	/* copy standby parameter from dram */
+	//standby_memcpy(&pm_info, arg, sizeof(pm_info));
+	
+	/* initialise standby modules */
+	standby_clk_init();
+	save_mem_status(SUSPEND_START + 0x04);
+	standby_int_init();
+	save_mem_status(SUSPEND_START + 0x05);
+	standby_tmr_init();
+	save_mem_status(SUSPEND_START + 0x06);
+	standby_twi_init(AXP_IICBUS);
+	save_mem_status(SUSPEND_START + 0x07);
+	//busy_waiting();
+    	mem_power_init();
+    	save_mem_status(SUSPEND_START + 0x08);
+
+	
+	//backup resume flag
+	save_mem_flag();
+	save_mem_status(SUSPEND_START + 0x09);
+	/* dram enter self-refresh */
+	//busy_waiting();
+	dram_power_save_process();
+	save_mem_status(SUSPEND_START + 0x0a);
+	
+	/* gating off dram clock */
+	//busy_waiting();
+    	standby_clk_dramgating(0);
+	save_mem_status(SUSPEND_START + 0x0b);
+	
+    	/*power off*/
+	//busy_waiting();
+    	mem_power_off();
+    	save_mem_status(SUSPEND_START + 0x0f);
+	
+	//notice: never get here, so need watchdog, not busy_waiting.
+	busy_waiting();
+    
+}

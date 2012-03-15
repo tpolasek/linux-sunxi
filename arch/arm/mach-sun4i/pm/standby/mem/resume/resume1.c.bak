@@ -1,0 +1,60 @@
+/* these code will be removed to sram.
+ * function: open the mmu, and jump to dram, for continuing resume*/
+#include "./../mem_i.h"
+
+extern unsigned int save_sp(void);
+extern int jump_to_resume(void* pointer, __u32 *addr);
+extern void restore_mmu_state(struct mmu_state *saved_mmu_state);
+extern void standby_flush_tlb(void);
+
+static struct aw_mem_para mem_para_info;
+extern char *__bss_start;
+extern char *__bss_end;
+
+int main(void)
+{
+	static __u32 sp_backup;
+	char    *tmpPtr = (char *)&__bss_start;
+	
+	save_mem_status_nommu(RESUME1_START);
+	busy_waiting();
+	//standby_flush_tlb();
+	/* flush data and instruction tlb, there is 32 items of data tlb and 32 items of instruction tlb,
+	The TLB is normally allocated on a rotating basis. The oldest entry is always the next allocated */
+	//standby_flush_tlb();
+	/* preload tlb for standby */
+	//standby_preload_tlb();
+	
+	/* clear bss segment */
+	do{*tmpPtr ++ = 0;}while(tmpPtr <= (char *)&__bss_end);
+	
+	//busy_waiting();
+	//move other storage to sram: saved_resume_pointer(virtual addr), saved_mmu_state
+	standby_memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1_PA), sizeof(mem_para_info));
+
+	/*restore mmu configuration*/
+	//busy_waiting();
+	restore_mmu_state(&(mem_para_info.saved_mmu_state));
+	save_mem_status(RESUME1_START + 0x01);
+	//busy_waiting();
+
+	standby_clk_init();
+	save_mem_status(RESUME1_START + 0x02);
+	standby_int_init();
+	save_mem_status(RESUME1_START + 0x03);
+	standby_tmr_init();
+	save_mem_status(RESUME1_START + 0x04);
+	standby_twi_init(AXP_IICBUS);
+	save_mem_status(RESUME1_START + 0x05);
+	
+	/*restore pmu config*/
+	//busy_waiting();
+	mem_power_exit();
+	save_mem_status(RESUME1_START + 0x06);
+	busy_waiting();
+	/*restore module status*/
+	//standby_twi_exit();
+	jump_to_resume((void *)mem_para_info.resume_pointer, mem_para_info.saved_runtime_context_svc);
+	
+	return;
+}

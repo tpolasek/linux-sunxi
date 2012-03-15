@@ -1,0 +1,42 @@
+/*the following code reside in dram when enter super standby
+ * actually, these code will be load into dram when start & load the system.
+ * the addr is : 0xc0f0,0000; size is 256Kbyte;
+ */
+	
+/* these code will be located in fixed addr
+ * after receive wake up signal, boot will jump to the fixed addr
+ * and excecute these code, and jump to sram for continuing resume.
+ */
+
+ #include "./../mem_i.h"
+ 
+extern void standby_flush_tlb(void);
+
+extern char *resume1_bin_start;
+extern char *resume1_bin_end;
+
+// #define no_save __attribute__ ((section(".no_save")))
+int main(void)
+{
+	int (*resume1)(void) = 0;
+	
+	//busy_waiting();
+	//standby_flush_tlb();
+	
+	save_mem_status_nommu(0x2000);
+	//busy_waiting();
+	resume1 = (int (*)(void))SRAM_FUNC_START_PA;
+	
+	//move resume1 code from dram to sram
+	standby_memcpy((void *)SRAM_FUNC_START_PA, (void *)&resume1_bin_start, (int)&resume1_bin_end - (int)&resume1_bin_start);
+	//sync
+	
+	save_mem_status_nommu(0x2001);
+	//busy_waiting();
+	//jump to sram
+	resume1();
+	/*never get here.*/
+	save_mem_status_nommu(0x2002);
+	while(1);
+}
+
