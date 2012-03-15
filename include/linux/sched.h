@@ -2493,6 +2493,8 @@ static inline int signal_pending_state(long state, struct task_struct *p)
 
 static inline int need_resched(void)
 {
+	//pr_info("%s: %d. \n", __func__, __LINE__);
+	//print_call_info();
 	return unlikely(test_thread_flag(TIF_NEED_RESCHED));
 }
 
