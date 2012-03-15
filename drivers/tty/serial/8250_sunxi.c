@@ -179,24 +179,23 @@ static int sw_serial_get_resource(struct sw_serial_port *sport)
     struct clk *pclk = NULL;
     char uart_para[16];
     int ret;
-
+    
     /* get register base */
     sport->mmres = platform_get_resource(sport->pdev, IORESOURCE_MEM, 0);
     if (!sport->mmres) {
         ret = -ENODEV;
         goto err_out;
     }
-
+    
     /* get clock */
     pclk = clk_get(&sport->pdev->dev, "apb1");
     if (IS_ERR(pclk)) {
         ret = PTR_ERR(pclk);
         goto iounmap;
     }
-
     sport->sclk = clk_get_rate(pclk);
     clk_put(pclk);
-
+    
     sprintf(name, "apb_uart%d", sport->port_no);
     sport->clk = clk_get(&sport->pdev->dev, name);
     if (IS_ERR(sport->clk)) {
@@ -204,14 +203,14 @@ static int sw_serial_get_resource(struct sw_serial_port *sport)
         goto iounmap;
     }
     clk_enable(sport->clk);
-
+    
     /* get irq */
     sport->irq = platform_get_irq(sport->pdev, 0);
     if (sport->irq == 0) {
         ret = -EINVAL;
         goto free_pclk;
     }
-
+    
     /* get gpio resource */
     sprintf(uart_para, "uart_para%d", sport->port_no);
     sport->pio_hdle = gpio_request_ex(uart_para, NULL);
@@ -240,7 +239,7 @@ static int sw_serial_get_config(struct sw_serial_port *sport, u32 uart_id)
 {
     char uart_para[16] = {0};
     int ret;
-
+    
     sprintf(uart_para, "uart_para%d", uart_id);
     ret = script_parser_fetch(uart_para, "uart_port", &sport->port_no, sizeof(int));
     if (ret)
@@ -250,7 +249,7 @@ static int sw_serial_get_config(struct sw_serial_port *sport, u32 uart_id)
     ret = script_parser_fetch(uart_para, "uart_type", &sport->pin_num, sizeof(int));
     if (ret)
         return -1;
-
+    
     return 0;
 }
 
@@ -317,7 +316,7 @@ free_dev:
 static int __devexit sw_serial_remove(struct platform_device *dev)
 {
     struct sw_serial_port *sport = platform_get_drvdata(dev);
-
+	
 	UART_MSG("serial remove\n");
 	serial8250_unregister_port(sw_serial[sport->port_no]);
 	sw_serial[sport->port_no] = 0;
@@ -331,7 +330,7 @@ static int sw_serial_suspend(struct platform_device *dev, pm_message_t state)
 {
 	int i;
 	struct uart_port *port;
-	UART_MSG("sw_serial_suspend uart suspend\n");
+	UART_MSG("serial8250_resume uart suspend\n");
 	UART_MSG("&dev->dev is 0x%x\n",&dev->dev);
 #if 0
 		volatile __u32 loop_flag = 1;
@@ -339,7 +338,7 @@ static int sw_serial_suspend(struct platform_device *dev, pm_message_t state)
 
 #endif
 	for (i = 0; i < MAX_PORTS; i++) {
-		port=(struct uart_port *)get_ports(i);
+		port=get_ports(i);
 		if (port->type != PORT_UNKNOWN){
 		UART_MSG("type is 0x%x  PORT_UNKNOWN is 0x%x\n",port->type,PORT_UNKNOWN);
 		UART_MSG("port.dev is 0x%x  &dev->dev is 0x%x\n",port->dev,&dev->dev);
@@ -366,7 +365,7 @@ static int sw_serial_resume(struct platform_device *dev)
 {
 	struct uart_port *port;
 	int i;
-	UART_MSG("sw_serial_resume SUPER_STANDBY resume\n");
+	UART_MSG("serial8250_resume SUPER_STANDBY resume\n");
 	UART_MSG("&dev->dev is 0x%x\n",&dev->dev);
 #if 0
 		volatile __u32 loop_flag = 1;
@@ -375,7 +374,7 @@ static int sw_serial_resume(struct platform_device *dev)
 #endif	
 
 	for (i = 0; i < MAX_PORTS; i++) {
-		port=(struct uart_port *)get_ports(i);
+		port=get_ports(i);
 		if (port->type != PORT_UNKNOWN){
 		UART_MSG("type is 0x%x  PORT_UNKNOWN is 0x%x\n",port->type,PORT_UNKNOWN);
 		UART_MSG("port.dev is 0x%x  &dev->dev is 0x%x\n",port->dev,&dev->dev);
@@ -465,7 +464,7 @@ static int __init sw_serial_init(void)
     int i;
     int used = 0;
     char uart_para[16];
-
+    
     memset(sw_serial, 0, sizeof(sw_serial));
     uart_used = 0;
     for (i=0; i<MAX_PORTS; i++, used=0) {
@@ -478,7 +477,7 @@ static int __init sw_serial_init(void)
             platform_device_register(&sw_uart_dev[i]);
         }
     }
-
+    
     if (uart_used) {
         UART_MSG("used uart info.: 0x%02x\n", uart_used);
         ret = platform_driver_register(&sw_serial_driver);
