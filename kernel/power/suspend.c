@@ -26,6 +26,8 @@
 #include <trace/events/power.h>
 
 #include "power.h"
+#include "pm_debug.h"
+#include "./../../arch/arm/mach-sun4i/pm/pm.h"
 
 const char *const pm_states[PM_SUSPEND_MAX] = {
 #ifdef CONFIG_EARLYSUSPEND
@@ -169,8 +171,13 @@ static int suspend_enter(suspend_state_t state)
 	error = syscore_suspend();
 	if (!error) {
 		if (!(suspend_test(TEST_CORE) || pm_wakeup_pending())) {
+			save_mem_status(BEFORE_EARLY_SUSPEND | 0x10);
+			//busy_waiting();
 			error = suspend_ops->enter(state);
+			save_mem_status(LATE_RESUME_START |0x0f);
+			//busy_waiting();
 			events_check_enabled = false;
+			
 		}
 		syscore_resume();
 	}
@@ -214,6 +221,8 @@ int suspend_devices_and_enter(suspend_state_t state)
 	}
 	//suspend_console();
 	suspend_test_start();
+	save_mem_status(BEFORE_EARLY_SUSPEND | 0x20);
+	//busy_waiting();
 	error = dpm_suspend_start(PMSG_SUSPEND);
 	if (error) {
 		printk(KERN_ERR "PM: Some devices failed to suspend\n");
@@ -228,6 +237,9 @@ int suspend_devices_and_enter(suspend_state_t state)
  Resume_devices:
 	suspend_test_start();
 	dpm_resume_end(PMSG_RESUME);
+	save_mem_status(BEFORE_EARLY_SUSPEND | 0x40);
+	//busy_waiting();
+	
 	suspend_test_finish("resume devices");
 	//resume_console();
  Close:
