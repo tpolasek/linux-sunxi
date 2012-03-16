@@ -497,6 +497,6 @@ static void __exit sw_serial_exit(void)
 MODULE_AUTHOR("Aaron.myeh<leafy.myeh@allwinnertech.com>");
 MODULE_DESCRIPTION("SUNXI 8250-compatible serial port expansion card driver");
 MODULE_LICENSE("GPL");
-
+ 
 module_init(sw_serial_init);
 module_exit(sw_serial_exit);
