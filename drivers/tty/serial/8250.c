@@ -3293,12 +3293,7 @@ int *get_ports(int number)
 	return (int *)port;
 }
 EXPORT_SYMBOL(get_ports);
-u32 get_fcr(int number)
-{
-	struct uart_8250_port *up = &serial8250_ports[number];
-	return 0x0e1;
-}
-EXPORT_SYMBOL(get_fcr);
+
 static int serial8250_resume(struct platform_device *dev)
 {
 	int i;
