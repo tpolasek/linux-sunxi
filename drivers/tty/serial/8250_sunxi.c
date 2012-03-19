@@ -331,7 +331,7 @@ static int sw_serial_suspend(struct platform_device *dev, pm_message_t state)
 {
 	int i;
 	struct uart_port *port;
-	UART_MSG("serial8250_resume uart suspend\n");
+	UART_MSG("sw_serial_suspend uart suspend\n");
 	UART_MSG("&dev->dev is 0x%x\n",&dev->dev);
 #if 0
 		volatile __u32 loop_flag = 1;
@@ -339,7 +339,7 @@ static int sw_serial_suspend(struct platform_device *dev, pm_message_t state)
 
 #endif
 	for (i = 0; i < MAX_PORTS; i++) {
-		port=get_ports(i);
+		port=(struct uart_port *)get_ports(i);
 		if (port->type != PORT_UNKNOWN){
 		UART_MSG("type is 0x%x  PORT_UNKNOWN is 0x%x\n",port->type,PORT_UNKNOWN);
 		UART_MSG("port.dev is 0x%x  &dev->dev is 0x%x\n",port->dev,&dev->dev);
@@ -366,7 +366,7 @@ static int sw_serial_resume(struct platform_device *dev)
 {
 	struct uart_port *port;
 	int i;
-	UART_MSG("serial8250_resume SUPER_STANDBY resume\n");
+	UART_MSG("sw_serial_resume SUPER_STANDBY resume\n");
 	UART_MSG("&dev->dev is 0x%x\n",&dev->dev);
 #if 0
 		volatile __u32 loop_flag = 1;
@@ -375,7 +375,7 @@ static int sw_serial_resume(struct platform_device *dev)
 #endif	
 
 	for (i = 0; i < MAX_PORTS; i++) {
-		port=get_ports(i);
+		port=(struct uart_port *)get_ports(i);
 		if (port->type != PORT_UNKNOWN){
 		UART_MSG("type is 0x%x  PORT_UNKNOWN is 0x%x\n",port->type,PORT_UNKNOWN);
 		UART_MSG("port.dev is 0x%x  &dev->dev is 0x%x\n",port->dev,&dev->dev);
