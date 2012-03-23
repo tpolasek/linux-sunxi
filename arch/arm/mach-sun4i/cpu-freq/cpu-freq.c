@@ -25,8 +25,10 @@
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
 #include "cpu-freq.h"
+#include <linux/pm.h>
+#include "../pm/pm_i.h"
 
-
+extern struct aw_mem_para mem_para_info;
 static struct sun4i_cpu_freq_t  cpu_cur;    /* current cpu frequency configuration  */
 static unsigned int last_target = ~0;       /* backup last target frequency         */
 
@@ -598,6 +600,7 @@ static int sun4i_cpufreq_getcur(struct sun4i_cpu_freq_t *cfg)
 
 /* variable for backup cpu frequency configuration */
 static struct sun4i_cpu_freq_t suspend_freq;
+static __u32 suspend_vdd = 0;
 
 /*
 *********************************************************************************************************
@@ -616,21 +619,51 @@ static struct sun4i_cpu_freq_t suspend_freq;
 */
 static int sun4i_cpufreq_suspend(struct cpufreq_policy *policy)
 {
-    struct sun4i_cpu_freq_t suspend;
+	struct sun4i_cpu_freq_t suspend;
 
-    CPUFREQ_DBG("%s, set cpu frequency to 60Mhz to prepare enter standby\n", __func__);
+	CPUFREQ_DBG("%s, set cpu frequency to 60Mhz to prepare enter standby\n", __func__);
+	
+	if (NORMAL_STANDBY == standby_type) {
+		/*process for normal standby*/
+		printk("[%s] normal standby enter\n", __FUNCTION__);
+		sun4i_cpufreq_getcur(&suspend_freq);
 
-    sun4i_cpufreq_getcur(&suspend_freq);
+		/* set cpu frequency to 60M hz for standby */
+		suspend.pll = 60000000;
+		suspend.div.cpu_div = 1;
+		suspend.div.axi_div = 1;
+		suspend.div.ahb_div = 1;
+		suspend.div.apb_div = 2;
+		__set_cpufreq_target(&suspend_freq, &suspend);
+	
+	} else if(SUPER_STANDBY == standby_type) {
+		/*process for super standby*/	
+		printk("[%s] super standby enter: \n", __FUNCTION__);
+#if 1
+		sun4i_cpufreq_getcur(&suspend_freq);
 
-    /* set cpu frequency to 60M hz for standby */
-    suspend.pll = 60000000;
-    suspend.div.cpu_div = 1;
-    suspend.div.axi_div = 1;
-    suspend.div.ahb_div = 1;
-    suspend.div.apb_div = 2;
-    __set_cpufreq_target(&suspend_freq, &suspend);
+		/*backup suspend vdd*/
+		//suspend_vdd = regulator_get_voltage(corevdd);
+		suspend_vdd = last_vdd;
+		
+		/* set cpu frequency to 60M hz for standby */
+		suspend.pll = 60000000;
+		suspend.div.cpu_div = 1;
+		suspend.div.axi_div = 1;
+		suspend.div.ahb_div = 1;
+		suspend.div.apb_div = 2;
+		__set_cpufreq_target(&suspend_freq, &suspend);
 
-    return 0;
+		mem_para_info.suspend_vdd = suspend_vdd;
+		mem_para_info.suspend_freq = suspend.pll;
+		printk("backup suspend_vdd = %d. freq = %d. \n", suspend_vdd, suspend.pll);
+#else 
+		printk("do nothing. \n");
+#endif
+	}
+
+
+	return 0;
 }
 
 
@@ -656,12 +689,59 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 	last_target = ~0;
 
 	CPUFREQ_DBG("%s: resuming with policy %p\n", __func__, policy);
-    sun4i_cpufreq_getcur(&suspend);
+	if (NORMAL_STANDBY == standby_type) {
+		/*process for normal standby*/
+		printk("[%s] normal standby enter\n", __FUNCTION__);
+		sun4i_cpufreq_getcur(&suspend);
 
-    /* restore cpu frequency configuration */
-    __set_cpufreq_target(&suspend, &suspend_freq);
+		/* restore cpu frequency configuration */
+		__set_cpufreq_target(&suspend, &suspend_freq);
 
-	CPUFREQ_DBG("%s: resuming done\n", __func__);
+		CPUFREQ_DBG("%s: resuming done\n", __func__);
+	} else if(SUPER_STANDBY == standby_type) {
+		/*process for super standby*/	
+		printk("[%s] super standby resume: to 60M hz\n", __FUNCTION__);
+#if 0
+		sun4i_cpufreq_getcur(&suspend);
+
+		/*restore vdd*/
+		if(regulator_set_voltage(corevdd, suspend_vdd*1000, suspend_vdd*1000)) {
+			CPUFREQ_INF("try to set voltage failed!\n");
+			new_vdd = last_vdd;
+		}
+		last_vdd = new_vdd;
+		
+		printk("restore suspend_vdd = %d. succeed. \n", suspend_vdd);
+		
+		/* restore cpu frequency configuration */
+		__set_cpufreq_target(&suspend, &suspend_freq);
+#endif		
+		//last_vdd = 1400;
+		cpu_cur.pll = 60000000;
+		cpu_cur.div.cpu_div = 1;
+		cpu_cur.div.axi_div = 1;
+		cpu_cur.div.ahb_div = 1;
+		cpu_cur.div.apb_div = 2;
+#ifdef CONFIG_CPU_FREQ_DVFS	
+
+#if 0
+		//type corevdd is not visible in the file.
+		corevdd.max_uV = 0;
+		corevdd->rdev = 0;
+		((struct regulator *)corevdd)->min_uV = 1000000;
+		(*corevdd).max_uV = 1400000;
+#endif
+
+#if 0
+		/*can not all this interface at this point, why?*/
+		regulator_set_voltage(corevdd, last_vdd*1000, last_vdd*1000);
+#endif
+
+#endif
+		print_flag = 1;
+		CPUFREQ_DBG("%s: resuming done\n", __func__);
+	}
+
 	return 0;
 }
 

@@ -18,8 +18,8 @@
 //#define RETURN_FROM_RESUME0_WITH_NOMMU // suspend: 0x0000, resume0: 0x4010, resume1: 0x0000
 //#define DIRECT_RETURN_FROM_SUSPEND //not support yet
 //#define ENTER_SUPER_STANDBY    //suspend: 0xf000, resume0: 0x4010, resume1: 0x0000
-//#define ENTER_SUPER_STANDBY_WITH_NOMMU //not support yet, suspend: 0x0000, resume0: 0x4010, resume1: 0x0000
-#define WATCH_DOG_RESET
+#define ENTER_SUPER_STANDBY_WITH_NOMMU //not support yet, suspend: 0x0000, resume0: 0x4010, resume1: 0x0000
+//#define WATCH_DOG_RESET
 
 /**start address for function run in sram*/
 #define SRAM_FUNC_START     SW_VA_SRAM_BASE
@@ -75,6 +75,8 @@ struct mmu_state {
 struct aw_mem_para{
 	void **resume_pointer;
 	__u32 mem_flag;
+	__u32 suspend_vdd;
+	__u32 suspend_freq;
 	__u32 saved_runtime_context_svc[RUNTIME_CONTEXT_SIZE];
 	__u32 saved_dram_training_area[DRAM_TRANING_SIZE];
 	struct mmu_state saved_mmu_state;

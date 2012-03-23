@@ -67,6 +67,7 @@
 #define PRE_DISABLE_MMU    //actually, mean ,prepare condition to disable mmu
 #endif 
 
+//#define VERIFY_RESTORE_STATUS
 
 /* define major number for power manager */
 #define AW_PMU_MAJOR    267
@@ -131,7 +132,7 @@ static struct tmr_state saved_tmr_state;
 static struct twi_state saved_twi_state;
 static struct gpio_state saved_gpio_state;
 
-static struct aw_mem_para mem_para_info;
+struct aw_mem_para mem_para_info;
 standby_type_e standby_type = NON_STANDBY;
 //static volatile int enter_flag = 0;
 volatile int print_flag = 0;
@@ -471,6 +472,33 @@ static void aw_early_suspend(void)
 
 /*
 *********************************************************************************************************
+*                           verify_restore
+*
+*Description: verify src and dest region is the same;
+*
+*Return     : 0: same;
+*                -1: different;
+*
+*Notes      : 
+*********************************************************************************************************
+*/
+#ifdef VERIFY_RESTORE_STATUS
+static int verify_restore(void *src, void *dest, int count)
+{
+	volatile char *s = (volatile char *)src;
+	volatile char *d = (volatile char *)dest;
+	while(--count){
+		if(*(s+count) != *(d+count)){
+			return -1;
+		}
+	}
+
+	return 0;
+}
+#endif
+
+/*
+*********************************************************************************************************
 *                           aw_late_resume
 *
 *Description: prepare necessary info for suspend&resume;
@@ -486,7 +514,7 @@ static void aw_late_resume(void)
 	//cpu_init();
 	/*restore pmu config*/
 	//busy_waiting();
-	
+	int ret = 0;
 	save_mem_status(LATE_RESUME_START |0x04);
 	
 	
@@ -514,7 +542,24 @@ static void aw_late_resume(void)
 	save_mem_status(LATE_RESUME_START |0x07);
 	memcpy((void *)DRAM_BACKUP_BASE_ADDR, (void *)mem_dram_backup_area, sizeof(__u32)*DRAM_BACKUP_SIZE);
 	dmac_flush_range((void *)DRAM_BACKUP_BASE_ADDR, (void *)(DRAM_BACKUP_BASE_ADDR + (sizeof(u32)) * DRAM_BACKUP_SIZE -1) );
-	
+
+#if VERIFY_RESTORE_STATUS
+	if(ret = verify_restore((void *)mem_dram_backup_area2, (void *)DRAM_BACKUP_BASE_ADDR2, sizeof(__u32)*DRAM_BACKUP_SIZE2)){
+		save_mem_status(LATE_RESUME_START |0x21);
+		busy_waiting();
+	}
+
+	if(ret = verify_restore((void *)mem_dram_backup_area1, (void *)DRAM_BACKUP_BASE_ADDR1, sizeof(__u32)*DRAM_BACKUP_SIZE1)){
+		save_mem_status(LATE_RESUME_START |0x22);
+		busy_waiting();
+	}
+
+	if(ret = verify_restore((void *)mem_dram_backup_area, (void *)DRAM_BACKUP_BASE_ADDR, sizeof(__u32)*DRAM_BACKUP_SIZE)){
+		save_mem_status(LATE_RESUME_START |0x23);
+		busy_waiting();
+	}
+#endif
+
 	save_mem_status(LATE_RESUME_START |0x08);
 	//busy_waiting();
 	mem_clk_restore(&(saved_clk_state));
@@ -750,7 +795,7 @@ void aw_pm_end(void)
 	standby_type = NON_STANDBY;
 	//uart_init(2, 115200);
 	save_mem_status(LATE_RESUME_START |0x10);
-	
+	print_flag = 0;
 	PM_DBG("aw_pm_end!\n");
 }
 

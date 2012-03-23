@@ -13,7 +13,7 @@ SUSPEND_OBJ = suspend.o pm_debug.o common.o stack.o standby_clock.o standby_twi.
 	mem_mmu_pc.o
 
 RESUME1_OBJ = resume1.o mem_power.o pm_debug.o stack.o mem_mmu_pc.o mem_mmu_pc_asm.o standby_twi.o standby_delay.o \
-	standby_int.o standby_tmr.o common.o standby_clock.o mem_cpu.o standby_power.o
+	standby_int.o standby_tmr.o common.o standby_clock.o mem_cpu.o standby_power.o dram/dram.o dram/dram_init.o
 
 RESUME0_OBJ = resume0.o mem_power.o pm_debug.o stack.o standby_twi.o standby_delay.o \
 	common.o standby_clock.o resume1_asm.o mem_mmu_pc_asm.o mem_cpu.o
@@ -107,6 +107,8 @@ resume1:
 	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc.c                          -o mem_mmu_pc.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc_asm.S                      -o mem_mmu_pc_asm.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_cpu.c				-o mem_cpu.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./dram/dram.c                              -o dram/dram.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./dram/dram_init.c                         -o dram/dram_init.o
 	
 	
 	$(CROSS_COMPILE)ld -T $(RESUME1_LD_FILE)  -EL  $(RESUME1_OBJ) -o $(RESUME1_OUPUTFILE).elf  -Map $(RESUME1_OUPUTFILE).map

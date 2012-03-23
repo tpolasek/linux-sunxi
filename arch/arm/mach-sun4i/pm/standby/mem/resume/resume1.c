@@ -133,23 +133,26 @@ int main(void)
 	flush_icache();
 #endif
 
+	
+	save_mem_status(RESUME1_START + 0x07);
+	standby_clk_init();
+	standby_twi_init(AXP_IICBUS);
+	save_mem_status(RESUME1_START + 0x08);
+	//busy_waiting();
+	setup_twi_env();
+	save_mem_status(RESUME1_START + 0x09);
+
 #ifdef POWER_OFF
-	standby_clk_pllenable();
+	//standby_clk_pllenable();
 	//save_mem_status(RESUME1_START + 0x06);
 	standby_mdelay(10);
 	standby_delay(1);
 	//restore ccmu
+	//busy_waiting();
 	restore_ccmu();
+	//busy_waiting();
 #endif
 
-	
-	save_mem_status(RESUME1_START + 0x07);
-	
-	standby_twi_init(AXP_IICBUS);
-	save_mem_status(RESUME1_START + 0x08);
-	//busy_waiting();
-	save_mem_status(RESUME1_START + 0x09);
-	
 	/*restore pmu config*/
 	//busy_waiting();
 #ifdef POWER_OFF
@@ -163,14 +166,16 @@ int main(void)
 //before jump to late_resume	
 #ifdef FLUSH_TLB
 	//busy_waiting();
+	save_mem_status(RESUME1_START + 0xb);
 	standby_flush_tlb();
 #endif
 
 #ifdef FLUSH_ICACHE
 	//clean i cache
+	save_mem_status(RESUME1_START + 0xc);
 	flush_icache();
 #endif
-	//save_mem_status(RESUME1_START + 0x15);
+	save_mem_status(RESUME1_START + 0xd);
 	
 	//busy_waiting();
 	//before jump, invalidate data
@@ -182,15 +187,26 @@ int main(void)
 void restore_ccmu(void)
 {
 	/* gating off dram clock */
-	standby_clk_dramgating(0);
-
+	//standby_clk_dramgating(0);
+	int i=0;
+	
+	for(i=0; i<6; i++){
+		dram_hostport_on_off(i, 0);
+	}
+	
+	for(i=16; i<31; i++){
+		dram_hostport_on_off(i, 0);
+	}
+	
 	/* switch cpu clock to HOSC, and disable pll */
 	standby_clk_core2hosc();
-	standby_clk_plldisable();
-
+	//standby_clk_plldisable();
+	mem_clk_plldisable();
+	
 	/* backup voltages */
-	dcdc2 = standby_get_voltage(POWER_VOL_DCDC2);
-	dcdc3 = standby_get_voltage(POWER_VOL_DCDC3);
+	//dcdc2 = 1400;
+	dcdc2 = mem_para_info.suspend_vdd;
+	dcdc3 = 1250;
 
 	/* set clock division cpu:axi:ahb:apb = 2:2:2:1 */
 	standby_clk_getdiv(&clk_div);
@@ -201,48 +217,59 @@ void restore_ccmu(void)
 
 	/* swtich apb1 to losc */
 	standby_clk_apb2losc();
-	standby_mdelay(10);
+	
 	/* switch cpu to 32k */
 	standby_clk_core2losc();
-#if(ALLOW_DISABLE_HOSC)
-	// disable HOSC, and disable LDO
-	standby_clk_hoscdisable();
-	standby_clk_ldodisable();
-#endif
+	/*delay period? 10/32k= 300us*/
+	standby_mdelay(10);
 
 	//restore
 
-#if(ALLOW_DISABLE_HOSC)
-	/* enable LDO, enable HOSC */
-	standby_clk_ldoenable();
-	/* delay 1ms for power be stable */
-	standby_delay(1);
-	standby_clk_hoscenable();
-	standby_delay(1);
-#endif
-	/* swtich apb1 to hosc */
-	standby_clk_apb2hosc();
 	/* switch clock to hosc */
 	standby_clk_core2hosc();
+	/* swtich apb1 to hosc */
+	standby_clk_apb2hosc();
 	/* restore clock division */
 	standby_clk_setdiv(&clk_div);
 
 	standby_mdelay(10);
-	
+
+	//busy_waiting();
 	/* restore voltage for exit standby */
 	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
 	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
 	standby_mdelay(10);
+
+	/*setting clock division ratio*/
+	/* set clock division cpu:axi:ahb:apb =  */
+	//standby_clk_getdiv(&clk_div);
+	tmp_clk_div.axi_div = 1;
+	tmp_clk_div.ahb_div = 1;
+	tmp_clk_div.apb_div = 2;
+	standby_clk_setdiv(&tmp_clk_div);
+
+	/*setting pll factor: 60M hz*/
+	standby_clk_set_pll_factor();
 	
 	/* enable pll */
 	standby_clk_pllenable();
-	standby_mdelay(10);
+	standby_mdelay(100);
+	
 	/* switch cpu clock to core pll */
 	standby_clk_core2pll();
 	standby_mdelay(10);
+	//busy_waiting();
 
 	/* gating on dram clock */
-	standby_clk_dramgating(1);
-
+	//standby_clk_dramgating(1);
+	for(i=0; i<6; i++){
+		dram_hostport_on_off(i, 1);
+	}
+	
+	for(i=16; i<31; i++){
+		dram_hostport_on_off(i, 1);
+	}
+	
+	//standby_mdelay(1000);
 	return;
 }

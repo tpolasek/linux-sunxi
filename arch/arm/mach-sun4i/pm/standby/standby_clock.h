@@ -47,6 +47,9 @@ __s32 standby_clk_getdiv(struct sun4i_clk_div_t  *clk_div);
 void standby_clk_dramgating(int onoff);
 __s32 standby_clk_apb2losc(void);
 __s32 standby_clk_apb2hosc(void);
+__s32 standby_clk_set_pll_factor(void);
+
+__s32 mem_clk_plldisable(void);
 
 extern __u32   cpu_ms_loopcnt;
 

@@ -64,7 +64,20 @@ void mem_power_init(void)
 	
 	return;
 }
-static void setup_env(void)
+
+
+/*
+*********************************************************************************************************
+*                           setup_env
+*
+* Description: setup_env for twi transfer.
+*
+* Arguments  : none;
+*
+* Returns    : result;
+*********************************************************************************************************
+*/
+void setup_twi_env(void)
 {
 	__ccmu_reg_list_t   *CmuReg;
 	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
@@ -74,10 +87,10 @@ static void setup_env(void)
 	*(volatile __u32 *)&CmuReg->Apb1Gate |= 0x01;
 	
 
-	/*setting gpio*/
+	/*setting gpio: twi0 sda, sck */
 	*(volatile __u32 *)(SW_VA_PORTC_IO_BASE + 0x24) |= 0x22;
 
-	/*twi module: */
+	/*twi module: twi ctrl */
 	*(volatile __u32 *)(SW_VA_TWI0_IO_BASE + 0x0c) |= 0x40;
 	
 	return;
@@ -99,7 +112,7 @@ void mem_power_exit(void)
 {
 	__u8    reg_val;
 
-	setup_env();
+	//setup_env();
 
 	/*把44H寄存器的bit5, bit6(按键上升沿触发、下降沿触发)置0*/
 	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x44, &reg_val)){
