@@ -640,23 +640,15 @@ static int sun4i_cpufreq_suspend(struct cpufreq_policy *policy)
 		/*process for super standby*/	
 		printk("[%s] super standby enter: \n", __FUNCTION__);
 #if 1
+		//backup suspend freq
 		sun4i_cpufreq_getcur(&suspend_freq);
 
 		/*backup suspend vdd*/
 		//suspend_vdd = regulator_get_voltage(corevdd);
 		suspend_vdd = last_vdd;
-		
-		/* set cpu frequency to 60M hz for standby */
-		suspend.pll = 60000000;
-		suspend.div.cpu_div = 1;
-		suspend.div.axi_div = 1;
-		suspend.div.ahb_div = 1;
-		suspend.div.apb_div = 2;
-		__set_cpufreq_target(&suspend_freq, &suspend);
-
 		mem_para_info.suspend_vdd = suspend_vdd;
 		mem_para_info.suspend_freq = suspend.pll;
-		printk("backup suspend_vdd = %d. freq = %d. \n", suspend_vdd, suspend.pll);
+		printk("backup suspend_vdd = %d. freq = %u. \n", suspend_vdd, suspend.pll);
 #else 
 		printk("do nothing. \n");
 #endif
@@ -691,7 +683,7 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 	CPUFREQ_DBG("%s: resuming with policy %p\n", __func__, policy);
 	if (NORMAL_STANDBY == standby_type) {
 		/*process for normal standby*/
-		printk("[%s] normal standby enter\n", __FUNCTION__);
+		printk("[%s] normal standby resume\n", __FUNCTION__);
 		sun4i_cpufreq_getcur(&suspend);
 
 		/* restore cpu frequency configuration */
@@ -700,7 +692,7 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 		CPUFREQ_DBG("%s: resuming done\n", __func__);
 	} else if(SUPER_STANDBY == standby_type) {
 		/*process for super standby*/	
-		printk("[%s] super standby resume: to 60M hz\n", __FUNCTION__);
+		printk("[%s] super standby resume: to %u hz\n", __FUNCTION__, suspend_freq.pll);
 #if 0
 		sun4i_cpufreq_getcur(&suspend);
 
@@ -722,6 +714,11 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 		cpu_cur.div.axi_div = 1;
 		cpu_cur.div.ahb_div = 1;
 		cpu_cur.div.apb_div = 2;
+
+		sun4i_cpufreq_getcur(&suspend);
+		/* restore cpu frequency configuration */
+		__set_cpufreq_target(&suspend, &suspend_freq);
+		
 #ifdef CONFIG_CPU_FREQ_DVFS	
 
 #if 0
