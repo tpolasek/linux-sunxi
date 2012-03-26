@@ -3,7 +3,7 @@
 #include <linux/delay.h>
 #include "pm_i.h"
 
-#define CHECK_RESTORE_STATUS
+//#define CHECK_RESTORE_STATUS
 
 /*
 *********************************************************************************************************
