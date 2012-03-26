@@ -648,7 +648,7 @@ static int sun4i_cpufreq_suspend(struct cpufreq_policy *policy)
 		suspend_vdd = last_vdd;
 		mem_para_info.suspend_vdd = suspend_vdd;
 		mem_para_info.suspend_freq = suspend.pll;
-		printk("backup suspend_vdd = %d. freq = %u. \n", suspend_vdd, suspend.pll);
+		printk("backup suspend_vdd = %d. freq = %u. \n", suspend_vdd, suspend_freq.pll);
 #else 
 		printk("do nothing. \n");
 #endif
