@@ -63,7 +63,7 @@ int main(void)
 
 #ifdef SET_COPRO_REG
 	set_copro_default();
-	save_mem_status_nommu(RUSUME0_START + 0x13);
+	save_mem_status_nommu(RUSUME0_START |0x01);
 	//busy_waiting();
 	fake_busy_waiting();
 #endif
@@ -90,7 +90,7 @@ int main(void)
 	//busy_waiting();
 
 #ifdef MMU_OPENED
-	save_mem_status(RUSUME0_START);
+	save_mem_status(RUSUME0_START |0x02);
 	/*restore dram training area*/
 	standby_memcpy((void *)DRAM_BASE_ADDR, (void *)DRAM_BACKUP_BASE_ADDR2, sizeof(__u32)*DRAM_TRANING_SIZE);
 	//busy_waiting();
@@ -98,13 +98,13 @@ int main(void)
 	//move resume1 code from dram to sram
 	standby_memcpy((void *)SRAM_FUNC_START, (void *)&resume1_bin_start, (int)&resume1_bin_end - (int)&resume1_bin_start);
 	//sync
-	save_mem_status(RUSUME0_START | 0x01);
+	save_mem_status(RUSUME0_START |0x03);
 	//jump to sram
 	resume1();
 	/*never get here.*/
-	save_mem_status(RUSUME0_START | 0x02);
+	save_mem_status(RUSUME0_START | 0x04);
 #else
-	save_mem_status_nommu(RUSUME0_START);
+	save_mem_status_nommu(RUSUME0_START |0x02);
 	standby_preload_tlb_nommu();
 	/*restore dram training area*/
 	standby_memcpy((void *)DRAM_BASE_ADDR_PA, (void *)DRAM_BACKUP_BASE_ADDR2_PA, sizeof(__u32)*DRAM_TRANING_SIZE);
@@ -114,12 +114,12 @@ int main(void)
 	//move resume1 code from dram to sram
 	standby_memcpy((void *)SRAM_FUNC_START_PA, (void *)&resume1_bin_start, (int)&resume1_bin_end - (int)&resume1_bin_start);
 	//sync	
-	save_mem_status_nommu(RUSUME0_START | 0x01);
+	save_mem_status_nommu(RUSUME0_START | 0x03);
 	//busy_waiting();
 	//jump to sram
 	resume1();
 	/*never get here.*/
-	save_mem_status_nommu(RUSUME0_START | 0x02);
+	save_mem_status_nommu(RUSUME0_START | 0x04);
 #endif
 
 

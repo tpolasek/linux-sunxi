@@ -156,18 +156,18 @@ int main(void)
 	The TLB is normally allocated on a rotating basis. The oldest entry is always the next allocated */
 #ifdef FLUSH_TLB
 	standby_flush_tlb();
-	save_mem_status(SUSPEND_START + 0x01);	
+	save_mem_status(SUSPEND_START |0x01);	
 #ifdef PRE_DISABLE_MMU
 	/* preload tlb for standby */
 	//busy_waiting();
 	//standby_preload_tlb_nommu(); //0x0000 mapping is not large enough for preload nommu tlb
 						//eg: 0x01c2.... is not in the 0x0000,0000 range.
 	standby_preload_tlb();
-	save_mem_status(SUSPEND_START + 0x02);	
+	save_mem_status(SUSPEND_START |0x02);	
 #else
 	/* preload tlb for standby */
 	standby_preload_tlb();
-	save_mem_status(SUSPEND_START + 0x02);	
+	save_mem_status(SUSPEND_START |0x03);	
 #endif
 
 #endif	
@@ -176,7 +176,7 @@ int main(void)
 	
 
 
-	save_mem_status(SUSPEND_START + 0x03);	
+	save_mem_status(SUSPEND_START |0x04);	
 
 	//busy_waiting();
 	/* copy standby parameter from dram */
@@ -184,28 +184,26 @@ int main(void)
 	
 	/* initialise standby modules */
 	standby_clk_init();
-	save_mem_status(SUSPEND_START + 0x04);
-	save_mem_status(SUSPEND_START + 0x041);
+	save_mem_status(SUSPEND_START |0x05);
 	standby_int_init();
-	save_mem_status(SUSPEND_START + 0x05);
+	save_mem_status(SUSPEND_START |0x06);
 	standby_tmr_init();
-	save_mem_status(SUSPEND_START + 0x06);
+	save_mem_status(SUSPEND_START |0x07);
 	standby_twi_init(AXP_IICBUS);
-	save_mem_status(SUSPEND_START + 0x07);
-	
-    	mem_power_init();
-    	save_mem_status(SUSPEND_START + 0x08);
+	save_mem_status(SUSPEND_START |0x08);
+	mem_power_init();
+    	save_mem_status(SUSPEND_START |0x09);
 	
 	//backup resume flag
 	save_mem_flag();
-	save_mem_status(SUSPEND_START + 0x09);
+	save_mem_status(SUSPEND_START |0x0a);
 
 	//just for test
 	/*restore pmu config*/
 	//busy_waiting();
 #ifdef DIRECT_RETRUN
 	mem_power_exit();
-	save_mem_status(RESUME1_START + 0x06);
+	save_mem_status(RESUME1_START |0x0b);
 	
 	return 0;
 #endif
@@ -214,12 +212,12 @@ int main(void)
 	//busy_waiting();
 #ifdef DRAM_ENTER_SELFRESH
 	dram_power_save_process();
-	save_mem_status(SUSPEND_START + 0x0a);
+	save_mem_status(SUSPEND_START |0x0c);
 	
 	/* gating off dram clock */
 	//busy_waiting();
     	standby_clk_dramgating(0);
-	save_mem_status(SUSPEND_START + 0x0b);
+	save_mem_status(SUSPEND_START |0x0d);
 #endif
 
 #ifdef INIT_DRAM
@@ -229,16 +227,16 @@ int main(void)
 	dram_size = init_DRAM( );                                // ≥ı ºªØDRAM
 	if(dram_size)
 	{
-		save_mem_status(SUSPEND_START + 0x0c);
+		save_mem_status(SUSPEND_START |0x0e);
 		//printk("dram size =%d\n", dram_size);
 	}
 	else
 	{
-		save_mem_status(SUSPEND_START + 0x0d);
+		save_mem_status(SUSPEND_START |0x0f);
 		//printk("initializing SDRAM Fail.\n");
 	}
 
-	save_mem_status(SUSPEND_START + 0x0e);
+	save_mem_status(SUSPEND_START |0x10);
 	standby_mdelay(100);
 
 	//return 0;
@@ -269,27 +267,26 @@ int main(void)
 	//start watch dog
 	/* enable watch-dog to reset cpu */
     	standby_tmr_enable_watchdog();
-	save_mem_status(SUSPEND_START + 0x1f);
+	save_mem_status(SUSPEND_START |0x11);
 	//while(1);
 #endif
 
 #ifdef DISABLE_MMU
-	save_mem_status(SUSPEND_START + 0x11);
 	disable_mmu();
 	standby_flush_tlb();
-	save_mem_status_nommu(SUSPEND_START + 0x12);
+	save_mem_status_nommu(SUSPEND_START |0x12);
 	//after disable mmu, it is time to preload nommu, need to access dram?
 	standby_preload_tlb_nommu();
 	//while(1);
 #ifdef SET_COPRO_DEFAULT
 		set_copro_default();
-		save_mem_status_nommu(SUSPEND_START + 0x13);
+		save_mem_status_nommu(SUSPEND_START |0x13);
 		//busy_waiting();
 		//fake_busy_waiting();
 #endif
 
 #ifdef JUMP_WITH_NOMMU
-		save_mem_status_nommu(SUSPEND_START + 0x10);
+		save_mem_status_nommu(SUSPEND_START |0x14);
 		//before jump, disable mmu
 		//busy_waiting();
 		//jump_to_resume0_nommu(0x40100000);
@@ -303,14 +300,14 @@ int main(void)
 		  * because twi use virtual addr. 
 		  */
 	    	mem_power_off_nommu();
-	    	save_mem_status_nommu(SUSPEND_START + 0x0f);
+	    	save_mem_status_nommu(SUSPEND_START |0x15);
 #endif
 
 #else
 
 #ifdef SET_COPRO_DEFAULT
 	set_copro_default();
-	save_mem_status(SUSPEND_START + 0x13);
+	save_mem_status(SUSPEND_START |0x13);
 	//busy_waiting();
 	//fake_busy_waiting();
 #endif
@@ -320,12 +317,12 @@ int main(void)
     	/*power off*/
 	//busy_waiting();
     	mem_power_off();
-    	save_mem_status(SUSPEND_START + 0x0f);
+    	save_mem_status(SUSPEND_START |0x0f);
 #endif
 
 #ifdef WITH_MMU
 	//busy_waiting();
-	save_mem_status(SUSPEND_START + 0x0f);
+	save_mem_status(SUSPEND_START |0x0f);
 	//busy_waiting();
 	jump_to_resume0(0xc0100000);
 #endif

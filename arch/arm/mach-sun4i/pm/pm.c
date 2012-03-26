@@ -134,6 +134,8 @@ static struct gpio_state saved_gpio_state;
 
 struct aw_mem_para mem_para_info;
 standby_type_e standby_type = NON_STANDBY;
+EXPORT_SYMBOL(standby_type);
+
 //static volatile int enter_flag = 0;
 volatile int print_flag = 0;
 
@@ -165,14 +167,28 @@ extern void flush_dcache(void);
 */
 static int aw_pm_valid(suspend_state_t state)
 {
-    PM_DBG("valid\n");
+	PM_DBG("valid\n");
 
-    if(!((state > PM_SUSPEND_ON) && (state < PM_SUSPEND_MAX))){
-        PM_DBG("state (%d) invalid!\n", state);
-        return 0;
-    }
-
-    return 1;
+	if(!((state > PM_SUSPEND_ON) && (state < PM_SUSPEND_MAX))){
+	PM_DBG("state (%d) invalid!\n", state);
+	return 0;
+	}
+	
+	if(PM_SUSPEND_STANDBY == state){
+#ifdef CROSS_MAPPING_STANDBY
+	standby_type = SUPER_STANDBY;
+#else
+	standby_type = NORMAL_STANDBY;
+#endif
+	}else if(PM_SUSPEND_MEM == state){
+#ifdef CROSS_MAPPING_STANDBY
+	standby_type = NORMAL_STANDBY;
+#else
+	standby_type = SUPER_STANDBY;
+#endif
+	}
+	
+	return 1;
 }
 
 
@@ -271,23 +287,23 @@ int aw_pm_prepare_late(void)
 */
 static void aw_early_suspend(void)
 {
-	save_mem_status(EARLY_SUSPEND_START | 0x06);
+	save_mem_status(EARLY_SUSPEND_START | 0x101);
 	//busy_waiting();
-	save_mem_status(EARLY_SUSPEND_START | 0x08);
+	save_mem_status(EARLY_SUSPEND_START | 0x102);
 	mem_clk_save(&(saved_clk_state));
 
-	save_mem_status(EARLY_SUSPEND_START | 0x09);
+	save_mem_status(EARLY_SUSPEND_START | 0x103);
 	mem_gpio_save(&(saved_gpio_state));
 	
-	save_mem_status(EARLY_SUSPEND_START | 0x0a);
+	save_mem_status(EARLY_SUSPEND_START | 0x104);
 	//busy_waiting();
 	mem_tmr_save(&(saved_tmr_state));
 
-	save_mem_status(EARLY_SUSPEND_START | 0x0b);
+	save_mem_status(EARLY_SUSPEND_START | 0x105);
 	//busy_waiting();
 	mem_twi_save(&(saved_twi_state));
 	
-	save_mem_status(EARLY_SUSPEND_START | 0x0c);
+	save_mem_status(EARLY_SUSPEND_START | 0x106);
 	mem_int_save(&(saved_int_state));
 	
 	//backup mmu
@@ -296,18 +312,18 @@ static void aw_early_suspend(void)
 	//backup cpu state
 	__save_processor_state(&(mem_para_info.saved_cpu_context));
 	//backup 0x0000,0000 page entry, size?
-	save_mem_status(EARLY_SUSPEND_START | 0x02);
+	save_mem_status(EARLY_SUSPEND_START | 0x107);
 	//busy_waiting();
 	save_mapping(MEM_SW_VA_SRAM_BASE);
 
-	save_mem_status(EARLY_SUSPEND_START | 0x03);
+	save_mem_status(EARLY_SUSPEND_START | 0x108);
 	//busy_waiting();
 	//backup dram area to leave space for resume0 code
 	memcpy((void *)mem_dram_backup_area, (void *)DRAM_BACKUP_BASE_ADDR, sizeof(__u32)*DRAM_BACKUP_SIZE);
 	dmac_flush_range((void *)mem_dram_backup_area, (void *)(mem_dram_backup_area + (sizeof(u32)) * DRAM_BACKUP_SIZE - 1));
 	
 	//backup dram area to reserve space for para space
-	save_mem_status(EARLY_SUSPEND_START  |0x04);
+	save_mem_status(EARLY_SUSPEND_START  |0x109);
 	//busy_waiting();
 	memcpy((void *)mem_dram_backup_area1, (void *)DRAM_BACKUP_BASE_ADDR1, sizeof(__u32)*DRAM_BACKUP_SIZE1);
 	dmac_flush_range((void *)mem_dram_backup_area1, (void *)(mem_dram_backup_area1 + (sizeof(u32)) * DRAM_BACKUP_SIZE1 - 1));
@@ -321,7 +337,7 @@ static void aw_early_suspend(void)
 	dmac_flush_range((void *)mem_dram_backup_compare_area2, (void *)(mem_dram_backup_compare_area2 + (sizeof(u32)) * DRAM_COMPARE_SIZE - 1));
 #endif
 
-	save_mem_status(EARLY_SUSPEND_START | 0x05);
+	save_mem_status(EARLY_SUSPEND_START | 0x10a);
 	//busy_waiting();
 	/* backup dram traning area: waring, access dram*/
 	//memcpy((void *)mem_dram_traning_area_back, (void *)DRAM_BASE_ADDR, sizeof(__u32)*DRAM_TRANING_SIZE);
@@ -339,12 +355,12 @@ static void aw_early_suspend(void)
 	//prepare resume0 code for resume
 	if((sizeof(__u32)*DRAM_BACKUP_SIZE) < ((int)&resume0_bin_end - (int)&resume0_bin_start) ){
 		//judge the reserved space for resume0 is enough or not.
-		save_mem_status(EARLY_SUSPEND_START | 0x07);
+		save_mem_status(EARLY_SUSPEND_START | 0x10b);
 		busy_waiting();
 	}
 	if((sizeof(__u32)*DRAM_BACKUP_SIZE1) < sizeof(mem_para_info)){
 		//judge the reserved space for mem para is enough or not.
-		save_mem_status(EARLY_SUSPEND_START | 0x08);
+		save_mem_status(EARLY_SUSPEND_START | 0x10c);
 		busy_waiting();
 	}
 	//busy_waiting();
@@ -356,7 +372,7 @@ static void aw_early_suspend(void)
 	//clean all the data into dram
 	memcpy((void *)DRAM_BACKUP_BASE_ADDR1, (void *)&mem_para_info, sizeof(mem_para_info));
 	dmac_flush_range((void *)DRAM_BACKUP_BASE_ADDR1, (void *)(DRAM_BACKUP_BASE_ADDR1 + (sizeof(u32)) * DRAM_BACKUP_SIZE1 - 1));
-	save_mem_status(EARLY_SUSPEND_START | 0x10);
+	save_mem_status(EARLY_SUSPEND_START | 0x10d);
 	//busy_waiting();
 
 	//prepare dram training area data
@@ -365,13 +381,13 @@ static void aw_early_suspend(void)
 
 
 	//dmac_flush_range((void *)0x00000000, (void *)(0xffffffff-1));
-	save_mem_status(EARLY_SUSPEND_START | 0x13);
+	save_mem_status(EARLY_SUSPEND_START | 0x10e);
 	
 	mem_arch_suspend();
 	save_processor_state(); 
 	
 	
-	save_mem_status(EARLY_SUSPEND_START | 0x14);
+	save_mem_status(EARLY_SUSPEND_START | 0x10f);
 	//busy_waiting();
 	//before creating mapping, build the coherent between cache and memory
 
@@ -380,10 +396,10 @@ static void aw_early_suspend(void)
 	__cpuc_flush_user_all();
 
 	__cpuc_coherent_user_range(0x00000000, 0xc0000000-1);
-	save_mem_status(EARLY_SUSPEND_START | 0x11);
+	save_mem_status(EARLY_SUSPEND_START | 0x110);
 	
 	__cpuc_coherent_kern_range(0xc0000000, 0xffffffff-1);
-	save_mem_status(EARLY_SUSPEND_START | 0x12);
+	save_mem_status(EARLY_SUSPEND_START | 0x111);
 
 	//create 0x0000,0000 mapping table: 0x0000,0000 -> 0x0000,0000 
 	create_mapping(&mem_sram_md);
@@ -391,22 +407,22 @@ static void aw_early_suspend(void)
 #ifdef PRE_DISABLE_MMU
 	pr_info("PRE_DISABLE_MMU %s: %s, %d. \n", __FILE__,  __func__, __LINE__);
 	//busy_waiting();
-	save_mem_status(EARLY_SUSPEND_START | 0x1c);
+	save_mem_status(EARLY_SUSPEND_START | 0x112);
 	//jump to sram: dram enter selfresh, and power off.
 	mem = (int (*)(void))SRAM_FUNC_START_PA;
 	//move standby code to sram
 	memcpy((void *)SRAM_FUNC_START, (void *)&suspend_bin_start, (int)&suspend_bin_end - (int)&suspend_bin_start);
-	save_mem_status(EARLY_SUSPEND_START | 0x1d);
+	save_mem_status(EARLY_SUSPEND_START | 0x113);
 	//busy_waiting();
 
-	save_mem_status(EARLY_SUSPEND_START | 0x1e);
+	save_mem_status(EARLY_SUSPEND_START | 0x114);
 	//busy_waiting();
 	//set_ttbr0();
 	//mem();
 	//create_mapping(&mem_sram_md);
-	save_mem_status(EARLY_SUSPEND_START | 0x1f);
+	save_mem_status(EARLY_SUSPEND_START | 0x115);
 	//busy_waiting();
-	save_mem_status(EARLY_SUSPEND_START | 0x20);
+	save_mem_status(EARLY_SUSPEND_START | 0x116);
 	
 #else
 
@@ -457,7 +473,7 @@ static void aw_early_suspend(void)
 	//save_mem_status(EARLY_SUSPEND_START |0x02);
 		
 	///check the stack status
-	save_mem_status(EARLY_SUSPEND_START | 0x1b);
+	save_mem_status(EARLY_SUSPEND_START | 0x117);
 	//busy_waiting();
 	
 #ifdef PRE_DISABLE_MMU
@@ -605,7 +621,7 @@ static int aw_pm_enter(suspend_state_t state)
 	//static int enter_flag = 0;
 
 #if 1	
-	save_mem_status(LATE_RESUME_START |0x12);
+	save_mem_status(BEFORE_EARLY_SUSPEND |0x01);
 	//busy_waiting();
 	
 	PM_DBG("enter state %d\n", state);
@@ -628,7 +644,7 @@ static int aw_pm_enter(suspend_state_t state)
 		//busy_waiting();
 	}else if(SUPER_STANDBY == standby_type){
 mem_enter:
-		save_mem_status(BEFORE_EARLY_SUSPEND);
+		save_mem_status(BEFORE_EARLY_SUSPEND |0x02);
 		//busy_waiting();
 					
 		if( 1 == mem_para_info.mem_flag){
@@ -691,17 +707,17 @@ mem_enter:
 #endif	
 			goto resume;
 		}
-		save_mem_status(BEFORE_EARLY_SUSPEND | 0x01);
+		save_mem_status(BEFORE_EARLY_SUSPEND | 0x03);
 		//busy_waiting();
 		save_runtime_context(mem_para_info.saved_runtime_context_svc);
 		mem_para_info.mem_flag = 1;
-		save_mem_status(BEFORE_EARLY_SUSPEND | 0x02);
+		save_mem_status(BEFORE_EARLY_SUSPEND | 0x04);
 		//busy_waiting();
-		save_mem_status(BEFORE_EARLY_SUSPEND | 0x03);
+		save_mem_status(BEFORE_EARLY_SUSPEND | 0x05);
 		//busy_waiting();
 		mem_para_info.resume_pointer = (void *)&&mem_enter;
 		//busy_waiting();
-		save_mem_status(BEFORE_EARLY_SUSPEND | 0x04);
+		save_mem_status(BEFORE_EARLY_SUSPEND | 0x06);
 
 		//busy_waiting();
 		aw_early_suspend();

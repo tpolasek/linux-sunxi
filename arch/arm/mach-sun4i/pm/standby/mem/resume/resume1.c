@@ -88,19 +88,19 @@ int main(void)
 	do{*tmpPtr ++ = 0;}while(tmpPtr <= (char *)&__bss_end);
 	
 #ifdef MMU_OPENED
-	save_mem_status(RESUME1_START + 0x02);
+	save_mem_status(RESUME1_START |0x02);
 	//move other storage to sram: saved_resume_pointer(virtual addr), saved_mmu_state
 	standby_memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1), sizeof(mem_para_info));
 #else
 	standby_preload_tlb_nommu();
 	/*switch stack*/
-	save_mem_status_nommu(RESUME1_START + 0x02);
+	save_mem_status_nommu(RESUME1_START |0x02);
 	//move other storage to sram: saved_resume_pointer(virtual addr), saved_mmu_state
 	standby_memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1_PA), sizeof(mem_para_info));
 	/*restore mmu configuration*/
-	save_mem_status_nommu(RESUME1_START + 0x03);
+	save_mem_status_nommu(RESUME1_START |0x03);
 	
-	save_mem_status_nommu(RESUME1_START + 0x04);
+	save_mem_status_nommu(RESUME1_START |0x04);
 #if 0
 	//busy_waiting();
 	disable_cache();
@@ -134,13 +134,13 @@ int main(void)
 #endif
 
 	
-	save_mem_status(RESUME1_START + 0x07);
+	save_mem_status(RESUME1_START |0x05);
 	standby_clk_init();
 	standby_twi_init(AXP_IICBUS);
-	save_mem_status(RESUME1_START + 0x08);
+	save_mem_status(RESUME1_START |0x06);
 	//busy_waiting();
 	setup_twi_env();
-	save_mem_status(RESUME1_START + 0x09);
+	save_mem_status(RESUME1_START |0x07);
 
 #ifdef POWER_OFF
 	//standby_clk_pllenable();
@@ -157,7 +157,7 @@ int main(void)
 	//busy_waiting();
 #ifdef POWER_OFF
 	mem_power_exit();
-	save_mem_status(RESUME1_START + 0xa);
+	save_mem_status(RESUME1_START |0x8);
 #endif
 	
 	/*restore module status, why masked?*/
@@ -166,16 +166,16 @@ int main(void)
 //before jump to late_resume	
 #ifdef FLUSH_TLB
 	//busy_waiting();
-	save_mem_status(RESUME1_START + 0xb);
+	save_mem_status(RESUME1_START |0x9);
 	standby_flush_tlb();
 #endif
 
 #ifdef FLUSH_ICACHE
 	//clean i cache
-	save_mem_status(RESUME1_START + 0xc);
+	save_mem_status(RESUME1_START |0xa);
 	flush_icache();
 #endif
-	save_mem_status(RESUME1_START + 0xd);
+	save_mem_status(RESUME1_START |0xb);
 	
 	//busy_waiting();
 	//before jump, invalidate data
