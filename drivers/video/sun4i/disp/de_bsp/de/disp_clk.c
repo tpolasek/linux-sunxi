@@ -985,6 +985,19 @@ __s32 BSP_disp_clk_on(__u32 type)
 {
     if(type & 1)
     {
+        {
+            image_clk_init(0);
+            image_clk_init(1);
+            scaler_clk_init(0);
+            scaler_clk_init(1);
+            lcdc_clk_init(0);
+            lcdc_clk_init(1);
+            tve_clk_init(0);
+            tve_clk_init(1);
+            hdmi_clk_init();
+            lvds_clk_init();
+        }
+        
 //AHB CLK
     	if((g_clk_status & CLK_DEFE0_AHB_ON) == CLK_DEFE0_AHB_ON)
     	{
