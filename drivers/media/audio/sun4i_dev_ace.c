@@ -53,6 +53,7 @@ __u32 ae_interrupt_sta = 0, ae_interrupt_value = 0;
 void *       ccmu_hsram;
 /*ae°¢ace°¢ceπ≤œÌ÷–∂œ∫≈*/
 #define ACE_IRQ_NO (60)
+#define AE_AUDIO_BASE 0xf1c1a100
 
 //#define ACE_DEBUG
 static int ace_dev_open(struct inode *inode, struct file *filp){   
@@ -232,7 +233,7 @@ static int acedev_mmap(struct file *filp, struct vm_area_struct *vma)
 } 
 
 static int snd_sw_ace_suspend(struct platform_device *pdev,pm_message_t state)
-{		
+{
 	suspend_acerate = clk_get_rate(ace_moduleclk);
 	clk_disable(dram_aceclk);
 	// Õ∑≈dram_aceclk ±÷”æ‰±˙
@@ -246,7 +247,7 @@ static int snd_sw_ace_suspend(struct platform_device *pdev,pm_message_t state)
 	clk_put(ahb_aceclk);
 	// Õ∑≈ace_pll5_pclk ±÷”æ‰±˙
 	clk_put(ace_pll5_pclk);
-
+	
 	/*for clk test*/
 #ifdef ACE_DEBUG
 	printk("[ace_suspend reg]\n");
@@ -260,16 +261,27 @@ static int snd_sw_ace_suspend(struct platform_device *pdev,pm_message_t state)
 }
 
 static int snd_sw_ace_resume(struct platform_device *pdev)
-{	
-	if(ref_count == 0){
-		return 0;
+{		
+	if (NORMAL_STANDBY == standby_type) {//process for normal standby
+		if (ref_count == 0) {
+			return 0;
+		}		
+	} else if(SUPER_STANDBY == standby_type) {//process for super standby		
+		ACE_Init();
+		if (ref_count == 0) {
+			return 0;
+		} else {
+			ref_count = 0; //when resume from super standby, clear the ref_count of the clk.
+		}
 	}
-	/* ace_moduleclk */   
+	
+	printk("when go to suspend, the application may not use the close API,some error clk happen, %s,line:%d\n", __func__, __LINE__);
+	/* ace_moduleclk */
 	ace_moduleclk = clk_get(NULL,"ace");
 	ace_pll5_pclk = clk_get(NULL, "sdram_pll_p");
 	if (clk_set_parent(ace_moduleclk, ace_pll5_pclk)) {
 		printk("try to set parent of ace_moduleclk to ace_pll5clk failed!\n");
-		goto out;      
+		goto out;
 	}
 	
 	if(clk_set_rate(ace_moduleclk, suspend_acerate)) {
@@ -308,7 +320,8 @@ static int snd_sw_ace_resume(struct platform_device *pdev)
 		clk_disable(dram_aceclk);
 	out1:
 		clk_disable(ace_moduleclk);
-	out:		
+	out:
+	
 	return 0;
 }
 

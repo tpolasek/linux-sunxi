@@ -266,12 +266,9 @@ static int sw_dmac_suspend(struct platform_device *dev, pm_message_t state)
 	dma_base = (void __iomem *)SW_VA_DMAC_IO_BASE;
 	
 	/*process for normal standby*/
-	if (NORMAL_STANDBY == standby_type) {
-		early_printk("[%s] normal standby enter\n", __FUNCTION__);	
+	if (NORMAL_STANDBY == standby_type) {		
 	/*process for super standby*/	
 	} else if(SUPER_STANDBY == standby_type) {
-		early_printk("[%s] super standby enter\n", __FUNCTION__);
-
 		for (channel = 0; channel < SW_DMA_CHANNELS;  channel++) {
 			cp[channel] = sw_chans[channel];
 			
@@ -297,9 +294,7 @@ static int sw_dmac_suspend(struct platform_device *dev, pm_message_t state)
 		/*save the dma enable register*/
 		regsave[0] = readl(dma_base + SW_DMA_DIRQEN);
 		/*save the dma pending status register*/
-		regsave[1] = readl(dma_base + SW_DMA_DIRQPD);	
-		
-		early_printk("[%s] enter\n", __FUNCTION__);
+		regsave[1] = readl(dma_base + SW_DMA_DIRQPD);		
 	}
 	return 0;
 }
@@ -308,23 +303,16 @@ static int sw_dmac_resume(struct platform_device *dev)
 {	
 	int channel;	
 	dma_base = (void __iomem *)SW_VA_DMAC_IO_BASE;
-	//printk("%s,line:%d\n", __func__, __LINE__);
 
-
-	if (NORMAL_STANDBY == standby_type) {
-		early_printk("[%s] normal resume enter\n", __FUNCTION__);
+	if (NORMAL_STANDBY == standby_type) {		
 		//process for normal standby
-	} else if(SUPER_STANDBY == standby_type) {		
-
-		
+	} else if(SUPER_STANDBY == standby_type) {
 		/*restore the dma enable register*/
 		writel(regsave[0], dma_base + SW_DMA_DIRQEN);
 		/*restore the dma pending status register*/	
 		writel(regsave[1], dma_base + SW_DMA_DIRQPD);		
 			
-		for (channel = 0; channel < SW_DMA_CHANNELS;  channel++) {
-			//cp[channel] = sw_chans[channel];
-			
+		for (channel = 0; channel < SW_DMA_CHANNELS;  channel++) {			
 			if ((channel & 0xff) < 8) {
 				cp[channel].regs   = dma_base + 0x100 + (channel * 0x20);
 			} else {
@@ -341,7 +329,6 @@ static int sw_dmac_resume(struct platform_device *dev)
 				sw_dma_ctrl(cp[channel].number, SW_DMAOP_START);			
 			}	
 		}
-
 	}
 	    
     return 0;
@@ -352,19 +339,19 @@ static int sw_dmac_resume(struct platform_device *dev)
 #endif /* CONFIG_PM */
 
 static struct platform_driver sw_dmac_driver = {
-        .probe          = sw_dmac_probe,
-        .remove         = __devexit_p(sw_dmac_remove),
-        .suspend        = sw_dmac_suspend,
-        .resume         = sw_dmac_resume,
-        .driver         = {
-                .name   = "sw_dmac",
-                .owner  = THIS_MODULE,
-        },
+    .probe          = sw_dmac_probe,
+    .remove         = __devexit_p(sw_dmac_remove),
+    .suspend        = sw_dmac_suspend,
+    .resume         = sw_dmac_resume,
+    .driver         = {
+            .name   = "sw_dmac",
+            .owner  = THIS_MODULE,
+    },
 };
 
 static int __init sw_dma_drvinit(void)
 {
-        platform_driver_register(&sw_dmac_driver);
+    platform_driver_register(&sw_dmac_driver);
 	return 0;
 }
 

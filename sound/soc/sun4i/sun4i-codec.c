@@ -352,8 +352,9 @@ static  int codec_init(void)
 	    return -1;
 	}	
 	
-	if(device_lr_change)
-		codec_wr_control(SUN4I_DAC_DEBUG ,  0x1, DAC_CHANNEL, 0x1);
+	if (device_lr_change) {
+		codec_wr_control(SUN4I_DAC_DEBUG ,  0x1, DAC_CHANNEL, 0x1);	
+	}
 	return 0;
 }
 
@@ -363,9 +364,9 @@ static int codec_play_open(struct snd_pcm_substream *substream)
 	codec_wr_control(SUN4I_DAC_FIFOC ,0x1, DAC_FIFO_FLUSH, 0x1);
 	//set TX FIFO send drq level
 	codec_wr_control(SUN4I_DAC_FIFOC ,0x4, TX_TRI_LEVEL, 0xf);
-	if(substream->runtime->rate > 32000){
+	if (substream->runtime->rate > 32000) {		
 		codec_wr_control(SUN4I_DAC_FIFOC ,  0x1,28, 0x0);
-	}else{
+	} else {		
 		codec_wr_control(SUN4I_DAC_FIFOC ,  0x1,28, 0x1);
 	}
 	//set TX FIFO MODE
@@ -377,6 +378,7 @@ static int codec_play_open(struct snd_pcm_substream *substream)
 	codec_wr_control(SUN4I_DAC_ACTL, 0x1, 	DACAEN_R, 0x1);
 	//enable dac to pa
 	codec_wr_control(SUN4I_DAC_ACTL, 0x1, 	DACPAS, 0x1);
+		
 	return 0;
 }
 
@@ -1267,8 +1269,7 @@ void snd_sun4i_codec_free(struct snd_card *card)
 }
 
 static void codec_resume_events(struct work_struct *work)
-{
-	printk("%s,%d\n",__func__,__LINE__);
+{	
 	codec_wr_control(SUN4I_DAC_DPC ,  0x1, DAC_EN, 0x1);
 	msleep(20);
 	//enable PA
@@ -1411,14 +1412,14 @@ static int __init sun4i_codec_probe(struct platform_device *pdev)
  */
 static int snd_sun4i_codec_suspend(struct platform_device *pdev,pm_message_t state)
 {
-	printk("[audio codec]:suspend start5000\n");
+	printk("[audio codec]:suspend start\n");
 	gpio_write_one_pin_value(gpio_pa_shutdown, 0, "audio_pa_ctrl");
-	mdelay(50);
+	msleep(50);
 	codec_wr_control(SUN4I_ADC_ACTL, 0x1, PA_ENABLE, 0x0);
-	mdelay(100);
+	msleep(100);
 	//pa mute
 	codec_wr_control(SUN4I_DAC_ACTL, 0x1, PA_MUTE, 0x0);
-	mdelay(500);
+	msleep(500);
     //disable dac analog
 	codec_wr_control(SUN4I_DAC_ACTL, 0x1, 	DACAEN_L, 0x0);
 	codec_wr_control(SUN4I_DAC_ACTL, 0x1, 	DACAEN_R, 0x0);
@@ -1444,7 +1445,40 @@ static int snd_sun4i_codec_resume(struct platform_device *pdev)
 	if (-1 == clk_enable(codec_moduleclk)){
 		printk("open codec_moduleclk failed; \n");
 	}
+	
+	/*process for normal standby*/
+	if (NORMAL_STANDBY == standby_type) {		
+	/*process for super standby*/	
+	} else if(SUPER_STANDBY == standby_type) {
+		int device_lr_change = 0;
+		enum sw_ic_ver  codec_chip_ver = sw_get_ic_ver();		
+		//set digital volume to maximum
+		if (codec_chip_ver == MAGIC_VER_A) {
+			codec_wr_control(SUN4I_DAC_DPC, 0x6, DIGITAL_VOL, 0x0);
+		}
 		
+		//set volume
+		if (codec_chip_ver == MAGIC_VER_A) {
+			codec_wr_control(SUN4I_DAC_ACTL, 0x6, VOLUME, 0x01);
+		} else if(codec_chip_ver == MAGIC_VER_B || codec_chip_ver == MAGIC_VER_C) {	
+			codec_wr_control(SUN4I_DAC_ACTL, 0x6, VOLUME, 0x3b);
+		} else {
+			printk("[audio codec] chip version is unknown!\n");
+			return -1;
+		}
+
+		codec_wr_control(SUN4I_DAC_ACTL, 0x6, VOLUME, 0x3b);
+		codec_wr_control(SUN4I_DAC_FIFOC, 0x3, DRA_LEVEL,0x3);
+		if (SCRIPT_AUDIO_OK != script_parser_fetch("audio_para", "audio_lr_change", &device_lr_change, sizeof(device_lr_change)/sizeof(int))) {
+			printk("audiocodec_adap_awxx_init: script_parser_fetch err. \n");
+			return -1;
+		}
+		
+		if (device_lr_change) {
+			codec_wr_control(SUN4I_DAC_DEBUG ,  0x1, DAC_CHANNEL, 0x1);
+		}
+	}
+	
 	queue_work(resume_work_queue, &codec_resume_work);
 	printk("[audio codec]:resume end\n");
 	return 0;	
