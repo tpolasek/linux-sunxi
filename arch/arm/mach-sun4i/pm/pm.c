@@ -131,6 +131,7 @@ static struct clk_state saved_clk_state;
 static struct tmr_state saved_tmr_state;
 static struct twi_state saved_twi_state;
 static struct gpio_state saved_gpio_state;
+static struct sram_state saved_sram_state;
 
 struct aw_mem_para mem_para_info;
 standby_type_e standby_type = NON_STANDBY;
@@ -305,6 +306,8 @@ static void aw_early_suspend(void)
 	
 	save_mem_status(EARLY_SUSPEND_START | 0x106);
 	mem_int_save(&(saved_int_state));
+
+	mem_sram_save(&(saved_sram_state));
 	
 	//backup mmu
 	//busy_waiting();
@@ -596,6 +599,7 @@ static void aw_late_resume(void)
 	mem_int_restore(&(saved_int_state));
 	
 	save_mem_status(LATE_RESUME_START |0x0b);
+	mem_sram_restore(&(saved_sram_state));
 	//busy_waiting();
 
 	//busy_waiting();

@@ -127,6 +127,7 @@ typedef struct __MEM_TWIC_REG
 
 #define INT_REG_LENGTH	(0x94>>2)
 #define GPIO_REG_LENGTH	(0x21c>>2)
+#define SRAM_REG_LENGTH	((0x94+0x4)>>2)
 
 struct int_state{
 	//__u32    IrqEnReg[3], IrqMaskReg[3], IrqSelReg[3];
@@ -153,6 +154,10 @@ struct gpio_state{
 	__u32 gpio_reg_back[GPIO_REG_LENGTH];
 };
 
+struct sram_state{
+	__u32 sram_reg_back[SRAM_REG_LENGTH];
+};
+
 //save module state
 __s32 mem_int_save(struct int_state *pint_state);
 __s32 mem_int_restore(struct int_state *pint_state);
@@ -164,6 +169,8 @@ __s32 mem_twi_save(struct twi_state *ptwi_state);
 __s32 mem_twi_restore(struct twi_state *ptwi_state);
 __s32 mem_gpio_save(struct gpio_state *pgpio_state);
 __s32 mem_gpio_restore(struct gpio_state *pgpio_state);
+__s32 mem_sram_save(struct sram_state *psram_state);
+__s32 mem_sram_restore(struct sram_state *psram_state);
 
 
 #endif /*_PM_I_H*/

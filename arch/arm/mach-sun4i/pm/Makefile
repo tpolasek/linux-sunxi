@@ -10,6 +10,7 @@ pm_tmp-y += ./mem_clk.o
 pm_tmp-y += ./mem_tmr.o
 pm_tmp-y += ./mem_twi.o
 pm_tmp-y += ./mem_gpio.o
+pm_tmp-y += ./mem_sram.o
 pm_tmp-y += ./pm_debug.o
 pm_tmp-y += ./pm.o
 pm_tmp-y += ./standby/stack.o
