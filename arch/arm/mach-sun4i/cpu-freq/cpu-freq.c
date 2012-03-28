@@ -794,7 +794,7 @@ static int sun4i_cpufreq_suspend(struct cpufreq_policy *policy)
 		mem_para_info.suspend_freq = suspend.pll;
 		printk("backup suspend_vdd = %d. freq = %u. \n", suspend_vdd, suspend_freq.pll);
 
-		ccmu_reg_backup(&CmuReg);
+		ccmu_reg_backup((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
 #else 
 		printk("do nothing. \n");
 #endif
@@ -865,8 +865,8 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 		/* restore cpu frequency configuration */
 		__set_cpufreq_target(&suspend, &suspend_freq);
 
-		ccmu_reg_restore(&CmuReg);
-		
+		ccmu_reg_restore((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
+
 #ifdef CONFIG_CPU_FREQ_DVFS	
 
 #if 0
