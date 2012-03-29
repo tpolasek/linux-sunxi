@@ -37,7 +37,7 @@
 #include <linux/sw-uart-dbg.h>
 #include "mem_cpu.h"
 
-#define CROSS_MAPPING_STANDBY
+//#define CROSS_MAPPING_STANDBY
 #define AW_PM_DBG   1
 #undef PM_DBG
 #if(AW_PM_DBG)
