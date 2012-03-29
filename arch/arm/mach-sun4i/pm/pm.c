@@ -529,11 +529,15 @@ static int verify_restore(void *src, void *dest, int count)
 */
 static void aw_late_resume(void)
 {
+
+#ifdef VERIFY_RESTORE_STATUS
+	int ret = 0;
+#endif
 	//resume procedure
 	//cpu_init();
 	/*restore pmu config*/
 	//busy_waiting();
-	int ret = 0;
+	
 	save_mem_status(LATE_RESUME_START |0x04);
 	
 	
@@ -562,7 +566,7 @@ static void aw_late_resume(void)
 	memcpy((void *)DRAM_BACKUP_BASE_ADDR, (void *)mem_dram_backup_area, sizeof(__u32)*DRAM_BACKUP_SIZE);
 	dmac_flush_range((void *)DRAM_BACKUP_BASE_ADDR, (void *)(DRAM_BACKUP_BASE_ADDR + (sizeof(u32)) * DRAM_BACKUP_SIZE -1) );
 
-#if VERIFY_RESTORE_STATUS
+#ifdef VERIFY_RESTORE_STATUS
 	if(ret = verify_restore((void *)mem_dram_backup_area2, (void *)DRAM_BACKUP_BASE_ADDR2, sizeof(__u32)*DRAM_BACKUP_SIZE2)){
 		save_mem_status(LATE_RESUME_START |0x21);
 		busy_waiting();
