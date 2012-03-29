@@ -100,13 +100,20 @@ extern void invalidate_dcache(void);
 
 int (*mem)(void) = 0;
 
+#if 0
 //pre-allocate an area for saving dram training area
 __u32 mem_dram_traning_area_back[DRAM_TRANING_SIZE];
 __u32 mem_dram_backup_area[DRAM_BACKUP_SIZE];
 __u32 mem_dram_backup_area1[DRAM_BACKUP_SIZE1];
 __u32 mem_dram_backup_area2[DRAM_BACKUP_SIZE2]; //for training area
-
 __u32 mem_dram_backup_compare_area2[DRAM_COMPARE_SIZE]; //for compare area
+#else
+static __u32 *mem_dram_traning_area_back = NULL;
+static __u32 *mem_dram_backup_area = NULL;
+static __u32 *mem_dram_backup_area1 = NULL;
+static __u32 *mem_dram_backup_area2 = NULL;
+static __u32 *mem_dram_backup_compare_area2 = NULL;
+#endif
 
 static struct map_desc mem_sram_md = { 
 	.virtual = MEM_SW_VA_SRAM_BASE,         
@@ -139,7 +146,7 @@ EXPORT_SYMBOL(standby_type);
 
 //static volatile int enter_flag = 0;
 volatile int print_flag = 0;
-
+static bool mem_allocated_flag = false;
 extern void create_mapping(struct map_desc *md);
 extern void save_mapping(unsigned long vaddr);
 extern void restore_mapping(unsigned long vaddr);
@@ -187,6 +194,16 @@ static int aw_pm_valid(suspend_state_t state)
 #else
 	standby_type = SUPER_STANDBY;
 #endif
+	}
+	
+	//allocat space for backup dram data
+	if(false == mem_allocated_flag){
+		mem_dram_traning_area_back = (__u32*)kmalloc(sizeof(__u32)*DRAM_TRANING_SIZE, GFP_KERNEL);
+		mem_dram_backup_area = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE, GFP_KERNEL);
+		mem_dram_backup_area1 = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE1, GFP_KERNEL);
+		mem_dram_backup_area2 = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE2, GFP_KERNEL);
+		mem_dram_backup_compare_area2 = (__u32*)kmalloc(sizeof(__u32)*DRAM_COMPARE_SIZE, GFP_KERNEL);	
+		mem_allocated_flag = true;	
 	}
 	
 	return 1;
@@ -816,7 +833,7 @@ void aw_pm_finish(void)
 void aw_pm_end(void)
 {
 	
-	standby_type = NON_STANDBY;
+	//standby_type = NON_STANDBY;
 	//uart_init(2, 115200);
 	save_mem_status(LATE_RESUME_START |0x10);
 	print_flag = 0;
@@ -879,7 +896,7 @@ static int __init aw_pm_init(void)
 {
     PM_DBG("aw_pm_init!\n");
     suspend_set_ops(&aw_pm_ops);
-
+	
     return 0;
 }
 
@@ -900,8 +917,16 @@ static int __init aw_pm_init(void)
 */
 static void __exit aw_pm_exit(void)
 {
-    PM_DBG("aw_pm_exit!\n");
-    suspend_set_ops(NULL);
+	PM_DBG("aw_pm_exit!\n");
+	if(true == mem_allocated_flag){
+		kfree(mem_dram_traning_area_back);
+		kfree(mem_dram_backup_area);
+		kfree(mem_dram_backup_area1);
+		kfree(mem_dram_backup_area2);
+		kfree(mem_dram_backup_compare_area2);
+		mem_allocated_flag = false;
+	}
+	suspend_set_ops(NULL);
 }
 
 module_init(aw_pm_init);
