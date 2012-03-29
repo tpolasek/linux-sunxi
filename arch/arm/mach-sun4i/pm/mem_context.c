@@ -206,52 +206,6 @@ void clear_mem_flag(void)
 	return;
 }
 
-/*
- * pfn_is_nosave - check if given pfn is in the 'nosave' section
- */
-//int pfn_is_nosave(unsigned long pfn)
-//{
-//	unsigned long nosave_begin_pfn = __pa_symbol(&__nosave_begin)
-//		>> PAGE_SHIFT;
-//	unsigned long nosave_end_pfn = PAGE_ALIGN(__pa_symbol(&__nosave_end))
-//		>> PAGE_SHIFT;
-//
-//	return (pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn);
-//}
-
-
-static void alloc_init_section(pgd_t *pgd, unsigned long addr,
-				      unsigned long end, unsigned long phys,
-				      const struct mem_type *type)
-{
-	pmd_t *pmd = pmd_offset(pgd, addr);
-
-	/*
-	 * Try a section mapping - end, addr and phys must all be aligned
-	 * to a section boundary.  Note that PMDs refer to the individual
-	 * L1 entries, whereas PGDs refer to a group of L1 entries making
-	 * up one logical pointer to an L2 table.
-	 */
-	if (((addr | end | phys) & ~SECTION_MASK) == 0) {
-		pmd_t *p = pmd;
-
-		if (addr & SECTION_SIZE)
-			pmd++;
-
-		do {
-			*pmd = __pmd(phys | type->prot_sect);
-			phys += SECTION_SIZE;
-		} while (pmd++, addr += SECTION_SIZE, addr != end);
-
-		flush_pmd_entry(p);
-	} else {
-		/*
-		 * No need to loop; pte's aren't interested in the
-		 * individual L1 entries.
-		 */
-		while(1);
-	}
-}
 
 /*
  * Create the page directory entries and any necessary
@@ -262,9 +216,8 @@ static void alloc_init_section(pgd_t *pgd, unsigned long addr,
  */
 void create_mapping(struct map_desc *md)
 {
-	unsigned long phys, addr, length, end;
+	unsigned long phys, addr, length;
 	const struct mem_type *type;
-	pgd_t *pgd;
 
 	//busy_waiting();
 	type = &mem_types[md->type];
@@ -287,18 +240,7 @@ void create_mapping(struct map_desc *md)
 	*((volatile __u32 *)(PAGE_TBL_ADDR)) = 0xc4a;
 	//actually, not need, just for test.
 	flush_tlb_all();
-#if 0
-	pgd = pgd_offset_k(addr);
-	end = addr + length;
-	do {
-		unsigned long next = pgd_addr_end(addr, end);
 
-		alloc_init_section(pgd, addr, next, phys, type);
-
-		phys += next - addr;
-		addr = next;
-	} while (pgd++, addr != end);
-#endif
 	return;
 }
 
@@ -317,18 +259,6 @@ void save_mapping(unsigned long vaddr)
 	backup_tbl[0].vaddr = addr;
 	backup_tbl[0].entry_val = *((volatile __u32 *)(PAGE_TBL_ADDR));
 	flush_tlb_all();
-#if 0
-	if (((addr) & ~SECTION_MASK) == 0) {
-		if (addr & SECTION_SIZE)
-			pmd++;
-		//busy_waiting();
-		backup_tbl[0].vaddr = addr;
-		backup_tbl[0].entry_val = *pmd;
-
-	} else {
-		while(1);
-	}	
-#endif
 
 	return;
 }
@@ -350,18 +280,6 @@ void restore_mapping(unsigned long vaddr)
 	//__cpuc_flush_kern_all();
 	*((volatile __u32 *)(PAGE_TBL_ADDR)) = backup_tbl[0].entry_val;
 	flush_tlb_all();
-#if 0
-	if (((addr) & ~SECTION_MASK) == 0) {
-		if (addr & SECTION_SIZE)
-			pmd++;
-			
-		//busy_waiting();
-		*pmd = backup_tbl[0].entry_val;
-
-	} else {
-		while(1);
-	}	
-#endif
 
 	return;
 }
