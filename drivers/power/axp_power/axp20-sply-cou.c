@@ -64,8 +64,8 @@ static int pmu_batdeten = 0;
 struct axp_adc_res adc;
 static int count_rdc = 0;
 static int count_dis = 0;
-#ifdef CONFIG_HAS_EARLYSUSPEND
 static int pmu_earlysuspend_chgcur = 0;
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static struct early_suspend	axp_early_suspend;
 int	early_suspend_flag = 0;
 #endif
