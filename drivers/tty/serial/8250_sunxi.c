@@ -40,7 +40,7 @@
 static int sw_serial[MAX_PORTS];
 
 
-#if 1
+#if 0
 #define UART_MSG(fmt...)    printk("[uart]: "fmt)
 #else
 #define UART_MSG(fmt...)	do { } while (0)
@@ -168,8 +168,8 @@ void sunxi_8250_comeback_reg(int port_num,struct uart_port *port)
 //    for (i=0; i<32; i+=4)
 //    {
 //        if (!(i&0xf))
-//            eayly_UART_MSG("\n0x%08x : ", i);
-//        eayly_UART_MSG("%08x ", readl(sport->port.membase + i));
+//            eayly_printk("\n0x%08x : ", i);
+//        eayly_printk("%08x ", readl(sport->port.membase + i));
 //    }
 //}
 
@@ -331,7 +331,7 @@ static int sw_serial_suspend(struct platform_device *dev, pm_message_t state)
 {
 	int i;
 	struct uart_port *port;
-	UART_MSG("serial8250_resume uart suspend\n");
+	UART_MSG("aw_resume uart suspend\n");
 	UART_MSG("&dev->dev is 0x%x\n",&dev->dev);
 #if 0
 		volatile __u32 loop_flag = 1;
@@ -339,7 +339,7 @@ static int sw_serial_suspend(struct platform_device *dev, pm_message_t state)
 
 #endif
 	for (i = 0; i < MAX_PORTS; i++) {
-		port=get_ports(i);
+		port=(struct uart_port *)get_ports(i);
 		if (port->type != PORT_UNKNOWN){
 		UART_MSG("type is 0x%x  PORT_UNKNOWN is 0x%x\n",port->type,PORT_UNKNOWN);
 		UART_MSG("port.dev is 0x%x  &dev->dev is 0x%x\n",port->dev,&dev->dev);
@@ -366,7 +366,7 @@ static int sw_serial_resume(struct platform_device *dev)
 {
 	struct uart_port *port;
 	int i;
-	UART_MSG("serial8250_resume SUPER_STANDBY resume\n");
+	UART_MSG("aw_resume SUPER_STANDBY resume\n");
 	UART_MSG("&dev->dev is 0x%x\n",&dev->dev);
 #if 0
 		volatile __u32 loop_flag = 1;
@@ -375,7 +375,7 @@ static int sw_serial_resume(struct platform_device *dev)
 #endif	
 
 	for (i = 0; i < MAX_PORTS; i++) {
-		port=get_ports(i);
+		port=(struct uart_port *)get_ports(i);
 		if (port->type != PORT_UNKNOWN){
 		UART_MSG("type is 0x%x  PORT_UNKNOWN is 0x%x\n",port->type,PORT_UNKNOWN);
 		UART_MSG("port.dev is 0x%x  &dev->dev is 0x%x\n",port->dev,&dev->dev);
@@ -497,6 +497,6 @@ static void __exit sw_serial_exit(void)
 MODULE_AUTHOR("Aaron.myeh<leafy.myeh@allwinnertech.com>");
 MODULE_DESCRIPTION("SUNXI 8250-compatible serial port expansion card driver");
 MODULE_LICENSE("GPL");
- 
+
 module_init(sw_serial_init);
 module_exit(sw_serial_exit);
