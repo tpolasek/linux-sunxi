@@ -127,6 +127,36 @@ static int _standby_twi_stop(void)
     return 0;
 }
 
+/*
+*********************************************************************************************************
+*                           setup_twi_env
+*
+* Description: setup_env for twi transfer.
+*
+* Arguments  : none;
+*
+* Returns    : result;
+*********************************************************************************************************
+*/
+void setup_twi_env(void)
+{
+	__ccmu_reg_list_t   *CmuReg;
+	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+	
+	/*clk module : setting clk ratio, enable gating*/
+	*(volatile __u32 *)&CmuReg->Apb1ClkDiv |= (0x2>>16 | 0x1f);
+	*(volatile __u32 *)&CmuReg->Apb1Gate |= 0x01;
+	
+
+	/*setting gpio: twi0 sda, sck */
+	*(volatile __u32 *)(SW_VA_PORTC_IO_BASE + 0x24) |= 0x22;
+
+	/*twi module: twi ctrl , bus-en bit*/
+	*(volatile __u32 *)(SW_VA_TWI0_IO_BASE + 0x0c) |= 0x40;
+	
+	return;
+
+}
 
 /*
 *********************************************************************************************************

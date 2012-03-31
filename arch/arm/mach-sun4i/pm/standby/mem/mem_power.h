@@ -19,7 +19,6 @@
 #define __MEM_POWER_H__
 #include "mem_i.h"
 
-void setup_twi_env(void);
 void mem_power_init(void);
 void mem_power_exit(void);
 void mem_power_off(void);
