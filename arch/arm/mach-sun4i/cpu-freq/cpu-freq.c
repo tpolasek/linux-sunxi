@@ -782,7 +782,7 @@ static int sun4i_cpufreq_suspend(struct cpufreq_policy *policy)
 	
 	} else if(SUPER_STANDBY == standby_type) {
 		/*process for super standby*/	
-		printk("[%s] super standby enter: \n", __FUNCTION__);
+		CPUFREQ_DBG("[%s] super standby enter: \n", __FUNCTION__);
 #if 1
 		//backup suspend freq
 		sun4i_cpufreq_getcur(&suspend_freq);
@@ -792,7 +792,7 @@ static int sun4i_cpufreq_suspend(struct cpufreq_policy *policy)
 		suspend_vdd = last_vdd;
 		mem_para_info.suspend_vdd = suspend_vdd;
 		mem_para_info.suspend_freq = suspend.pll;
-		printk("backup suspend_vdd = %d. freq = %u. \n", suspend_vdd, suspend_freq.pll);
+		CPUFREQ_DBG("backup suspend_vdd = %d. freq = %u. \n", suspend_vdd, suspend_freq.pll);
 
 		ccmu_reg_backup((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
 #else 
@@ -838,7 +838,7 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 		CPUFREQ_DBG("%s: resuming done\n", __func__);
 	} else if(SUPER_STANDBY == standby_type) {
 		/*process for super standby*/	
-		printk("[%s] super standby resume: to %u hz\n", __FUNCTION__, suspend_freq.pll);
+		CPUFREQ_DBG("[%s] super standby resume: to %u hz\n", __FUNCTION__, suspend_freq.pll);
 #if 0
 		sun4i_cpufreq_getcur(&suspend);
 
@@ -855,10 +855,10 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 		__set_cpufreq_target(&suspend, &suspend_freq);
 #endif		
 		//last_vdd = 1400;
-		cpu_cur.pll = 60000000;
+		cpu_cur.pll = 384000000;
 		cpu_cur.div.cpu_div = 1;
 		cpu_cur.div.axi_div = 1;
-		cpu_cur.div.ahb_div = 1;
+		cpu_cur.div.ahb_div = 2;
 		cpu_cur.div.apb_div = 2;
 
 		sun4i_cpufreq_getcur(&suspend);
@@ -883,7 +883,7 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 #endif
 
 #endif
-		print_flag = 1;
+		//print_flag = 1;
 		CPUFREQ_DBG("%s: resuming done\n", __func__);
 	}
 

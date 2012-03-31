@@ -115,6 +115,8 @@ static __u32 *mem_dram_backup_area2 = NULL;
 static __u32 *mem_dram_backup_compare_area2 = NULL;
 #endif
 
+extern void cpufreq_user_event_notify(void);
+
 static struct map_desc mem_sram_md = { 
 	.virtual = MEM_SW_VA_SRAM_BASE,         
 	.pfn = __phys_to_pfn(MEM_SW_PA_SRAM_BASE),         
@@ -205,7 +207,8 @@ static int aw_pm_valid(suspend_state_t state)
 		mem_dram_backup_compare_area2 = (__u32*)kmalloc(sizeof(__u32)*DRAM_COMPARE_SIZE, GFP_KERNEL);	
 		mem_allocated_flag = true;	
 	}
-	
+
+	//print_flag = 0;
 	return 1;
 }
 
@@ -242,6 +245,8 @@ int aw_pm_begin(suspend_state_t state)
 		standby_type = SUPER_STANDBY;
 #endif
 	}
+	//set freq max
+	cpufreq_user_event_notify();
 	
 	return 0;
 }
@@ -425,7 +430,7 @@ static void aw_early_suspend(void)
 	create_mapping(&mem_sram_md);
 	
 #ifdef PRE_DISABLE_MMU
-	pr_info("PRE_DISABLE_MMU %s: %s, %d. \n", __FILE__,  __func__, __LINE__);
+	//pr_info("PRE_DISABLE_MMU %s: %s, %d. \n", __FILE__,  __func__, __LINE__);
 	//busy_waiting();
 	save_mem_status(EARLY_SUSPEND_START | 0x112);
 	//jump to sram: dram enter selfresh, and power off.
@@ -671,7 +676,7 @@ static int aw_pm_enter(suspend_state_t state)
 mem_enter:
 		save_mem_status(BEFORE_EARLY_SUSPEND |0x02);
 		//busy_waiting();
-					
+		
 		if( 1 == mem_para_info.mem_flag){
 			//check the stack status
 			//busy_waiting();
@@ -749,8 +754,7 @@ mem_enter:
 		
 
 resume:
-		save_mem_status(LATE_RESUME_START);
-		//busy_waiting();
+		pr_info("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
 		save_mem_status(LATE_RESUME_START | 0x01);
 		aw_late_resume();
 		
@@ -836,7 +840,7 @@ void aw_pm_end(void)
 	//standby_type = NON_STANDBY;
 	//uart_init(2, 115200);
 	save_mem_status(LATE_RESUME_START |0x10);
-	print_flag = 0;
+	//print_flag = 0;
 	PM_DBG("aw_pm_end!\n");
 }
 
