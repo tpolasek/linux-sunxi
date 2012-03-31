@@ -13,7 +13,8 @@ SUSPEND_OBJ = suspend.o pm_debug.o common.o stack.o standby_clock.o standby_twi.
 	mem_mmu_pc.o
 
 RESUME1_OBJ = resume1.o mem_power.o pm_debug.o stack.o mem_mmu_pc.o mem_mmu_pc_asm.o standby_twi.o standby_delay.o \
-	standby_int.o standby_tmr.o common.o standby_clock.o mem_cpu.o standby_power.o dram/dram.o dram/dram_init.o
+	standby_int.o standby_tmr.o common.o standby_clock.o mem_cpu.o standby_power.o dram/dram.o dram/dram_init.o \
+	mem_tmr.o
 
 RESUME0_OBJ = resume0.o mem_power.o pm_debug.o stack.o standby_twi.o standby_delay.o \
 	common.o standby_clock.o resume1_asm.o mem_mmu_pc_asm.o mem_cpu.o
@@ -95,6 +96,7 @@ suspend:
 resume1:
 	$(CC) $(INCLUDE) $(CFLAGS) ./mem/resume/resume1.c                     -o resume1.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./mem/mem_power.c                          -o mem_power.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./mem/mem_tmr.c                            -o mem_tmr.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                            -o pm_debug.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./common.c                                 -o common.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./stack.S                                  -o stack.o

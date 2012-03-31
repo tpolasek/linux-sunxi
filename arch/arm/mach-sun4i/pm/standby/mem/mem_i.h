@@ -22,6 +22,8 @@
 #include <mach/platform.h>
 
 #include "mem_power.h"
+#include "mem_tmr.h"
+
 #include "mach/dram.h"
 #include "../../pm_config.h"
 #include "../standby_i.h"
