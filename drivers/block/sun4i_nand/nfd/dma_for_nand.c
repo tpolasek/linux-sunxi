@@ -94,7 +94,7 @@ __hdle NAND_RequestDMA  (__u32 dmatype)
 	__hdle ch;
 	
 	//printk("%s, %d. \n", __func__, __LINE__);
-	print_call_info();
+	//print_call_info();
 	
 	ch = sw_dma_request(DMACH_DNAND, &nand_dma_client, NULL);
 	if(ch < 0)
@@ -162,7 +162,7 @@ __s32  NAND_ReleaseDMA  (__hdle hDma)
 __s32 NAND_SettingDMA(__hdle hDMA, void * pArg)
 {
 	//printk("%s, %d. \n", __func__, __LINE__);
-	print_call_info();
+	//print_call_info();
 	sw_dma_setflags(hDMA, SW_DMAF_AUTOSTART);
 	return sw_dma_config(hDMA, (struct dma_hw_conf*)pArg);
 }

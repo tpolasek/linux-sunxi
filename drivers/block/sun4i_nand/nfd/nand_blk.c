@@ -280,8 +280,7 @@ static int nand_transfer(struct nand_blk_dev * dev, unsigned long start,unsigned
 	switch(cmd) {
 
 	case READ:
-	if(print_flag)
-                        printk("R %lu %lu 0x%x \n",start, nsector, (__u32)buf);
+                        //printk("R %lu %lu 0x%x \n",start, nsector, (__u32)buf);
 		dbg_inf("READ:%lu from %lu\n",nsector,start);
 
 		#ifndef NAND_CACHE_RW
@@ -303,8 +302,7 @@ static int nand_transfer(struct nand_blk_dev * dev, unsigned long start,unsigned
 
 
 	case WRITE:
-	if(print_flag)
-                        printk("W %lu %lu 0x%x \n",start, nsector, (__u32)buf);
+                        //printk("W %lu %lu 0x%x \n",start, nsector, (__u32)buf);
 		dbg_inf("WRITE:%lu from %lu\n",nsector,start);
 		#ifndef NAND_CACHE_RW
 			ret = LML_Write(start, nsector, buf);
