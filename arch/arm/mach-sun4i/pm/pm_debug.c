@@ -51,3 +51,13 @@ void save_mem_status_nommu(volatile __u32 val)
 	return;
 }
 
+#ifdef GET_CYCLE_CNT
+__u32 get_cyclecount (void)
+{
+  __u32 value;
+  // Read CCNT Register
+  asm volatile ("MRC p15, 0, %0, c9, c13, 0\t\n": "=r"(value));  
+  return value;
+}
+#endif
+

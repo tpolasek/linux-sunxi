@@ -22,6 +22,10 @@ extern char *resume1_bin_start;
 extern char *resume1_bin_end;
 static int (*resume1)(void);
 
+#ifdef GET_CYCLE_CNT
+static int start = 0;
+#endif
+
 #ifdef RETURN_FROM_RESUME0_WITH_MMU
 #define MMU_OPENED
 #define SWITCH_STACK
@@ -42,11 +46,12 @@ static int (*resume1)(void);
 #if defined(ENTER_SUPER_STANDBY) || defined(ENTER_SUPER_STANDBY_WITH_NOMMU) || defined(WATCH_DOG_RESET)
 #undef MMU_OPENED
 #define SWITCH_STACK
-#define SET_COPRO_REG
-#define FLUSH_TLB
-#define FLUSH_ICACHE
-#define INVALIDATE_DCACHE
+//#define SET_COPRO_REG
+//#define FLUSH_TLB
+//#define FLUSH_ICACHE
+//#define INVALIDATE_DCACHE
 #endif
+
 
 
 // #define no_save __attribute__ ((section(".no_save")))
@@ -116,6 +121,14 @@ int main(void)
 	//sync	
 	save_mem_status_nommu(RUSUME0_START | 0x03);
 	//busy_waiting();
+
+#ifdef GET_CYCLE_CNT	
+	//record resume0 time period in 08 reg
+	start = *(volatile __u32 *)(PERMANENT_REG_PA+ 0x08);
+	*(volatile __u32 *)(PERMANENT_REG_PA  + 0x08) = get_cyclecount() - start;
+	//record resume1 start
+	*(volatile __u32 *)(PERMANENT_REG_PA+ 0x0c) = get_cyclecount(); 
+#endif
 	//jump to sram
 	resume1();
 	/*never get here.*/

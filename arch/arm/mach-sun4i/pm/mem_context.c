@@ -239,7 +239,7 @@ void create_mapping(struct map_desc *md)
 	//__cpuc_flush_user_all();
 	*((volatile __u32 *)(PAGE_TBL_ADDR)) = 0xc4a;
 	//actually, not need, just for test.
-	flush_tlb_all();
+	//flush_tlb_all();
 
 	return;
 }
@@ -258,7 +258,7 @@ void save_mapping(unsigned long vaddr)
 	//__cpuc_flush_kern_all();
 	backup_tbl[0].vaddr = addr;
 	backup_tbl[0].entry_val = *((volatile __u32 *)(PAGE_TBL_ADDR));
-	flush_tlb_all();
+	//flush_tlb_all();
 
 	return;
 }

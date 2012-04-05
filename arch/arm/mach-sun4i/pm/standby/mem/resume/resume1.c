@@ -30,6 +30,12 @@ static struct sun4i_clk_div_t  tmp_clk_div;
 static __u32 sp_backup;
 char    *tmpPtr = (char *)&__bss_start;
 
+#ifdef GET_CYCLE_CNT
+static int start = 0;
+static int end = 0;
+#endif
+
+
 #ifdef RETURN_FROM_RESUME0_WITH_MMU
 #define MMU_OPENED
 #undef POWER_OFF
@@ -138,6 +144,16 @@ int main(void)
 	save_mem_status(RESUME1_START |0xb);
 	
 	//busy_waiting();
+#ifdef GET_CYCLE_CNT
+	//record resume1 time period in 0c reg 
+	start = *(volatile __u32 *)(PERMANENT_REG  + 0x0c);
+	end = get_cyclecount();
+	*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = end - start;
+	//*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = get_cyclecount();
+	//record start
+	*(volatile __u32 *)(PERMANENT_REG  + 0x00) = get_cyclecount();
+#endif
+
 	//before jump, invalidate data
 	jump_to_resume((void *)mem_para_info.resume_pointer, mem_para_info.saved_runtime_context_svc);
 	

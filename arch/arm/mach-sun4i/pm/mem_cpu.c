@@ -227,6 +227,8 @@ void __restore_processor_state(struct saved_context *ctxt)
 	/* CR7 */
 	asm volatile ("mcr p15, 0, %0, c7, c4, 0" : : "r"(ctxt->par));
 #if 1
+//just for test cycle counter
+#if 0
 	/* CR9 */
 	asm volatile ("mcr p15, 0, %0, c9, c12, 0" : : "r"(ctxt->pmcontrolr));
 	asm volatile ("mcr p15, 0, %0, c9, c12, 1" : : "r"(ctxt->cesr));
@@ -239,6 +241,7 @@ void __restore_processor_state(struct saved_context *ctxt)
 	asm volatile ("mcr p15, 0, %0, c9, c13, 0" : : "r"(ctxt->ccr));
 	asm volatile ("mcr p15, 0, %0, c9, c13, 1" : : "r"(ctxt->esr));
 	asm volatile ("mcr p15, 0, %0, c9, c13, 2" : : "r"(ctxt->pmcountr));
+#endif	
 	asm volatile ("mcr p15, 0, %0, c9, c14, 0" : : "r"(ctxt->uer));
 	asm volatile ("mcr p15, 0, %0, c9, c14, 1" : : "r"(ctxt->iesr));
 	asm volatile ("mcr p15, 0, %0, c9, c14, 2" : : "r"(ctxt->iecr));

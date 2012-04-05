@@ -17,6 +17,8 @@
 	#define PERMANENT_REG_PA (0x01c0123c)
 #endif
 
+//#define GET_CYCLE_CNT
+
 void busy_waiting(void);
 /*
  * notice: when resume, boot0 need to clear the flag, 
@@ -26,6 +28,10 @@ void save_mem_flag(void);
 void save_mem_status(volatile __u32 val);
 void save_mem_status_nommu(volatile __u32 val);
 __u32 get_mem_status(void);
+
+#ifdef GET_CYCLE_CNT
+__u32 get_cyclecount (void);
+#endif
 
 #endif /*_PM_DEBUG_H*/
 
