@@ -667,7 +667,7 @@ void dpm_resume(pm_message_t state)
 #ifdef GET_CYCLE_CNT
 			after_device_resume = get_cyclecount();
 			printk("dev name = %s. before_device_resume = 0x%x, after_device_resume = 0x%x \n", \
-				(*dev).init_name, before_device_resume, after_device_resume);
+				(*dev).kobj.name, before_device_resume, after_device_resume);
 #endif
 		}
 		if (!list_empty(&dev->power.entry))
