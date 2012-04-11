@@ -85,7 +85,7 @@ __s32 standby_clk_exit(void)
     *(volatile __u32 *)&CmuReg->Pll2Ctl = ccu_reg_back[1];
     *(volatile __u32 *)&CmuReg->Pll3Ctl = ccu_reg_back[2];
     *(volatile __u32 *)&CmuReg->Pll4Ctl = ccu_reg_back[3];
-    *(volatile __u32 *)&CmuReg->Pll5Ctl = ccu_reg_back[4];
+   // *(volatile __u32 *)&CmuReg->Pll5Ctl = ccu_reg_back[4];
     *(volatile __u32 *)&CmuReg->Pll6Ctl = ccu_reg_back[5];
     *(volatile __u32 *)&CmuReg->Pll7Ctl = ccu_reg_back[6];
 
@@ -180,6 +180,29 @@ __s32 standby_clk_plldisable(void)
     return 0;
 }
 
+/*
+*********************************************************************************************************
+*                                     mem_clk_plldisable
+*
+* Description: disable all pll except dram pll.
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+__s32 mem_clk_plldisable(void)
+{
+    CmuReg->Pll1Ctl.PLLEn = 0;
+    CmuReg->Pll2Ctl.PLLEn = 0;
+    CmuReg->Pll3Ctl.PLLEn = 0;
+    CmuReg->Pll4Ctl.PLLEn = 0;
+  //  CmuReg->Pll5Ctl.PLLEn = 0;
+    CmuReg->Pll6Ctl.PLLEn = 0;
+    CmuReg->Pll7Ctl.PLLEn = 0;
+
+    return 0;
+}
 
 /*
 *********************************************************************************************************
@@ -305,6 +328,17 @@ __s32 standby_clk_setdiv(struct sun4i_clk_div_t  *clk_div)
     CmuReg->SysClkDiv.AXIClkDiv = clk_div->axi_div;
     CmuReg->SysClkDiv.AHBClkDiv = clk_div->ahb_div;
     CmuReg->SysClkDiv.APB0ClkDiv = clk_div->apb_div;
+
+    return 0;
+}
+
+__s32 standby_clk_set_pll_factor(void)
+{
+
+    CmuReg->Pll1Ctl.FactorN = 10;
+    CmuReg->Pll1Ctl.FactorK = 0;
+    CmuReg->Pll1Ctl.FactorM = 0;
+    CmuReg->Pll1Ctl.PLLDivP = 2;
 
     return 0;
 }
