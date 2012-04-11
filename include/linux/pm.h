@@ -28,9 +28,13 @@
 #include <linux/timer.h>
 #include <linux/completion.h>
 
-extern int standby_type; 
-#define NORMAL_STANDY	(1)
-#define SUPER_STANDBY		(3)
+typedef enum{
+	NON_STANDBY = 0,
+	NORMAL_STANDBY = 1,
+	SUPER_STANDBY = 3
+}standby_type_e;
+extern standby_type_e standby_type; 
+
 /*
  * Callbacks for platform drivers to implement.
  */

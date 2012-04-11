@@ -306,4 +306,27 @@ static inline void print_hex_dump_bytes(const char *prefix_str, int prefix_type,
 
 #endif
 
+extern volatile int print_flag;
+
+#define  print_call_info(...) ({					\
+	do{						\
+		if(1 == print_flag){ 				\
+			pr_info("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);	\
+				}						\
+								\
+	}				\
+	while(0);})
+
+#if 0
+#define  my_print_call_info(fmt, args...) ({					\
+	do{						\
+		if(1 == print_flag){ 				\
+			pr_info("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);	\
+			my_printk(fmt, ##args);	\
+				}						\
+								\
+	}				\
+	while(0);})
+#endif 
+	
 #endif
