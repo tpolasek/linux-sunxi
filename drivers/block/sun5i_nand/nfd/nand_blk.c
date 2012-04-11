@@ -33,6 +33,7 @@
 #include "nand_private.h"
 #include <linux/wait.h>
 #include <linux/sched.h>
+#include <linux/pm.h>
 extern struct __NandStorageInfo_t  NandStorageInfo;
 extern struct __NandDriverGlobal_t NandDriverInfo;
 
@@ -79,6 +80,7 @@ struct nand_disk disk_array[MAX_PART_COUNT];
 
 #ifdef NAND_CACHE_FLUSH_EVERY_SEC
 static int after_write = 0;
+static struct nand_state nand_reg_state;
 
 struct collect_ops{
 		unsigned long timeout;
@@ -1452,6 +1454,8 @@ static int nand_suspend(struct platform_device *plat_dev, pm_message_t state)
 
 	printk("[NAND] nand_suspend \n");
 
+	if(NORMAL_STANDBY== standby_type)
+	{
 	if(!IS_IDLE){
 		for(i=0;i<10;i++){
 			msleep(200);
@@ -1470,9 +1474,45 @@ static int nand_suspend(struct platform_device *plat_dev, pm_message_t state)
 		#endif
 
 		release_nand_pio();
+		}
+	}
+	else if(SUPER_STANDBY == standby_type)
+	{
+	printk("nand super standy mode suspend\n");
+#if 1
+		if(!IS_IDLE){
+			for(i=0;i<10;i++){
+				msleep(200);
+				if(IS_IDLE)
+					break;
+			}
+		}
+		if(i==10){
+			return -EBUSY;
+		}else{
+			down(&mytr.nand_ops_mutex);
+			#ifndef USE_SYS_CLK
+				release_nand_clock();
+			#else
+				nand_module_clk_disable();
+			#endif
+
+			release_nand_pio();
+			
+		}
+#endif
+#if 1
+
+	//backup
+	for(i=0; i<(NAND_REG_LENGTH); i++){
+		nand_reg_state.nand_reg_back[i] = *(volatile u32 *)(SW_VA_NANDFLASHC_IO_BASE + i*0x04); 
+		pr_info("reg addr 0x%x : 0x%x \n", i, nand_reg_state.nand_reg_back[i]);
+	}
+#endif
+
+	}
 		printk("[NAND] nand_suspend ok \n");
 		return 0;
-	}
 }
 
 #ifdef CONFIG_SUN5I_NANDFLASH_TEST
@@ -1483,6 +1523,8 @@ static int nand_resume(struct platform_device *plat_dev)
 {
 
 	printk("[NAND] nand_resume \n");
+	if(NORMAL_STANDBY== standby_type){
+		//process for normal standby
 	set_nand_pio();
 
 	#ifndef USE_SYS_CLK
@@ -1492,6 +1534,40 @@ static int nand_resume(struct platform_device *plat_dev)
 	#endif
 
 	up(&mytr.nand_ops_mutex);
+	}else if(SUPER_STANDBY == standby_type){
+#if 1
+		int i;
+
+		printk("nand super standy mode resume \n");
+		//process for normal standby
+		set_nand_pio();
+
+		#ifndef USE_SYS_CLK
+			active_nand_clock();
+		#else
+			nand_module_clk_enable();
+		#endif
+
+		
+		//process for super standby
+		//restore reg state
+		for(i=0; i<(NAND_REG_LENGTH); i++){
+			if(0x9 == i){
+				continue;
+			}
+			*(volatile u32 *)(SW_VA_NANDFLASHC_IO_BASE + i*0x04) = nand_reg_state.nand_reg_back[i]; 
+		}
+		for(i=0; i<(NAND_REG_LENGTH); i++){
+			pr_info("reg addr 0x%x : 0x%x \n", i, *(volatile u32 *)(SW_VA_NANDFLASHC_IO_BASE + i*0x04));
+		}
+		
+
+		up(&mytr.nand_ops_mutex);
+#endif
+		
+	}
+
+	
 
 
 	return 0;
