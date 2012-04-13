@@ -1,4 +1,5 @@
 #include "dev_disp.h"
+#include "linux/pm.h"
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -498,18 +499,20 @@ static struct early_suspend backlight_early_suspend_handler =
 
 #endif
 
+static __u32 image0_reg_bak,image1_reg_bak,scaler0_reg_bak,scaler1_reg_bak;
 int disp_suspend(struct platform_device *pdev, pm_message_t state)
 {
+    printk("==disp_suspend call\n");
+
 #ifndef CONFIG_HAS_EARLYSUSPEND
-    int i = 0;
-
-    __inf("disp_suspend call\n");
-
-    for(i=0; i<2; i++)
     {
-        suspend_output_type[i] = BSP_disp_get_output_type(i);
-        if(suspend_output_type[i] == DISP_OUTPUT_TYPE_LCD)
+        int i = 0;
+
+        for(i=0; i<2; i++)
         {
+            suspend_output_type[i] = BSP_disp_get_output_type(i);
+            if(suspend_output_type[i] == DISP_OUTPUT_TYPE_LCD)
+            {
             DRV_lcd_close(i);
         }
         else if(suspend_output_type[i] == DISP_OUTPUT_TYPE_TV)
@@ -519,12 +522,30 @@ int disp_suspend(struct platform_device *pdev, pm_message_t state)
         else if(suspend_output_type[i] == DISP_OUTPUT_TYPE_VGA)
         {
             BSP_disp_vga_close(i);
-        }
-        else if(suspend_output_type[i] == DISP_OUTPUT_TYPE_HDMI)
-        {
-            BSP_disp_hdmi_close(i);
+            }
+            else if(suspend_output_type[i] == DISP_OUTPUT_TYPE_HDMI)
+            {
+                BSP_disp_hdmi_close(i);
+            }
         }
     }
+#endif
+
+     if(SUPER_STANDBY == standby_type)
+     {  
+        printk("==disp super standby enter\n");
+        
+        image0_reg_bak = (__u32)disp_malloc(0xe00 - 0x800);
+        image1_reg_bak = (__u32)disp_malloc(0xe00 - 0x800);
+        scaler0_reg_bak = (__u32)disp_malloc(0xa18);
+        scaler1_reg_bak = (__u32)disp_malloc(0xa18);
+        BSP_disp_store_image_reg(0, image0_reg_bak);
+        BSP_disp_store_image_reg(1, image1_reg_bak);
+        BSP_disp_store_scaler_reg(0, scaler0_reg_bak);
+        BSP_disp_store_scaler_reg(1, scaler1_reg_bak);
+     }
+
+#ifndef CONFIG_HAS_EARLYSUSPEND
     BSP_disp_clk_off(3);
 #else
     BSP_disp_clk_off(1);
@@ -537,16 +558,35 @@ int disp_suspend(struct platform_device *pdev, pm_message_t state)
 
 int disp_resume(struct platform_device *pdev)
 {
+    printk("==disp_resume call\n");
+
 #ifndef CONFIG_HAS_EARLYSUSPEND
-    int i = 0;
-
-    __inf("disp_resume call\n");
-
     BSP_disp_clk_on(3);
+#else
+    BSP_disp_clk_on(1);
+#endif
 
-    for(i=0; i<2; i++)
+    if(SUPER_STANDBY == standby_type)
     {
-        if(suspend_output_type[i] == DISP_OUTPUT_TYPE_LCD)
+        printk("==disp super standby exit\n");
+        
+        BSP_disp_restore_scaler_reg(0, scaler0_reg_bak);
+        BSP_disp_restore_image_reg(0, image0_reg_bak);
+        BSP_disp_restore_lcdc_reg(0);
+        BSP_disp_restore_tvec_reg(0);
+        disp_free((void*)scaler0_reg_bak);
+        disp_free((void*)image0_reg_bak);
+    }
+    
+#ifndef CONFIG_HAS_EARLYSUSPEND
+    {
+        int i = 0;
+
+        BSP_disp_clk_on(3);
+
+        for(i=0; i<2; i++)
+        {
+            if(suspend_output_type[i] == DISP_OUTPUT_TYPE_LCD)
         {
             DRV_lcd_open(i);
         }
@@ -557,14 +597,13 @@ int disp_resume(struct platform_device *pdev)
         else if(suspend_output_type[i] == DISP_OUTPUT_TYPE_VGA)
         {
             BSP_disp_vga_open(i);
-        }
-        else if(suspend_output_type[i] == DISP_OUTPUT_TYPE_HDMI)
-        {
-            BSP_disp_hdmi_open(i);
+            }
+            else if(suspend_output_type[i] == DISP_OUTPUT_TYPE_HDMI)
+            {
+                BSP_disp_hdmi_open(i);
+            }
         }
     }
-#else
-    BSP_disp_clk_on(1);
 #endif
 
     suspend_status &= (~2);
