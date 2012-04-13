@@ -1389,7 +1389,13 @@ static int snd_sun5i_codec_resume(struct platform_device *pdev)
 	if (-1 == clk_enable(codec_moduleclk)){
 		printk("open codec_moduleclk failed; \n");
 	}
-		
+	/*process for normal standby*/
+	if (NORMAL_STANDBY == standby_type) {
+	/*process for super standby*/
+	} else if(SUPER_STANDBY == standby_type) {
+		codec_wr_control(SUN5I_DAC_ACTL, 0x6, VOLUME, 0x3b);
+		codec_wr_control(SUN5I_DAC_FIFOC, 0x3, DRA_LEVEL,0x3);
+	}
 	queue_work(resume_work_queue, &codec_resume_work);
 	printk("[audio codec]:resume end\n");
 	return 0;	
