@@ -179,7 +179,14 @@ static void sun4i_keyboard_suspend(struct early_suspend *h)
         printk("enter earlysuspend: sun4i_keyboard_suspend. \n");
     #endif
     
-    writel(0,KEY_BASSADDRESS + LRADC_CTRL);
+	if (NORMAL_STANDBY == standby_type) {
+		printk("[%s] normal standby enter\n", __FUNCTION__);	
+		writel(0,KEY_BASSADDRESS + LRADC_CTRL);
+	/*process for super standby*/	
+	} else if(SUPER_STANDBY == standby_type) {
+		printk("[%s] super standby enter: do nothing. \n", __FUNCTION__);
+	}	
+    
 	return ;
 }
 
@@ -192,8 +199,21 @@ static void sun4i_keyboard_resume(struct early_suspend *h)
 #ifdef PRINT_SUSPEND_INFO
 	printk("enter laterresume: sun4i_keyboard_resume. \n");
 #endif
-
-	writel(FIRST_CONCERT_DLY|LEVELB_VOL|KEY_MODE_SELECT|LRADC_HOLD_EN|ADC_CHAN_SELECT|LRADC_SAMPLE_62HZ|LRADC_EN,KEY_BASSADDRESS + LRADC_CTRL);
+	/*process for normal standby*/
+	if (NORMAL_STANDBY == standby_type) {
+		printk("[%s] normal standby resume enter\n", __FUNCTION__);	
+		writel(FIRST_CONCERT_DLY|LEVELB_VOL|KEY_MODE_SELECT|LRADC_HOLD_EN|ADC_CHAN_SELECT|LRADC_SAMPLE_62HZ|LRADC_EN,KEY_BASSADDRESS + LRADC_CTRL);
+	/*process for super standby*/	
+	} else if(SUPER_STANDBY == standby_type) {
+		printk("[%s] super standby resume enter\n", __FUNCTION__);
+		#ifdef ONE_CHANNEL
+			writel(LRADC_ADC0_DOWN_EN|LRADC_ADC0_UP_EN|LRADC_ADC0_DATA_EN,KEY_BASSADDRESS + LRADC_INTC);	
+			writel(FIRST_CONCERT_DLY|LEVELB_VOL|KEY_MODE_SELECT|LRADC_HOLD_EN|ADC_CHAN_SELECT|LRADC_SAMPLE_62HZ|LRADC_EN,KEY_BASSADDRESS + LRADC_CTRL);
+			//writel(FIRST_CONCERT_DLY|LEVELB_VOL|KEY_MODE_SELECT|ADC_CHAN_SELECT|LRADC_SAMPLE_62HZ|LRADC_EN,KEY_BASSADDRESS + LRADC_CTRL);
+		#else
+		#endif
+	}
+	
 	return ; 
 }
 #else
