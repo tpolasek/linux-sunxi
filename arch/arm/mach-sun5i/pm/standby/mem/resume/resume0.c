@@ -47,7 +47,7 @@ static int start = 0;
 #undef MMU_OPENED
 #define SWITCH_STACK
 //#define SET_COPRO_REG
-//#define FLUSH_TLB
+#define FLUSH_TLB
 //#define FLUSH_ICACHE
 //#define INVALIDATE_DCACHE
 #endif
