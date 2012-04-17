@@ -50,7 +50,9 @@ __s32 standby_twi_init(int group)
     TwiCtlRegBak = 0x80&twi_reg->reg_ctl;/* backup INT_EN;no need for BUS_EN(0xc0)  */
     twi_reg->reg_clkr = (2<<3)|3;
     twi_reg->reg_reset |= 0x1;
-
+	
+	while(twi_reg->reg_reset&0x1);
+	
     return 0;
 }
 
