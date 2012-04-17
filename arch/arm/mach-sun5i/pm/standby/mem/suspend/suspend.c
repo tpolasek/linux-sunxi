@@ -124,8 +124,11 @@ void set_ttbr0(void);
 int main(void)
 {
 	char    *tmpPtr = (char *)&__bss_start;
-	static __u32 sp_backup;
-	__s32 dram_size;
+	static __u32 sp_backup = 0;
+	__s32 dram_size = 0;
+#ifdef GET_CYCLE_CNT
+	__u32 start = 0;
+#endif
 
 	/* save stack pointer registger, switch stack to sram */
 	//mark it, just for test 
@@ -212,12 +215,19 @@ int main(void)
 	/* dram enter self-refresh */
 	//busy_waiting();
 #ifdef DRAM_ENTER_SELFRESH
+#ifdef GET_CYCLE_CNT
+	start = get_cyclecount();
+#endif
 	dram_power_save_process();
-	save_mem_status(SUSPEND_START |0x0c);
+	//save_mem_status(SUSPEND_START |0x0c);
 	
 	/* gating off dram clock */
 	//busy_waiting();
     	standby_clk_dramgating(0);
+#ifdef GET_CYCLE_CNT
+	start = get_cyclecount() - start;
+	//busy_waiting();
+#endif
 	save_mem_status(SUSPEND_START |0x0d);
 #endif
 
@@ -332,10 +342,13 @@ int main(void)
 	//notice: never get here, so need watchdog, not busy_waiting.
 #ifndef DIRECT_RETRUN
 {
+
+#ifdef CONFIG_ARCH_SUN4I
 #if 0
 	#define CPU_CONFIG_REG (0X01C20D3C)
 	__u32 val = *(volatile __u32 *)(CPU_CONFIG_REG);
 	*(volatile __u32 *)(PERMANENT_REG_PA  + 0x04) = val;
+#endif
 #endif
 	busy_waiting();
 }		

@@ -36,6 +36,7 @@ __u32 get_mem_status(void);
 
 #ifdef GET_CYCLE_CNT
 __u32 get_cyclecount (void);
+void init_perfcounters (__u32 do_reset, __u32 enable_divider);
 #endif
 
 #endif /*_PM_DEBUG_H*/

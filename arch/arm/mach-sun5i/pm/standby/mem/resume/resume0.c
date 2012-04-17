@@ -58,6 +58,12 @@ static int start = 0;
 int main(void)
 {
 	//stack?
+#if 0
+	volatile __u32 loop_flag = 1;
+	while(1 == loop_flag);
+	
+#endif
+
 #ifdef SWITCH_STACK
 #ifdef MMU_OPENED
 	save_sp();
@@ -123,12 +129,14 @@ int main(void)
 	save_mem_status_nommu(RUSUME0_START | 0x03);
 	//busy_waiting();
 
-#ifdef GET_CYCLE_CNT	
+#ifdef GET_CYCLE_CNT
+#ifdef CONFIG_ARCH_SUN4I	
 	//record resume0 time period in 08 reg
 	start = *(volatile __u32 *)(PERMANENT_REG_PA+ 0x08);
 	*(volatile __u32 *)(PERMANENT_REG_PA  + 0x08) = get_cyclecount() - start;
 	//record resume1 start
 	*(volatile __u32 *)(PERMANENT_REG_PA+ 0x0c) = get_cyclecount(); 
+#endif
 #endif
 	//jump to sram
 	resume1();

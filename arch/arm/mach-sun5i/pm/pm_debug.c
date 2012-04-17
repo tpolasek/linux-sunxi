@@ -59,5 +59,36 @@ __u32 get_cyclecount (void)
   asm volatile ("MRC p15, 0, %0, c9, c13, 0\t\n": "=r"(value));  
   return value;
 }
+
+void init_perfcounters (__u32 do_reset, __u32 enable_divider)
+{
+	// in general enable all counters (including cycle counter)
+	__u32 value = 1;
+
+	// peform reset:
+	if (do_reset)
+	{
+		value |= 2;     // reset all counters to zero.
+		value |= 4;     // reset cycle counter to zero.
+	}
+
+	if (enable_divider)
+		value |= 8;     // enable "by 64" divider for CCNT.
+
+	value |= 16;
+
+	// program the performance-counter control-register:
+	asm volatile ("mcr p15, 0, %0, c9, c12, 0" : : "r"(value));
+
+	// enable all counters:
+	value = 0x8000000f;
+	asm volatile ("mcr p15, 0, %0, c9, c12, 1" : : "r"(value));
+
+	// clear overflows:
+	asm volatile ("MCR p15, 0, %0, c9, c12, 3" : : "r"(value));
+
+	return;
+}
+
 #endif
 

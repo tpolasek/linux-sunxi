@@ -145,6 +145,7 @@ int main(void)
 	
 	//busy_waiting();
 #ifdef GET_CYCLE_CNT
+#ifdef CONFIG_ARCH_SUN4I
 	//record resume1 time period in 0c reg 
 	start = *(volatile __u32 *)(PERMANENT_REG  + 0x0c);
 	end = get_cyclecount();
@@ -152,6 +153,7 @@ int main(void)
 	//*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = get_cyclecount();
 	//record start
 	*(volatile __u32 *)(PERMANENT_REG  + 0x00) = get_cyclecount();
+#endif
 #endif
 
 	//before jump, invalidate data

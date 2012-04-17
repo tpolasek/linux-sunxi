@@ -271,7 +271,12 @@ int aw_pm_begin(suspend_state_t state)
 	}
 	//set freq max
 	cpufreq_user_event_notify();
-	
+
+#ifdef GET_CYCLE_CNT
+	// init counters:
+	init_perfcounters (1, 0);
+#endif
+
 	return 0;
 }
 
