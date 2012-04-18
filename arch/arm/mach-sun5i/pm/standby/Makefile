@@ -32,7 +32,7 @@ RESUME0_LD_FILE = resume0.xn
 
 CC = $(CROSS_COMPILE)gcc
 
-CFLAGS = -O0 -g -march=armv7-a -fno-unwind-tables -fno-asynchronous-unwind-tables -mlittle-endian  -c
+CFLAGS = -Os -g -march=armv7-a -fno-unwind-tables -fno-asynchronous-unwind-tables -mlittle-endian  -c
 
 all: standby suspend resume1 resume0
 
