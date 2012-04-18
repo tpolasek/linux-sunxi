@@ -28,7 +28,8 @@ static __u32 dcdc2, dcdc3;
 static struct sun4i_clk_div_t  clk_div;
 static struct sun4i_clk_div_t  tmp_clk_div;
 static __u32 sp_backup;
-char    *tmpPtr = (char *)&__bss_start;
+static char    *tmpPtr = (char *)&__bss_start;
+static __u32 status = 0; 
 
 #ifdef GET_CYCLE_CNT
 static int start = 0;
@@ -62,14 +63,17 @@ static int end = 0;
 
 int main(void)
 {
+	/* clear bss segment */
+	do{*tmpPtr ++ = 0;}while(tmpPtr <= (char *)&__bss_end);
+	
 #ifdef MMU_OPENED
 	save_mem_status(RESUME1_START);
 #else
-	save_mem_status_nommu(RESUME1_START);
+	//busy_waiting();
+	//save_mem_status_nommu(RESUME1_START);
+	status = save_sun5i_mem_status_nommu(RESUME1_START);
 #endif
 
-	/* clear bss segment */
-	do{*tmpPtr ++ = 0;}while(tmpPtr <= (char *)&__bss_end);
 	
 #ifdef MMU_OPENED
 	save_mem_status(RESUME1_START |0x02);
@@ -78,13 +82,18 @@ int main(void)
 #else
 	standby_preload_tlb_nommu();
 	/*switch stack*/
-	save_mem_status_nommu(RESUME1_START |0x02);
+	//save_mem_status_nommu(RESUME1_START |0x02);
+	save_sun5i_mem_status_nommu(RESUME1_START |0x02);
 	//move other storage to sram: saved_resume_pointer(virtual addr), saved_mmu_state
 	standby_memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1_PA), sizeof(mem_para_info));
 	/*restore mmu configuration*/
-	save_mem_status_nommu(RESUME1_START |0x03);
+	//save_mem_status_nommu(RESUME1_START |0x03);
+	save_sun5i_mem_status_nommu(RESUME1_START |0x03);
 	
+	//busy_waiting();
 	restore_mmu_state(&(mem_para_info.saved_mmu_state));
+	disable_dcache();
+	save_sun5i_mem_status(RESUME1_START |0x13);
 
 #endif
 
@@ -94,25 +103,30 @@ int main(void)
 	standby_flush_tlb();
 	standby_preload_tlb();
 #endif
-
+	save_sun5i_mem_status(RESUME1_START |0x04);
 #ifdef FLUSH_ICACHE
 	//clean i cache
 	flush_icache();
 #endif
 	
-	save_mem_status(RESUME1_START |0x05);
+	//save_mem_status(RESUME1_START |0x05);
+	save_sun5i_mem_status(RESUME1_START |0x05);
 	standby_twi_init(AXP_IICBUS);
-	save_mem_status(RESUME1_START |0x06);
+	//save_mem_status(RESUME1_START |0x06);
+	save_sun5i_mem_status(RESUME1_START |0x06);
 	//twi freq?
 	setup_twi_env();
-	save_mem_status(RESUME1_START |0x07);
+	//save_mem_status(RESUME1_START |0x07);
+	save_sun5i_mem_status(RESUME1_START |0x07);
 
 #ifdef POWER_OFF
+#if 1
 	dcdc2 = mem_para_info.suspend_vdd;
-	dcdc3 = 1250;
+	dcdc3 = 1200;
 	/* restore voltage for exit standby */
 	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
 	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
+#endif
 	//busy_waiting();
 #endif
 
@@ -120,7 +134,8 @@ int main(void)
 	//busy_waiting();
 #ifdef POWER_OFF
 	mem_power_exit();
-	save_mem_status(RESUME1_START |0x8);
+	//save_mem_status(RESUME1_START |0x8);
+	save_sun5i_mem_status(RESUME1_START |0x8);
 	/* disable watch-dog: coresponding with boot0 */
 	mem_tmr_init();
 	mem_tmr_disable_watchdog();
@@ -132,17 +147,21 @@ int main(void)
 //before jump to late_resume	
 #ifdef FLUSH_TLB
 	//busy_waiting();
-	save_mem_status(RESUME1_START |0x9);
+	//save_mem_status(RESUME1_START |0x9);
+	save_sun5i_mem_status(RESUME1_START |0x9);
 	standby_flush_tlb();
 #endif
 
 #ifdef FLUSH_ICACHE
 	//clean i cache
-	save_mem_status(RESUME1_START |0xa);
+	//save_mem_status(RESUME1_START |0xa);
+	save_sun5i_mem_status(RESUME1_START |0xa);
 	flush_icache();
 #endif
-	save_mem_status(RESUME1_START |0xb);
+	//save_mem_status(RESUME1_START |0xb);
 	
+	save_sun5i_mem_status(RESUME1_START |0xb);
+	save_sun5i_mem_status(status);
 	//busy_waiting();
 #ifdef GET_CYCLE_CNT
 #ifdef CONFIG_ARCH_SUN4I

@@ -51,6 +51,23 @@ void save_mem_status_nommu(volatile __u32 val)
 	return;
 }
 
+__u32 save_sun5i_mem_status(volatile __u32 val)
+{
+	__u32 tmp;
+	tmp = *(volatile __u32 *)(SUN5I_STATUS_REG);
+	*(volatile __u32 *)(SUN5I_STATUS_REG) = val;
+	return tmp;
+}
+
+__u32 save_sun5i_mem_status_nommu(volatile __u32 val)
+{
+	__u32 tmp;
+	tmp = *(volatile __u32 *)(SUN5I_STATUS_REG_PA);
+	*(volatile __u32 *)(SUN5I_STATUS_REG_PA) = val;
+	return tmp;
+}
+
+
 #ifdef GET_CYCLE_CNT
 __u32 get_cyclecount (void)
 {

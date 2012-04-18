@@ -1,6 +1,7 @@
 #ifndef _PM_DEBUG_H
 #define _PM_DEBUG_H
 
+#include "pm_config.h"
 /*
  * Copyright (c) 2011-2015 yanggq.young@allwinnertech.com
  *
@@ -19,6 +20,10 @@
 	#define PERMANENT_REG_PA (0x01c0123c)
 	#define STATUS_REG (0xc0200000)
 	#define STATUS_REG_PA (0x40200000)
+	//notice: the address is located in the last word of (DRAM_BACKUP_BASE_ADDR + DRAM_BACKUP_SIZE)
+	#define SUN5I_STATUS_REG (DRAM_BACKUP_BASE_ADDR + (DRAM_BACKUP_SIZE<<2) -0x4)
+	#define SUN5I_STATUS_REG_PA (DRAM_BACKUP_BASE_ADDR_PA + (DRAM_BACKUP_SIZE<<2) -0x4)
+	
 #endif
 
 
@@ -33,6 +38,8 @@ void save_mem_flag(void);
 void save_mem_status(volatile __u32 val);
 void save_mem_status_nommu(volatile __u32 val);
 __u32 get_mem_status(void);
+__u32 save_sun5i_mem_status_nommu(volatile __u32 val);
+__u32 save_sun5i_mem_status(volatile __u32 val);
 
 #ifdef GET_CYCLE_CNT
 __u32 get_cyclecount (void);
