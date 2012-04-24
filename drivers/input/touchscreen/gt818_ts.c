@@ -41,7 +41,7 @@
 #include "ctp_platform_ops.h"
 
 #define FOR_TSLIB_TEST
-//#define PRINT_INT_INFO
+#define PRINT_INT_INFO
 //#define PRINT_POINT_INFO
 #define PRINT_SUSPEND_INFO
 #define TEST_I2C_TRANSFER
@@ -172,7 +172,7 @@ static void ctp_clear_penirq(void)
 	//writel(reg_val,gpio_addr + PIO_INT_STAT_OFFSET);
 	//writel(reg_val&(1<<(CTP_IRQ_NO)),gpio_addr + PIO_INT_STAT_OFFSET);
 	if((reg_val = (reg_val&(1<<(CTP_IRQ_NO))))){
-		print_int_info("%s: %d. ==CTP_IRQ_NO=\n", __func__, __LINE__);         
+		print_int_info("%s: %d. ==CTP_IRQ_NO: %d=\n", __func__, __LINE__, CTP_IRQ_NO);         
 		writel(reg_val,gpio_addr + PIO_INT_STAT_OFFSET);
 	}
 	return;
@@ -1005,10 +1005,10 @@ DATA_NO_READY:
 XFER_ERROR:
 	i2c_end_cmd(ts);
 	if(ts->use_irq){
-//	    enable_irq(ts->client->irq);
-        reg_val = readl(gpio_addr + PIO_INT_CTRL_OFFSET);
-        reg_val |=(1<<CTP_IRQ_NO);
-        writel(reg_val,gpio_addr + PIO_INT_CTRL_OFFSET);
+		//enable_irq(ts->client->irq);
+		reg_val = readl(gpio_addr + PIO_INT_CTRL_OFFSET);
+		reg_val |=(1<<CTP_IRQ_NO);
+		writel(reg_val,gpio_addr + PIO_INT_CTRL_OFFSET);
 	}
 }
 
@@ -1031,14 +1031,20 @@ static irqreturn_t goodix_ts_irq_handler(int irq, void *dev_id)
 	struct goodix_ts_data *ts = dev_id;
 
 	//printk(KERN_INFO"-------------------ts_irq_handler------------------\n");
+	//waring: not proper for shared mode irq.
 	//disable_irq_nosync(ts->client->irq);
+	//disable CTP_IRQ_NO irq
+	reg_val = readl(gpio_addr + PIO_INT_CTRL_OFFSET);
+	reg_val &=~(1<<CTP_IRQ_NO);
+	writel(reg_val,gpio_addr + PIO_INT_CTRL_OFFSET);	
+	
 	reg_val = readl(gpio_addr + PIO_INT_STAT_OFFSET);
      
 	if(reg_val&(1<<(CTP_IRQ_NO)))
 	{	
-		print_int_info("%s: %d. ==CTP_IRQ_NO=\n", __func__, __LINE__);
+		print_int_info("%s: %d. ==CTP_IRQ_NO: %d=\n", __func__, __LINE__, CTP_IRQ_NO);
 		//clear the CTP_IRQ_NO interrupt pending
-		writel(reg_val&(1<<(CTP_IRQ_NO)),gpio_addr + PIO_INT_STAT_OFFSET);
+		writel(reg_val&(1<<(CTP_IRQ_NO)), gpio_addr + PIO_INT_STAT_OFFSET);
 		queue_work(goodix_wq, &ts->work);
 	}
 	else
@@ -1351,44 +1357,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	}
 	ts->bad_data = 0;
 //	finger_list.length = 0;
-#ifdef INT_PORT	
-	client->irq=INT_PORT;		//If not defined in client
-	if (client->irq)
-	{
-		#if INT_TRIGGER==1
-			#define GT801_PLUS_IRQ_TYPE IRQ_TYPE_EDGE_RISING
-		#elif INT_TRIGGER==0
-			#define GT801_PLUS_IRQ_TYPE IRQ_TYPE_EDGE_FALLING
-	//	#elif INT_TRIGGER==2
-	//		#define GT801_PLUS_IRQ_TYPE IRQ_TYPE_LEVEL_LOW
-	//	#elif INT_TRIGGER==3
-	//		#define GT801_PLUS_IRQ_TYPE IRQ_TYPE_LEVEL_HIGH
-		#endif
-		    //pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
-		err = ctp_ops.set_irq_mode("ctp_para", "ctp_int_port", CTP_IRQ_MODE);
-		if(0 != err){
-			printk("%s:ctp_ops.set_irq_mode err. \n", __func__);
-			goto exit_set_irq_mode;
-		}
 
-		err =  request_irq(SW_INT_IRQNO_PIO, goodix_ts_irq_handler, GT801_PLUS_IRQ_TYPE|IRQF_SHARED, client->name, ts);
-		if (err < 0) {
-			pr_info( "goodix_probe: request irq failed\n");
-			goto exit_irq_request_failed;
-		}
-		ts->use_irq = 1;
-		printk("======Request EIRQ succesd!==== \n");
-		dev_dbg(&client->dev,"Reques EIRQ %d succesd on GPIO:%d\n",INT_PORT,INT_PORT);
-
-	}
-#endif	
-	
-	if (!ts->use_irq) 
-	{
-		hrtimer_init(&ts->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-		ts->timer.function = goodix_ts_timer_func;
-		hrtimer_start(&ts->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
-	}
 
     	//pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
 	goodix_read_version(ts);
@@ -1437,6 +1406,45 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	}
 #endif
 
+#ifdef INT_PORT	
+	client->irq=INT_PORT;		//If not defined in client
+	if (client->irq)
+	{
+		#if INT_TRIGGER==1
+			#define GT801_PLUS_IRQ_TYPE IRQ_TYPE_EDGE_RISING
+		#elif INT_TRIGGER==0
+			#define GT801_PLUS_IRQ_TYPE IRQ_TYPE_EDGE_FALLING
+	//	#elif INT_TRIGGER==2
+	//		#define GT801_PLUS_IRQ_TYPE IRQ_TYPE_LEVEL_LOW
+	//	#elif INT_TRIGGER==3
+	//		#define GT801_PLUS_IRQ_TYPE IRQ_TYPE_LEVEL_HIGH
+		#endif
+		    //pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
+		err = ctp_ops.set_irq_mode("ctp_para", "ctp_int_port", CTP_IRQ_MODE);
+		if(0 != err){
+			printk("%s:ctp_ops.set_irq_mode err. \n", __func__);
+			goto exit_set_irq_mode;
+		}
+
+		err =  request_irq(SW_INT_IRQNO_PIO, goodix_ts_irq_handler, GT801_PLUS_IRQ_TYPE|IRQF_SHARED, client->name, ts);
+		if (err < 0) {
+			pr_info( "goodix_probe: request irq failed\n");
+			goto exit_irq_request_failed;
+		}
+		ts->use_irq = 1;
+		printk("======Request EIRQ succesd!==== \n");
+		dev_dbg(&client->dev,"Reques EIRQ %d succesd on GPIO:%d\n",INT_PORT,INT_PORT);
+
+	}
+		
+	if (!ts->use_irq) 
+	{
+		hrtimer_init(&ts->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		ts->timer.function = goodix_ts_timer_func;
+		hrtimer_start(&ts->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
+	}
+#endif	
+
 	i2c_end_cmd(ts);
 	 //pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
 	dev_info(&client->dev,"Start %s in %s mode\n", 
@@ -1449,7 +1457,7 @@ err_init_godix_ts:
 	if(ts->use_irq)
 	{
 		ts->use_irq = 0;
-//		free_irq(client->irq,ts);
+		free_irq(client->irq,ts);
 	#ifdef INT_PORT	
 		//gpio_direction_input(INT_PORT);
 		//gpio_free(INT_PORT);
@@ -1501,7 +1509,7 @@ static int goodix_ts_remove(struct i2c_client *client)
  		gpio_set_one_pin_io_status(gpio_int_hdle, 0, "ctp_int_port");
 
 	#endif	
-//		free_irq(client->irq, ts);
+		free_irq(client->irq, ts);
 	}	
 	else if(ts)
 		hrtimer_cancel(&ts->timer);
@@ -1520,6 +1528,15 @@ static int goodix_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 	int ret;
 	struct goodix_ts_data *ts = i2c_get_clientdata(client);
 
+	disable_irq(client->irq);
+	ret = cancel_work_sync(&ts->work);
+	if(ret && ts->use_irq){
+		//enable_irq(client->irq);
+		//reg_val = readl(gpio_addr + PIO_INT_CTRL_OFFSET);
+		//reg_val |=(1<<CTP_IRQ_NO);
+		//writel(reg_val,gpio_addr + PIO_INT_CTRL_OFFSET);	
+	}
+	
 	if (ts->use_irq){
 		//disable_irq(client->irq);
 		reg_val = readl(gpio_addr + PIO_INT_CTRL_OFFSET);
@@ -1527,10 +1544,10 @@ static int goodix_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 		writel(reg_val,gpio_addr + PIO_INT_CTRL_OFFSET);	
 	}	
 	else
-		hrtimer_cancel(&ts->timer);
-	//ret = cancel_work_sync(&ts->work);
-	//if(ret && ts->use_irq)	
-		//enable_irq(client->irq);
+		hrtimer_cancel(&ts->timer);	
+
+	enable_irq(client->irq);
+	
 	if (ts->power) {	/* ±ØÐëÔÚÈ¡ÏûworkºóÔÙÖ´ÐÐ£¬±ÜÃâÒòGPIOµ¼ÖÂ×ø±ê´¦Àí´úÂëËÀÑ­»·	*/
 		ret = ts->power(ts, 0);
 		if (ret < 0)
@@ -1559,9 +1576,9 @@ static int goodix_ts_resume(struct i2c_client *client)
 
 	if (ts->use_irq){
 		//enable_irq(client->irq);
-		reg_val = readl(gpio_addr + PIO_INT_CTRL_OFFSET);
-		reg_val |=(1<<CTP_IRQ_NO);
-		writel(reg_val,gpio_addr + PIO_INT_CTRL_OFFSET);	
+		//reg_val = readl(gpio_addr + PIO_INT_CTRL_OFFSET);
+		//reg_val |=(1<<CTP_IRQ_NO);
+		//writel(reg_val,gpio_addr + PIO_INT_CTRL_OFFSET);	
 	}	
 	else
 		hrtimer_start(&ts->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
