@@ -218,6 +218,37 @@ static void axp_charger_update_state(struct axp_charger *charger)
  	charger->charge_on = ((val[0] >> 7) & 0x01);
 }
 
+
+/*set CPU-VDD,AVCC,DRAM-VDD,LDO3,LDO4 power up first ,after 4ms Core_VDD,VCC-3V3 power up*/
+static void axp_set_startup_sequence(struct axp_charger *charger)
+{
+	axp_write(charger->master,0xF4,0x06); //open REGF2/5 Lock
+	axp_write(charger->master,0xF2,0x04); //open REG10x Lock
+	axp_write(charger->master,0xFF,0x01);
+	axp_write(charger->master,0x03,0x02); //set EXTEN power up at step 2 and 4ms step by step
+					     // highest 2bit depend the startup time,00-1ms,01-4ms,10-16ms,11-32ms
+	axp_write(charger->master,0x04,0x08); //set Core-VDD power up at step 2
+	axp_write(charger->master,0xFF,0x00);
+	axp_write(charger->master,0xF4,0x00); //Close all Lock
+	if(axp_debug){
+		uint8_t val;
+		axp_reads(charger->master,0xF4,1,&val);
+		DBG_PSY_MSG("axp209 REGF4  = %x\n",val);
+		axp_reads(charger->master,0xF2,1,&val);
+		DBG_PSY_MSG("axp209 REGF2  = %x\n",val);
+		axp_write(charger->master,0xFF,0x01);
+		axp_reads(charger->master,0xF2,1,&val);
+		DBG_PSY_MSG("first axp209 REGFF  = %x\n",val);
+		axp_reads(charger->master,0x03,1,&val);
+		DBG_PSY_MSG("axp209 REG103  = %x\n",val);
+		axp_reads(charger->master,0x04,1,&val);
+		DBG_PSY_MSG("axp209 REG104  = %x\n",val);
+		axp_write(charger->master,0xFF,0x01);
+		axp_reads(charger->master,0xF2,1,&val);
+		DBG_PSY_MSG("after axp209 REGFF  = %x\n",val);
+		}
+}
+
 static void axp_charger_update(struct axp_charger *charger)
 {
   uint16_t tmp;
@@ -1686,7 +1717,7 @@ static int axp_battery_probe(struct platform_device *pdev)
   charger->battery_info         = pdata->battery_info;
   charger->disvbat			= 0;
   charger->disibat			= 0;
-
+axp_set_startup_sequence(charger);
   ret = axp_battery_first_init(charger);
   if (ret)
     goto err_charger_init;
