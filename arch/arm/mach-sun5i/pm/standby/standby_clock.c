@@ -335,10 +335,10 @@ __s32 standby_clk_setdiv(struct sun4i_clk_div_t  *clk_div)
 __s32 standby_clk_set_pll_factor(void)
 {
 
-    CmuReg->Pll1Ctl.FactorN = 10;
+    CmuReg->Pll1Ctl.FactorN = 16;
     CmuReg->Pll1Ctl.FactorK = 0;
     CmuReg->Pll1Ctl.FactorM = 0;
-    CmuReg->Pll1Ctl.PLLDivP = 2;
+    CmuReg->Pll1Ctl.PLLDivP = 0;
 
     return 0;
 }
