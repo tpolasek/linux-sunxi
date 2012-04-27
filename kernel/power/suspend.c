@@ -187,7 +187,7 @@ static int suspend_enter(suspend_state_t state)
 		}
 #ifdef GET_CYCLE_CNT
 		before_syscore_resume = get_cyclecount();
-		printk("before_syscore_resume = 0x%x. \n", before_syscore_resume);
+		printk("#before_syscore_resume# = #%x#. \n", before_syscore_resume);
 #endif
 		syscore_resume();
 	}
@@ -204,7 +204,7 @@ static int suspend_enter(suspend_state_t state)
 
 #ifdef GET_CYCLE_CNT
 	before_dpm_resume_noirq = get_cyclecount();
-	printk("before_dpm_resume_noirq = 0x%x. \n", before_dpm_resume_noirq);
+	printk("#before_dpm_resume_noirq# = #%x#. \n", before_dpm_resume_noirq);
 #endif
 	dpm_resume_noirq(PMSG_RESUME);
 
@@ -252,7 +252,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 	suspend_test_start();
 #ifdef GET_CYCLE_CNT
 	before_dpm_resume_end = get_cyclecount();
-	printk("before_dpm_resume_end = 0x%x. \n", before_dpm_resume_end);
+	printk("#before_dpm_resume_end# = #%x#. \n", before_dpm_resume_end);
 #endif
 	dpm_resume_end(PMSG_RESUME);
 	save_mem_status(BEFORE_EARLY_SUSPEND | 0x40);
@@ -260,7 +260,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 
 #ifdef GET_CYCLE_CNT
 	before_test_finish = get_cyclecount();
-	printk("before_test_finish = 0x%x. \n", before_test_finish);
+	printk("#before_test_finish# = #%x#. \n", before_test_finish);
 #endif
 	suspend_test_finish("resume devices");
 	//resume_console();

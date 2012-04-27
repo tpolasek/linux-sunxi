@@ -668,7 +668,7 @@ void dpm_resume(pm_message_t state)
 			mutex_lock(&dpm_list_mtx);
 #ifdef GET_CYCLE_CNT
 			after_device_resume = get_cyclecount();
-			printk("dev name = %s. before_device_resume = 0x%x, after_device_resume = 0x%x \n", \
+			printk("#dev name# = #%s#. #before_device_resume# = #%x#, #after_device_resume# = #%x# \n", \
 				(*dev).kobj.name, before_device_resume, after_device_resume);
 #endif
 		}
@@ -754,13 +754,13 @@ void dpm_resume_end(pm_message_t state)
 {
 #ifdef GET_CYCLE_CNT
 	before_dpm_resume = get_cyclecount();
-	printk("before_dpm_resume = 0x%x. \n", before_dpm_resume);
+	printk("#before_dpm_resume# = #%x#. \n", before_dpm_resume);
 #endif
 	dpm_resume(state);
 
 #ifdef GET_CYCLE_CNT	
 	before_dpm_complete = get_cyclecount();
-	printk("before_dpm_complete = 0x%x. \n", before_dpm_complete);
+	printk("#before_dpm_complete# = #%x#. \n", before_dpm_complete);
 #endif
 	dpm_complete(state);
 }
@@ -1033,7 +1033,7 @@ int dpm_suspend(pm_message_t state)
 		
 #ifdef GET_CYCLE_CNT
 			after_device_suspend = get_cyclecount();
-			printk("dev name = %s. before_device_suspend = 0x%x, after_device_suspend = 0x%x \n", \
+			printk("#dev name# = #%s#. #before_device_suspend# = #%x#, #after_device_suspend# = #%x# \n", \
 				(*dev).kobj.name, before_device_suspend, after_device_suspend);
 #endif
 		if (!list_empty(&dev->power.entry))
