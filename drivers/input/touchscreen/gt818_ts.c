@@ -41,9 +41,9 @@
 #include "ctp_platform_ops.h"
 
 #define FOR_TSLIB_TEST
-//#define PRINT_INT_INFO
+#define PRINT_INT_INFO
 //#define PRINT_POINT_INFO
-//#define PRINT_SUSPEND_INFO
+#define PRINT_SUSPEND_INFO
 #define TEST_I2C_TRANSFER
 //#define DEBUG
 
@@ -772,7 +772,7 @@ static int goodix_init_panel(struct goodix_ts_data *ts)
 			
             config_info_d[57] = (config_info_d[57]&0xf7)|(INT_TRIGGER<<3);
             //pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
-            msleep(1500);
+            //msleep(1500);
             ret=i2c_write_bytes(ts->client,config_info_d, (sizeof(config_info_d)/sizeof(config_info_d[0])));
         }
         //pr_info("%s: %s, %d. \n", __FILE__, __func__, __LINE__);
@@ -1137,23 +1137,26 @@ static int goodix_ts_power(struct goodix_ts_data * ts, int on)
 					gpio_set_one_pin_io_status(gpio_int_hdle,0, "ctp_int_port");
 				}
 				
-				for(retry=0; retry<3; retry++)
-				{
-					//pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
-					ret=goodix_init_panel(ts);
-					pr_info(KERN_INFO"goodix_init_panel ret is :%d\n",ret);
+				if(STANDBY_WITH_POWER_OFF == standby_level){
+					for(retry=0; retry<3; retry++)
+					{
+						//pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
+						ret=goodix_init_panel(ts);
+						pr_info(KERN_INFO"goodix_init_panel ret is :%d\n",ret);
 
-					
-					if(ret != 0){
-						//Initiall failed
-						msleep(2);
-						continue;
+						
+						if(ret != 0){
+							//Initiall failed
+							msleep(2);
+							continue;
+						}
+						else{
+							break;
+						}
+						
 					}
-					else{
-						break;
-					}
-					
 				}
+
 				ctp_enable_irq();
        
 			#else
