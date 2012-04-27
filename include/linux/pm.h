@@ -35,6 +35,13 @@ typedef enum{
 }standby_type_e;
 extern standby_type_e standby_type; 
 
+typedef enum{
+	STANDBY_INITIAL = 0,
+	STANDBY_WITH_POWER = 1,
+	STANDBY_WITH_POWER_OFF = 2
+}standby_level_e;
+extern standby_level_e standby_level;
+
 /*
  * Callbacks for platform drivers to implement.
  */

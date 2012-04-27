@@ -22,6 +22,7 @@
 #include <linux/workqueue.h>
 
 #include "power.h"
+#include "./../../arch/arm/mach-sun5i/pm/pm.h"
 
 enum {
 	DEBUG_USER_STATE = 1U << 0,
@@ -44,6 +45,11 @@ enum {
 	SUSPEND_REQUESTED_AND_SUSPENDED = SUSPEND_REQUESTED | SUSPENDED,
 };
 static int state;
+
+#ifdef GET_CYCLE_CNT
+static int start = 0;
+static int end = 0;
+#endif
 
 #ifdef CONFIG_EARLYSUSPEND_DELAY
 extern struct wake_lock ealysuspend_delay_work;
@@ -102,9 +108,19 @@ static void early_suspend(struct work_struct *work)
 		if (pos->suspend != NULL) {
 			if (debug_mask & DEBUG_VERBOSE)
 				pr_info("early_suspend: calling %pf\n", pos->suspend);
+
+#ifdef GET_CYCLE_CNT
+	start = get_cyclecount();
+#endif
 			pos->suspend(pos);
+#ifdef GET_CYCLE_CNT
+	end = get_cyclecount();
+	printk("#suspend addr# = #%x#, #start# = #%x#, #end# = #%x#. \n", pos->suspend, start, end);
+#endif
+			
 		}
 	}
+	standby_level = STANDBY_WITH_POWER;
 	mutex_unlock(&early_suspend_lock);
 
 	if (debug_mask & DEBUG_SUSPEND)
@@ -144,11 +160,21 @@ static void late_resume(struct work_struct *work)
 			if (debug_mask & DEBUG_VERBOSE)
 				pr_info("late_resume: calling %pf\n", pos->resume);
 
+#ifdef GET_CYCLE_CNT
+	start = get_cyclecount();
+#endif
 			pos->resume(pos);
+#ifdef GET_CYCLE_CNT
+	end = get_cyclecount();
+	printk("#resume_addr# = #%x#, #start# = #%x#, #end# = #%x# . \n", pos->resume, start, end);
+#endif
+
 		}
 	}
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("late_resume: done\n");
+
+	standby_level = STANDBY_INITIAL;
 abort:
 	mutex_unlock(&early_suspend_lock);
 }
