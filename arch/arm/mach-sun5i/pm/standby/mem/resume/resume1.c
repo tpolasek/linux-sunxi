@@ -61,7 +61,8 @@ static int end = 0;
 #define INVALIDATE_DCACHE
 #endif
 
-void restore_ccmu(void);
+static void restore_ccmu(void);
+
 int main(void)
 {
 	/* clear bss segment */
