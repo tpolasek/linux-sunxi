@@ -245,7 +245,8 @@ void restore_ccmu(void)
 	/* restore voltage for exit standby */
 	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
 	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
-	standby_mdelay(70);
+	//25us * 40 * 10
+	standby_mdelay(400);
 
 	/*setting clock division ratio*/
 	/* set clock division cpu:axi:ahb:apb =  1:1:2:2*/
@@ -261,11 +262,13 @@ void restore_ccmu(void)
 	
 	/* enable pll */
 	standby_clk_pllenable();
-	standby_mdelay(100);
+	//25us * 40 * 10
+	standby_mdelay(400);
 	
 	/* switch cpu clock to core pll */
 	standby_clk_core2pll();
-	standby_mdelay(10);
+	//33us* 30 * 10
+	standby_mdelay(300);
 	//busy_waiting();
 
 	/* gating on dram clock */

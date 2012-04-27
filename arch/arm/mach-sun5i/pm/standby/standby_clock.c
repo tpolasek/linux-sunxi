@@ -221,7 +221,7 @@ __s32 standby_clk_pllenable(void)
     CmuReg->Pll2Ctl.PLLEn = 1;
     CmuReg->Pll3Ctl.PLLEn = 1;
     CmuReg->Pll4Ctl.PLLEn = 1;
-    CmuReg->Pll5Ctl.PLLEn = 1;
+    //CmuReg->Pll5Ctl.PLLEn = 1;
     CmuReg->Pll6Ctl.PLLEn = 1;
     CmuReg->Pll7Ctl.PLLEn = 1;
 
