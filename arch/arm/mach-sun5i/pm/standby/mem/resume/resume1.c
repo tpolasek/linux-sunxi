@@ -61,6 +61,7 @@ static int end = 0;
 #define INVALIDATE_DCACHE
 #endif
 
+void restore_ccmu(void);
 int main(void)
 {
 	/* clear bss segment */
@@ -120,13 +121,13 @@ int main(void)
 	save_sun5i_mem_status(RESUME1_START |0x07);
 
 #ifdef POWER_OFF
-#if 1
-	dcdc2 = mem_para_info.suspend_vdd;
-	dcdc3 = 1200;
-	/* restore voltage for exit standby */
-	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
-	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
-#endif
+	//standby_clk_pllenable();
+	//save_mem_status(RESUME1_START + 0x06);
+	//standby_mdelay(10);
+	//standby_delay(1);
+	//restore ccmu
+	//busy_waiting();
+	restore_ccmu();
 	//busy_waiting();
 #endif
 
@@ -161,7 +162,7 @@ int main(void)
 	//save_mem_status(RESUME1_START |0xb);
 	
 	save_sun5i_mem_status(RESUME1_START |0xb);
-	save_sun5i_mem_status(status);
+	//save_sun5i_mem_status(status);
 	//busy_waiting();
 #ifdef GET_CYCLE_CNT
 #ifdef CONFIG_ARCH_SUN4I
@@ -172,12 +173,111 @@ int main(void)
 	//*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = get_cyclecount();
 	//record start
 	*(volatile __u32 *)(PERMANENT_REG  + 0x00) = get_cyclecount();
+#elif defined CONFIG_ARCH_SUN5I
+	start = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x0C);
+	end = get_cyclecount();
+	*(volatile __u32 *)(SUN5I_STATUS_REG - 0x0C) = end - start;
+	//*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = get_cyclecount();
+	//record start
+	*(volatile __u32 *)(SUN5I_STATUS_REG  - 0x10) = get_cyclecount();
 #endif
 #endif
 
 	//before jump, invalidate data
 	jump_to_resume((void *)mem_para_info.resume_pointer, mem_para_info.saved_runtime_context_svc);
 	
+	return;
+}
+
+void restore_ccmu(void)
+{
+	/* gating off dram clock */
+	//standby_clk_dramgating(0);
+	int i=0;
+	
+	for(i=0; i<6; i++){
+		dram_hostport_on_off(i, 0);
+	}
+	
+	for(i=16; i<31; i++){
+		dram_hostport_on_off(i, 0);
+	}
+	
+	/* switch cpu clock to HOSC, and disable pll */
+	standby_clk_core2hosc();
+	//standby_clk_plldisable();
+	mem_clk_plldisable();
+	
+	/* backup voltages */
+	//dcdc2 = 1400;
+	dcdc2 = mem_para_info.suspend_vdd;
+	dcdc3 = 1200;
+
+	/* set clock division cpu:axi:ahb:apb = 2:2:2:1 */
+#if 0
+	standby_clk_getdiv(&clk_div);
+	tmp_clk_div.axi_div = 0;
+	tmp_clk_div.ahb_div = 0;
+	tmp_clk_div.apb_div = 0;
+	standby_clk_setdiv(&tmp_clk_div);
+#endif
+	/* swtich apb1 to losc */
+	//standby_clk_apb2losc();
+	
+	/* switch cpu to 32k */
+	//standby_clk_core2losc();
+	/*delay period? 10/32k= 300us*/
+	//standby_mdelay(10);
+
+	//restore
+
+	/* switch clock to hosc */
+	//standby_clk_core2hosc();
+	/* swtich apb1 to hosc */
+	//standby_clk_apb2hosc();
+	/* restore clock division */
+	//standby_clk_setdiv(&clk_div);
+
+	//standby_mdelay(10);
+
+	//busy_waiting();
+	/* restore voltage for exit standby */
+	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
+	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
+	standby_mdelay(70);
+
+	/*setting clock division ratio*/
+	/* set clock division cpu:axi:ahb:apb =  1:1:2:2*/
+	//standby_clk_getdiv(&clk_div);
+	//tmp_clk_div.axi_div = 0;
+	//tmp_clk_div.ahb_div = 1;
+	//tmp_clk_div.apb_div = 1;
+	//standby_clk_setdiv(&tmp_clk_div);
+	
+	//busy_waiting();
+	/*setting pll factor: 384M hz*/
+	standby_clk_set_pll_factor();
+	
+	/* enable pll */
+	standby_clk_pllenable();
+	standby_mdelay(100);
+	
+	/* switch cpu clock to core pll */
+	standby_clk_core2pll();
+	standby_mdelay(10);
+	//busy_waiting();
+
+	/* gating on dram clock */
+	//standby_clk_dramgating(1);
+	for(i=0; i<6; i++){
+		dram_hostport_on_off(i, 1);
+	}
+	
+	for(i=16; i<31; i++){
+		dram_hostport_on_off(i, 1);
+	}
+	
+	//standby_mdelay(1000);
 	return;
 }
 

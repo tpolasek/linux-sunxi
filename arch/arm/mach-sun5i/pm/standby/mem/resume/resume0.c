@@ -46,9 +46,9 @@ static int start = 0;
 #if defined(ENTER_SUPER_STANDBY) || defined(ENTER_SUPER_STANDBY_WITH_NOMMU) || defined(WATCH_DOG_RESET)
 #undef MMU_OPENED
 #define SWITCH_STACK
-//#define SET_COPRO_REG
+#define SET_COPRO_REG
 #define FLUSH_TLB
-//#define FLUSH_ICACHE
+#define FLUSH_ICACHE
 //#define INVALIDATE_DCACHE
 #endif
 
@@ -76,6 +76,7 @@ int main(void)
 #ifdef SET_COPRO_REG
 	set_copro_default();
 	save_mem_status_nommu(RUSUME0_START |0x01);
+	save_sun5i_mem_status_nommu(RUSUME0_START |0x01);
 	//busy_waiting();
 	fake_busy_waiting();
 #endif
@@ -85,16 +86,19 @@ int main(void)
 
 #ifdef FLUSH_TLB
 	standby_flush_tlb();
+	save_sun5i_mem_status_nommu(RUSUME0_START |0x02);
 #endif
 
 #ifdef FLUSH_ICACHE
 	//clean i cache
 	flush_icache();
+	save_sun5i_mem_status_nommu(RUSUME0_START |0x03);
 #endif
 
 #ifdef INVALIDATE_DCACHE
 	/*notice: will corrupt r0 - r11*/
 	invalidate_dcache();
+	save_sun5i_mem_status_nommu(RUSUME0_START |0x04);
 #endif
 
 	/* preload tlb for standby */
@@ -117,6 +121,7 @@ int main(void)
 	save_mem_status(RUSUME0_START | 0x04);
 #else
 	save_mem_status_nommu(RUSUME0_START |0x02);
+	save_sun5i_mem_status_nommu(RUSUME0_START |0x05);
 	standby_preload_tlb_nommu();
 	/*restore dram training area*/
 	standby_memcpy((void *)DRAM_BASE_ADDR_PA, (void *)DRAM_BACKUP_BASE_ADDR2_PA, sizeof(__u32)*DRAM_TRANING_SIZE);
@@ -127,6 +132,7 @@ int main(void)
 	standby_memcpy((void *)SRAM_FUNC_START_PA, (void *)&resume1_bin_start, (int)&resume1_bin_end - (int)&resume1_bin_start);
 	//sync	
 	save_mem_status_nommu(RUSUME0_START | 0x03);
+	save_sun5i_mem_status_nommu(RUSUME0_START |0x06);
 	//busy_waiting();
 
 #ifdef GET_CYCLE_CNT
@@ -136,12 +142,18 @@ int main(void)
 	*(volatile __u32 *)(PERMANENT_REG_PA  + 0x08) = get_cyclecount() - start;
 	//record resume1 start
 	*(volatile __u32 *)(PERMANENT_REG_PA+ 0x0c) = get_cyclecount(); 
+#elif defined CONFIG_ARCH_SUN5I
+	start = *(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x08);
+	*(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x08) = get_cyclecount() - start;
+	//record resume1 start
+	*(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x0C) = get_cyclecount(); 
 #endif
 #endif
 	//jump to sram
 	resume1();
 	/*never get here.*/
 	save_mem_status_nommu(RUSUME0_START | 0x04);
+	save_sun5i_mem_status_nommu(RUSUME0_START |0x07);
 #endif
 
 
