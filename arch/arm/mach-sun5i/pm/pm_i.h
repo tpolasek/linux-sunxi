@@ -125,9 +125,15 @@ typedef struct __MEM_TWIC_REG
 
 } __mem_twic_reg_t;
 
-#define INT_REG_LENGTH	(0x94>>2)
-#define GPIO_REG_LENGTH	(0x21c>>2)
+#ifdef CONFIG_ARCH_SUN4I
+#define INT_REG_LENGTH	((0x90+0x4)>>2)
+#define GPIO_REG_LENGTH	((0x218+0x4)>>2)
 #define SRAM_REG_LENGTH	((0x94+0x4)>>2)
+#elif defined CONFIG_ARCH_SUN5I
+#define INT_REG_LENGTH	((0x94+0x4)>>2)
+#define GPIO_REG_LENGTH	((0x218+0x4)>>2)
+#define SRAM_REG_LENGTH	((0x94+0x4)>>2)
+#endif
 
 struct int_state{
 	//__u32    IrqEnReg[3], IrqMaskReg[3], IrqSelReg[3];
