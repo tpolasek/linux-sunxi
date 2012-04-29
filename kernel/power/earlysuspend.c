@@ -115,7 +115,7 @@ static void early_suspend(struct work_struct *work)
 			pos->suspend(pos);
 #ifdef GET_CYCLE_CNT
 	end = get_cyclecount();
-	printk("#suspend addr# = #%x#, #start# = #%x#, #end# = #%x#. \n", pos->suspend, start, end);
+	printk("#suspend addr# = #%x#, #start# = #%x#, #end# = #%x#. \n", (unsigned int)(pos->suspend), start, end);
 #endif
 			
 		}
@@ -166,7 +166,7 @@ static void late_resume(struct work_struct *work)
 			pos->resume(pos);
 #ifdef GET_CYCLE_CNT
 	end = get_cyclecount();
-	printk("#resume_addr# = #%x#, #start# = #%x#, #end# = #%x# . \n", pos->resume, start, end);
+	printk("#resume_addr# = #%x#, #start# = #%x#, #end# = #%x# . \n", (unsigned int)(pos->resume), start, end);
 #endif
 
 		}

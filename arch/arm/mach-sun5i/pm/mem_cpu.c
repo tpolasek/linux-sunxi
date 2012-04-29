@@ -199,7 +199,7 @@ void __restore_processor_state(struct saved_context *ctxt)
 	/* CR1 */
 #if defined(CORTEX_A8)
 	//busy_waiting();
-	asm volatile ("mcr p15, 0, %0, c1, c0, 0" : : "r"(ctxt->cr)); //will effect visible addr space, cache, instruction prediction
+	//asm volatile ("mcr p15, 0, %0, c1, c0, 0" : : "r"(ctxt->cr)); //will effect visible addr space, cache, instruction prediction
 	asm volatile ("mcr p15, 0, %0, c1, c0, 2" : : "r"(ctxt->cacr));
 #elif defined(CORTEX_A9)
 	//asm volatile ("mcr p15, 0, %0, c1, c0, 0" : : "r"(ctxt->cr));
@@ -286,6 +286,7 @@ void __restore_processor_state(struct saved_context *ctxt)
 	asm volatile ("mcr p15, 5, %0, c15, c7, 2" : : "r"(ctxt->mtlbar));
 #endif
 #endif
+
 	asm volatile ("dsb");
 	asm volatile ("isb");
 
@@ -342,10 +343,10 @@ void set_copro_default(void)
 	/* CR7 */
 	asm volatile ("mcr p15, 0, %0, c7, c4, 0" : : "r"(ctxt->par));
 	/* CR9 */
-	asm volatile ("mcr p15, 0, %0, c9, c12, 0" : : "r"(ctxt->pmcontrolr));
-	asm volatile ("mcr p15, 0, %0, c9, c12, 1" : : "r"(ctxt->cesr));
+	//asm volatile ("mcr p15, 0, %0, c9, c12, 0" : : "r"(ctxt->pmcontrolr));
+	//asm volatile ("mcr p15, 0, %0, c9, c12, 1" : : "r"(ctxt->cesr));
 	asm volatile ("mcr p15, 0, %0, c9, c12, 2" : : "r"(ctxt->cecr));
-	asm volatile ("mcr p15, 0, %0, c9, c12, 3" : : "r"(ctxt->ofsr));
+	//asm volatile ("mcr p15, 0, %0, c9, c12, 3" : : "r"(ctxt->ofsr));
 #ifdef CORTEX_A8
 	asm volatile ("mcr p15, 0, %0, c9, c12, 4" : : "r"(ctxt->sir));
 #endif

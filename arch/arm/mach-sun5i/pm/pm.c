@@ -66,7 +66,7 @@
 #define PRE_DISABLE_MMU    //actually, mean ,prepare condition to disable mmu
 #endif 
 
-//#define VERIFY_RESTORE_STATUS
+#define VERIFY_RESTORE_STATUS
 
 /* define major number for power manager */
 #define AW_PMU_MAJOR    267
@@ -151,7 +151,7 @@ static int invalidate_data_time = 0;
 static int invalidate_instruct_time = 0;
 static int before_restore_processor = 0;
 static int after_restore_process = 0;
-static int restore_runtime_peroid = 0;
+//static int restore_runtime_peroid = 0;
 
 //late_resume timing
 static int late_resume_start = 0;
@@ -170,10 +170,13 @@ static int late_resume_end = 0;
 struct aw_mem_para mem_para_info;
 standby_type_e standby_type = NON_STANDBY;
 EXPORT_SYMBOL(standby_type);
+standby_level_e standby_level = STANDBY_INITIAL;
+EXPORT_SYMBOL(standby_level);
 
 //static volatile int enter_flag = 0;
 volatile int print_flag = 0;
 static bool mem_allocated_flag = false;
+static int dram_backup = 0;
 extern void create_mapping(struct map_desc *md);
 extern void save_mapping(unsigned long vaddr);
 extern void restore_mapping(unsigned long vaddr);
@@ -230,6 +233,10 @@ static int aw_pm_valid(suspend_state_t state)
 		mem_dram_backup_area2 = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE2, GFP_KERNEL);
 		mem_dram_backup_compare_area2 = (__u32*)kmalloc(sizeof(__u32)*DRAM_COMPARE_SIZE, GFP_KERNEL);	
 		mem_allocated_flag = true;	
+#ifdef GET_CYCLE_CNT
+	// init counters:
+	init_perfcounters (1, 0);
+#endif
 	}
 
 	//print_flag = 0;
@@ -272,10 +279,6 @@ int aw_pm_begin(suspend_state_t state)
 	//set freq max
 	cpufreq_user_event_notify();
 
-#ifdef GET_CYCLE_CNT
-	// init counters:
-	init_perfcounters (1, 0);
-#endif
 
 	return 0;
 }
@@ -557,8 +560,10 @@ static int verify_restore(void *src, void *dest, int count)
 {
 	volatile char *s = (volatile char *)src;
 	volatile char *d = (volatile char *)dest;
-	while(--count){
-		if(*(s+count) != *(d+count)){
+	
+	while(count--){
+		if(*(s+(count)) != *(d+(count))){
+			busy_waiting();
 			return -1;
 		}
 	}
@@ -594,6 +599,7 @@ static void aw_late_resume(void)
 #endif
 
 	save_mem_status(LATE_RESUME_START |0x04);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x24);
 
 	//busy_waiting();
 	memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1), sizeof(mem_para_info));
@@ -601,6 +607,7 @@ static void aw_late_resume(void)
 	
 	/* restore dram training area: need access mmu&dram */
 	save_mem_status(LATE_RESUME_START |0x05);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x25);
 	//busy_waiting();
 	//memcpy((void *)DRAM_BASE_ADDR, (void *)mem_dram_traning_area_back, sizeof(__u32)*DRAM_TRANING_SIZE);
 
@@ -613,6 +620,7 @@ static void aw_late_resume(void)
 	dmac_flush_range((void *)DRAM_BACKUP_BASE_ADDR2, (void *)(DRAM_BACKUP_BASE_ADDR2 + (sizeof(u32)) * DRAM_BACKUP_SIZE2 - 1));
 	
 	save_mem_status(LATE_RESUME_START |0x06);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x26);
 #ifdef GET_CYCLE_CNT
 	backup_area1_start = get_cyclecount();
 #endif
@@ -622,30 +630,38 @@ static void aw_late_resume(void)
 	//restore dram backup area
 	//busy_waiting();
 	save_mem_status(LATE_RESUME_START |0x07);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x27);
 #ifdef GET_CYCLE_CNT
 	backup_area_start = get_cyclecount();
 #endif
 	memcpy((void *)DRAM_BACKUP_BASE_ADDR, (void *)mem_dram_backup_area, sizeof(__u32)*DRAM_BACKUP_SIZE);
 	dmac_flush_range((void *)DRAM_BACKUP_BASE_ADDR, (void *)(DRAM_BACKUP_BASE_ADDR + (sizeof(u32)) * DRAM_BACKUP_SIZE -1) );
 
+	//busy_waiting();
+	dram_backup = save_sun5i_mem_status(LATE_RESUME_START | 0x27);
+	save_sun5i_mem_status(dram_backup);
 #ifdef VERIFY_RESTORE_STATUS
-	if(ret = verify_restore((void *)mem_dram_backup_area2, (void *)DRAM_BACKUP_BASE_ADDR2, sizeof(__u32)*DRAM_BACKUP_SIZE2)){
+	if(0 != (ret = (verify_restore((void *)mem_dram_backup_area2, (void *)DRAM_BACKUP_BASE_ADDR2, sizeof(__u32)*DRAM_BACKUP_SIZE2)))){
 		save_mem_status(LATE_RESUME_START |0x21);
+		save_sun5i_mem_status(LATE_RESUME_START | 0x31);
 		busy_waiting();
 	}
 
-	if(ret = verify_restore((void *)mem_dram_backup_area1, (void *)DRAM_BACKUP_BASE_ADDR1, sizeof(__u32)*DRAM_BACKUP_SIZE1)){
+	if(0 != (ret = verify_restore((void *)mem_dram_backup_area1, (void *)DRAM_BACKUP_BASE_ADDR1, sizeof(__u32)*DRAM_BACKUP_SIZE1))){
 		save_mem_status(LATE_RESUME_START |0x22);
+		save_sun5i_mem_status(LATE_RESUME_START | 0x32);
 		busy_waiting();
 	}
-
-	if(ret = verify_restore((void *)mem_dram_backup_area, (void *)DRAM_BACKUP_BASE_ADDR, sizeof(__u32)*DRAM_BACKUP_SIZE)){
+	//busy_waiting();
+	if(0 != (ret = verify_restore((void *)mem_dram_backup_area, (void *)DRAM_BACKUP_BASE_ADDR, sizeof(__u32)*DRAM_BACKUP_SIZE))){
 		save_mem_status(LATE_RESUME_START |0x23);
+		save_sun5i_mem_status(LATE_RESUME_START | 0x33);
 		busy_waiting();
 	}
 #endif
 
 	save_mem_status(LATE_RESUME_START |0x08);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x28);
 	//busy_waiting();
 #ifdef GET_CYCLE_CNT
 	clk_restore_start = get_cyclecount();
@@ -653,6 +669,7 @@ static void aw_late_resume(void)
 	mem_clk_restore(&(saved_clk_state));
 	
 	save_mem_status(LATE_RESUME_START |0x09);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x29);
 #ifdef GET_CYCLE_CNT
 	gpio_restore_start = get_cyclecount();
 #endif
@@ -660,6 +677,7 @@ static void aw_late_resume(void)
 	//busy_waiting();
 	
 	save_mem_status(LATE_RESUME_START |0x0c);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x2a);
 #ifdef GET_CYCLE_CNT
 	twi_restore_start = get_cyclecount();
 #endif
@@ -667,6 +685,7 @@ static void aw_late_resume(void)
 	//busy_waiting();
 	
 	save_mem_status(LATE_RESUME_START |0x09);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x2b);
 	//busy_waiting();
 #ifdef GET_CYCLE_CNT
 	tmr_restore_start = get_cyclecount();
@@ -674,34 +693,24 @@ static void aw_late_resume(void)
 	mem_tmr_restore(&(saved_tmr_state));
 	
 	save_mem_status(LATE_RESUME_START |0x0a);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x2c);
 #ifdef GET_CYCLE_CNT
 	int_restore_start = get_cyclecount();
 #endif
 	mem_int_restore(&(saved_int_state));
 	
 	save_mem_status(LATE_RESUME_START |0x0b);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x2d);
 #ifdef GET_CYCLE_CNT
 	sram_restore_start = get_cyclecount();
 #endif
 	mem_sram_restore(&(saved_sram_state));
+	save_sun5i_mem_status(LATE_RESUME_START | 0x2e);
 
 #ifdef GET_CYCLE_CNT
 	late_resume_end = get_cyclecount();
 #endif
 
-#ifdef GET_CYCLE_CNT
-	printk("late_resume_start = 0x%x. \n", late_resume_start);
-	printk("backup_area2_start = 0x%x. \n", backup_area2_start);
-	printk("backup_area1_start = 0x%x. \n", backup_area1_start);
-	printk("backup_area_start = 0x%x. \n", backup_area_start);
-	printk("clk_restore_start = 0x%x. \n", clk_restore_start);
-	printk("gpio_restore_start = 0x%x. \n", gpio_restore_start);
-	printk("twi_restore_start = 0x%x. \n", twi_restore_start);
-	printk("tmr_restore_start = 0x%x. \n", tmr_restore_start);
-	printk("int_restore_start = 0x%x. \n", int_restore_start);
-	printk("sram_restore_start = 0x%x. \n", sram_restore_start);
-	printk("late_resume_end = 0x%x. \n", late_resume_end);
-#endif
 	
 	//busy_waiting();
 }
@@ -749,7 +758,8 @@ static int aw_pm_enter(suspend_state_t state)
 		//busy_waiting();
 	}else if(SUPER_STANDBY == standby_type){
 mem_enter:
-		save_mem_status(BEFORE_EARLY_SUSPEND |0x02);
+		//save_mem_status(BEFORE_EARLY_SUSPEND |0x02);
+		save_sun5i_mem_status(BEFORE_EARLY_SUSPEND |0x02);
 		//busy_waiting();
 		//invalidate period
 		
@@ -763,6 +773,7 @@ mem_enter:
 			//disable_l2cache();
 			//disable_program_flow_prediction();
 #ifdef GET_CYCLE_CNT
+#ifdef CONFIG_ARCH_SUN4I
 			resume0_period = *(volatile __u32 *)(0xf1c20d28);
 			resume1_period = *(volatile __u32 *)(0xf1c20d2c);
 			pm_start = get_cyclecount();
@@ -773,10 +784,23 @@ mem_enter:
 			*(volatile __u32 *)(PERMANENT_REG  + 0x00) = 0;
 			
 			invalidate_instruct_time = get_cyclecount();
+#elif defined(CONFIG_ARCH_SUN5I)
+			resume0_period = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x08);
+			resume1_period = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x0C);
+			pm_start = get_cyclecount();
+			
+			start = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x10);
+			invalidate_data_time = get_cyclecount() - start;
+			//*(volatile __u32 *)(PERMANENT_REG  + 0x00) = invalidate_data_time;
+			//*(volatile __u32 *)(PERMANENT_REG  + 0x00) = 0;
+			save_sun5i_mem_status(LATE_RESUME_START |0x03);
+			invalidate_instruct_time = get_cyclecount();
+#endif
 #endif
 			//busy_waiting();
 			
 			invalidate_branch_predictor();
+			save_sun5i_mem_status(LATE_RESUME_START |0x04);
 			//flush_icache();
 			//flush_dcache();
 			
@@ -789,6 +813,7 @@ mem_enter:
 			//must be called to invalidate I-cache inner shareable?
 			// I+BTB cache invalidate
 			__cpuc_flush_icache_all();
+			save_sun5i_mem_status(LATE_RESUME_START |0x05);
 			//__cpuc_flush_kern_all();
 			//__cpuc_flush_user_all();
 			//clean i/d cache
@@ -807,12 +832,18 @@ mem_enter:
 			//disable 0x0000 <---> 0x0000 mapping
 			//busy_waiting();
  			restore_processor_state();
+ 			//save_sun5i_mem_status(LATE_RESUME_START |0x06);
+ 			//busy_waiting();
+ 			//disable_dcache();
+ 			//busy_waiting();
+ 			save_sun5i_mem_status(LATE_RESUME_START |0x16);
  #ifdef GET_CYCLE_CNT
  			after_restore_process = get_cyclecount();
  #endif
  			
  			//destroy 0x0000 <---> 0x0000 mapping
 			restore_mapping(MEM_SW_VA_SRAM_BASE);
+			save_sun5i_mem_status(LATE_RESUME_START |0x07);
 			
 			//flush_tlb_all();
 			
@@ -829,6 +860,7 @@ mem_enter:
 			//busy_waiting();	
 
 			save_mem_status(LATE_RESUME_START |0x0e);
+			save_sun5i_mem_status(LATE_RESUME_START |0x08);
 			//busy_waiting();
 
 			//flush tlb?
@@ -841,6 +873,7 @@ mem_enter:
 		//busy_waiting();
 		save_runtime_context(mem_para_info.saved_runtime_context_svc);
 		mem_para_info.mem_flag = 1;
+		standby_level = STANDBY_WITH_POWER_OFF;
 		save_mem_status(BEFORE_EARLY_SUSPEND | 0x04);
 		//busy_waiting();
 		save_mem_status(BEFORE_EARLY_SUSPEND | 0x05);
@@ -857,24 +890,59 @@ resume:
 		//here, uart not ok, need after clk restore?
 		//printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
 		save_mem_status(LATE_RESUME_START | 0x01);
+		save_sun5i_mem_status(LATE_RESUME_START | 0x09);
 		aw_late_resume();
 		
 #ifdef GET_CYCLE_CNT
 		printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
 
-		printk("resume0 time =%x, resume1 time = %x\n", resume0_period, resume1_period);
-		printk("pm_start = %x after_late_resume = %x \n", pm_start, get_cyclecount());
+		printk("#resume0 time# = #%x#, #resume1 time# = #%x#\n", resume0_period, resume1_period);
+		printk("#pm_start# = #%x# #after_late_resume# = #%x# \n", pm_start, get_cyclecount());
 		
+
+		printk("the late_resume detail is:");
+
+		printk("#invalidate_data_time_period# = #%x#, \n \
+				before_restore_processor = %x, after_restore_process = %x. \n \
+				#restore_period# =# %x# \n", invalidate_data_time, before_restore_processor, \
+				after_restore_process, after_restore_process - before_restore_processor);
+
+		printk("late_resume_start = %x. \n", late_resume_start);
+		printk("backup_area2_start = %x. \n", backup_area2_start);
+		printk("backup_area1_start = %x. \n", backup_area1_start);
+		printk("#restore_backup_area2_time# = #%x#. \n", backup_area1_start - backup_area2_start);
+
+		printk("backup_area_start = %x. \n", backup_area_start);
+		printk("#restore_backup_area1_time# = #%x#. \n", backup_area_start - backup_area1_start);
 		
-		printk("invalidate_data_time = %x, before_restore_processor = %x, after_restore_process = %x. \
-			restore_period = %x \n", invalidate_data_time, before_restore_processor, \
-			after_restore_process, after_restore_process - before_restore_processor);
+		printk("clk_restore_start = %x. \n", clk_restore_start);
+		printk("#restore_backup_area_time# = #%x#. \n", clk_restore_start - backup_area_start);
+			
+		printk("gpio_restore_start = %x. \n", gpio_restore_start);
+		printk("#restore_clk_time# = #%x#. \n", gpio_restore_start - clk_restore_start);
+		
+		printk("twi_restore_start = %x. \n", twi_restore_start);
+		printk("#restore_gpio_time# = #%x#. \n", twi_restore_start - gpio_restore_start);
+		
+		printk("tmr_restore_start = %x. \n", tmr_restore_start);
+		printk("#restore_twi_time# = #%x#. \n", tmr_restore_start - twi_restore_start);
+			
+		printk("int_restore_start = %x. \n", int_restore_start);
+		printk("#restore_tmr_time# = #%x#. \n", int_restore_start - tmr_restore_start);
+			
+		printk("sram_restore_start = %x. \n", sram_restore_start);
+		printk("#restore_int_time# = #%x#. \n", sram_restore_start - int_restore_start);
+		
+		printk("late_resume_end = %x. \n", late_resume_end);
+		printk("#restore_sram_time# = #%x#. \n", late_resume_end - sram_restore_start);
+
 #endif
 				
 	}
 
 #endif
 	save_mem_status(LATE_RESUME_START |0x40);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x0a);
 #if 1
 	//busy_waiting();
 	//print_flag = 1;
@@ -883,8 +951,12 @@ resume:
 #endif
 	
 	//busy_waiting();
+	printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
 	save_mem_status(LATE_RESUME_START |0x41);
+	save_sun5i_mem_status(LATE_RESUME_START | 0x0b);
 	//usy_waiting();
+	save_sun5i_mem_status(dram_backup);
+	enable_cache();
 	asm volatile ("ldmfd sp!, {r1-r12, lr}" );
 	return 0;
 }
