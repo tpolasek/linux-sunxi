@@ -58,6 +58,11 @@ static inline __u64 standby_uldiv(__u64 dividend, __u32 divisior)
 
 void standby_memcpy(void *dest, void *src, int n);
 void standby_mdelay(int ms);
+
+/*notice: all the delay cycle is measured by 60M hz 
+ *when in super standby, the os is running in 1008M
+ *so, the delay cycle need reconsideration.
+ */
 void standby_delay(int cycle);
 
 #endif  //__COMMON_H__

@@ -158,6 +158,27 @@ __s32 standby_clk_core2pll(void)
 
 /*
 *********************************************************************************************************
+*                                     mem_clk_core2pll
+*
+* Description: switch core clock to core pll, target cpu freq is 384M hz.
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+__s32 mem_clk_core2pll(void)
+{
+    CmuReg->SysClkDiv.AC328ClkSrc = 2;
+    /* cpu frequency is 384M hz */
+    cpu_ms_loopcnt = 9600;
+
+    return 0;
+}
+
+
+/*
+*********************************************************************************************************
 *                                     standby_clk_plldisable
 *
 * Description: disable dram pll.
@@ -356,7 +377,20 @@ __s32 standby_clk_setdiv(struct sun4i_clk_div_t  *clk_div)
     return 0;
 }
 
-__s32 standby_clk_set_pll_factor(void)
+
+/*
+*********************************************************************************************************
+*                                     mem_clk_set_pll_factor
+*
+* Description: set pll factor, target cpu freq is 384M hz
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+
+__s32 mem_clk_set_pll_factor(void)
 {
 
     CmuReg->Pll1Ctl.FactorN = 16;

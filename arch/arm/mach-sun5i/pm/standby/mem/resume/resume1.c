@@ -245,7 +245,7 @@ void restore_ccmu(void)
 	/* restore voltage for exit standby */
 	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
 	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
-	//25us * 40 * 10
+	//25us * 400
 	standby_mdelay(400);
 
 	/*setting clock division ratio*/
@@ -258,7 +258,7 @@ void restore_ccmu(void)
 	
 	//busy_waiting();
 	/*setting pll factor: 384M hz*/
-	standby_clk_set_pll_factor();
+	mem_clk_set_pll_factor();
 	
 	/* enable pll */
 	mem_clk_pllenable();
@@ -266,9 +266,9 @@ void restore_ccmu(void)
 	standby_mdelay(400);
 	
 	/* switch cpu clock to core pll */
-	standby_clk_core2pll();
-	//33us* 30 * 10
-	standby_mdelay(300);
+	mem_clk_core2pll();
+	//25us* 40 * 10
+	standby_mdelay(400);
 	//busy_waiting();
 
 	/* gating on dram clock */

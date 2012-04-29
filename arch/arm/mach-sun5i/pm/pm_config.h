@@ -13,6 +13,7 @@
  #endif
  
  #define CONFIG_ARCH_SUN5I
+ #define ENABLE_SUPER_STANDBY
  
  //#define RETURN_FROM_RESUME0_WITH_MMU    //suspend: 0xf000, resume0: 0xc010, resume1: 0xf000
 //#define RETURN_FROM_RESUME0_WITH_NOMMU // suspend: 0x0000, resume0: 0x4010, resume1: 0x0000

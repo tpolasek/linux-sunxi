@@ -50,6 +50,9 @@ __s32 standby_clk_apb2hosc(void);
 
 __s32 mem_clk_plldisable(void);
 __s32 mem_clk_pllenable(void);
+__s32 mem_clk_set_pll_factor(void);
+
+
 
 extern __u32   cpu_ms_loopcnt;
 
