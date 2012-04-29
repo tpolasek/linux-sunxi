@@ -221,6 +221,30 @@ __s32 standby_clk_pllenable(void)
     CmuReg->Pll2Ctl.PLLEn = 1;
     CmuReg->Pll3Ctl.PLLEn = 1;
     CmuReg->Pll4Ctl.PLLEn = 1;
+    CmuReg->Pll5Ctl.PLLEn = 1;
+    CmuReg->Pll6Ctl.PLLEn = 1;
+    CmuReg->Pll7Ctl.PLLEn = 1;
+
+    return 0;
+}
+
+/*
+*********************************************************************************************************
+*                                     mem_clk_pllenable
+*
+* Description: enable all pll except dram pll.
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+__s32 mem_clk_pllenable(void)
+{
+    CmuReg->Pll1Ctl.PLLEn = 1;
+    CmuReg->Pll2Ctl.PLLEn = 1;
+    CmuReg->Pll3Ctl.PLLEn = 1;
+    CmuReg->Pll4Ctl.PLLEn = 1;
     //CmuReg->Pll5Ctl.PLLEn = 1;
     CmuReg->Pll6Ctl.PLLEn = 1;
     CmuReg->Pll7Ctl.PLLEn = 1;

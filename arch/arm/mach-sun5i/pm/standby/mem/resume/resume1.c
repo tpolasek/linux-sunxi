@@ -261,7 +261,7 @@ void restore_ccmu(void)
 	standby_clk_set_pll_factor();
 	
 	/* enable pll */
-	standby_clk_pllenable();
+	mem_clk_pllenable();
 	//25us * 40 * 10
 	standby_mdelay(400);
 	
