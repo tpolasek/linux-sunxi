@@ -345,15 +345,15 @@ void set_copro_default(void)
 	/* CR9 */
 	//asm volatile ("mcr p15, 0, %0, c9, c12, 0" : : "r"(ctxt->pmcontrolr));
 	//asm volatile ("mcr p15, 0, %0, c9, c12, 1" : : "r"(ctxt->cesr));
-	asm volatile ("mcr p15, 0, %0, c9, c12, 2" : : "r"(ctxt->cecr));
+	//asm volatile ("mcr p15, 0, %0, c9, c12, 2" : : "r"(ctxt->cecr));
 	//asm volatile ("mcr p15, 0, %0, c9, c12, 3" : : "r"(ctxt->ofsr));
 #ifdef CORTEX_A8
-	asm volatile ("mcr p15, 0, %0, c9, c12, 4" : : "r"(ctxt->sir));
+	//asm volatile ("mcr p15, 0, %0, c9, c12, 4" : : "r"(ctxt->sir));
 #endif
-	asm volatile ("mcr p15, 0, %0, c9, c12, 5" : : "r"(ctxt->pcsr));
-	asm volatile ("mcr p15, 0, %0, c9, c13, 0" : : "r"(ctxt->ccr));
-	asm volatile ("mcr p15, 0, %0, c9, c13, 1" : : "r"(ctxt->esr));
-	asm volatile ("mcr p15, 0, %0, c9, c13, 2" : : "r"(ctxt->pmcountr));
+	//asm volatile ("mcr p15, 0, %0, c9, c12, 5" : : "r"(ctxt->pcsr));
+	//asm volatile ("mcr p15, 0, %0, c9, c13, 0" : : "r"(ctxt->ccr));
+	//asm volatile ("mcr p15, 0, %0, c9, c13, 1" : : "r"(ctxt->esr));
+	//asm volatile ("mcr p15, 0, %0, c9, c13, 2" : : "r"(ctxt->pmcountr));
 	asm volatile ("mcr p15, 0, %0, c9, c14, 0" : : "r"(ctxt->uer));
 	asm volatile ("mcr p15, 0, %0, c9, c14, 1" : : "r"(ctxt->iesr));
 	asm volatile ("mcr p15, 0, %0, c9, c14, 2" : : "r"(ctxt->iecr));

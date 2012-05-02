@@ -785,11 +785,11 @@ mem_enter:
 			
 			invalidate_instruct_time = get_cyclecount();
 #elif defined(CONFIG_ARCH_SUN5I)
-			resume0_period = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x08);
-			resume1_period = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x0C);
+			resume0_period = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x04);
+			resume1_period = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x08);
 			pm_start = get_cyclecount();
 			
-			start = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x10);
+			start = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x0c);
 			invalidate_data_time = get_cyclecount() - start;
 			//*(volatile __u32 *)(PERMANENT_REG  + 0x00) = invalidate_data_time;
 			//*(volatile __u32 *)(PERMANENT_REG  + 0x00) = 0;

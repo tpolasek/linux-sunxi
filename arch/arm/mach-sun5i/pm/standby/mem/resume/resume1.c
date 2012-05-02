@@ -175,12 +175,12 @@ int main(void)
 	//record start
 	*(volatile __u32 *)(PERMANENT_REG  + 0x00) = get_cyclecount();
 #elif defined CONFIG_ARCH_SUN5I
-	start = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x0C);
+	start = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x08);
 	end = get_cyclecount();
-	*(volatile __u32 *)(SUN5I_STATUS_REG - 0x0C) = end - start;
+	*(volatile __u32 *)(SUN5I_STATUS_REG - 0x08) = end - start;
 	//*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = get_cyclecount();
 	//record start
-	*(volatile __u32 *)(SUN5I_STATUS_REG  - 0x10) = get_cyclecount();
+	*(volatile __u32 *)(SUN5I_STATUS_REG  - 0x0c) = get_cyclecount();
 #endif
 #endif
 

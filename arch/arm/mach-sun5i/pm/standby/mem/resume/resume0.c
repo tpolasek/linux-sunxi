@@ -24,6 +24,7 @@ static int (*resume1)(void);
 
 #ifdef GET_CYCLE_CNT
 static int start = 0;
+static int end = 0;
 #endif
 
 #ifdef RETURN_FROM_RESUME0_WITH_MMU
@@ -143,10 +144,13 @@ int main(void)
 	//record resume1 start
 	*(volatile __u32 *)(PERMANENT_REG_PA+ 0x0c) = get_cyclecount(); 
 #elif defined CONFIG_ARCH_SUN5I
-	start = *(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x08);
-	*(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x08) = get_cyclecount() - start;
+	//busy_waiting();
+	start = *(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x04);
+	end = get_cyclecount();
+	*(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x04) = end - start;
+	//busy_waiting();
 	//record resume1 start
-	*(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x0C) = get_cyclecount(); 
+	*(volatile __u32 *)(SUN5I_STATUS_REG_PA - 0x08) = get_cyclecount(); 
 #endif
 #endif
 	//jump to sram
