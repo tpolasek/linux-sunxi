@@ -952,7 +952,7 @@ resume:
 	
 	//busy_waiting();
 	printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
-	printk("version 0.51, delay compatible for 1008M");
+	printk("version 0.6.\n");
 	save_mem_status(LATE_RESUME_START |0x41);
 	save_sun5i_mem_status(LATE_RESUME_START | 0x0b);
 	//usy_waiting();
