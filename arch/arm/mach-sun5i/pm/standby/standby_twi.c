@@ -336,7 +336,7 @@ __s32 twi_byte_rw_nommu(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *dat
     unsigned int   timeout;
     int   ret = -1;
 
-    twi_reg = SW_PA_TWI0_IO_BASE;
+    twi_reg = (__twic_reg_t *)SW_PA_TWI0_IO_BASE;
     twi_reg->reg_efr = 0;/* ±ê×¼¶ÁĞ´±ØĞëÖÃ0 */
 
     state_tmp = twi_reg->reg_status;

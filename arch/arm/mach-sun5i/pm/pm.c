@@ -34,7 +34,7 @@
 #include <asm/mach/map.h>
 #include <asm/cacheflush.h>
 #include "pm_i.h"
-#include <linux/sw-uart-dbg.h>
+//#include <linux/sw-uart-dbg.h>
 #include "mem_cpu.h"
 
 //#define CROSS_MAPPING_STANDBY
@@ -896,8 +896,9 @@ resume:
 #ifdef GET_CYCLE_CNT
 		printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
 
-		printk("#resume0 time# = #%x#, #resume1 time# = #%x#\n", resume0_period, resume1_period);
-		printk("#pm_start# = #%x# #after_late_resume# = #%x# \n", pm_start, get_cyclecount());
+		printk("#resume0 time# = #%x#\n, #resume1 time# = #%x#\n", resume0_period, resume1_period);
+		printk("#pm_start# = #%x# #after_late_resume# = #%x# \n, #late_resume_period# = #%x# \n", \
+				pm_start, late_resume_end, (late_resume_end - pm_start));
 		
 
 		printk("the late_resume detail is:");
@@ -952,7 +953,7 @@ resume:
 	
 	//busy_waiting();
 	printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
-	printk("version 0.6.\n");
+	printk("version 0.61. merge to dev\n");
 	save_mem_status(LATE_RESUME_START |0x41);
 	save_sun5i_mem_status(LATE_RESUME_START | 0x0b);
 	//usy_waiting();
