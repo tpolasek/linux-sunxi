@@ -1,6 +1,12 @@
 #include "pm_types.h"
 #include "pm.h"
 
+static __u32 cpu_freq = 0;
+static __u32 overhead = 0;
+#define CCU_REG_VA (0xF1c20000)
+#define CCU_REG_PA (0x01c20000)
+
+
 void busy_waiting(void)
 {
 #if 1
@@ -67,8 +73,6 @@ __u32 save_sun5i_mem_status_nommu(volatile __u32 val)
 	return tmp;
 }
 
-
-#ifdef GET_CYCLE_CNT
 __u32 get_cyclecount (void)
 {
   __u32 value;
@@ -107,5 +111,124 @@ void init_perfcounters (__u32 do_reset, __u32 enable_divider)
 	return;
 }
 
+void reset_counter(void)
+{
+	__u32 value = 0;
+
+	asm volatile ("mrc p15, 0, %0, c9, c12, 0" : : "r"(value));
+	value |= 4;     // reset cycle counter to zero.
+	// program the performance-counter control-register:
+	//__asm {MCR p15, 0, value, c9, c12, 0}
+	asm volatile ("mcr p15, 0, %0, c9, c12, 0" : : "r"(value));
+}
+
+void change_runtime_env(__u32 mmu_flag)
+{
+	__u32 factor_n = 0;
+	__u32 factor_k = 0;
+	__u32 factor_m = 0;
+	__u32 factor_p = 0;
+	__u32 start = 0;
+	__u32 cmu_reg = 0;
+	volatile __u32 reg_val = 0;
+
+	if(mmu_flag){
+		cmu_reg = CCU_REG_VA;
+	}else{
+		cmu_reg = CCU_REG_PA;
+	}
+	//init counters:
+	//init_perfcounters (1, 0);
+	// measure the counting overhead:
+	start = get_cyclecount();
+	overhead = get_cyclecount() - start;
+	//busy_waiting();
+	//get runtime freq: clk src + divider ratio
+	//src selection
+	reg_val = *(volatile int *)(cmu_reg + 0x54);
+	reg_val >>= 16;
+	reg_val &= 0x3;
+	if(0 == reg_val){
+		//32khz osc
+		cpu_freq = 32;
+		
+	}else if(1 == reg_val){
+		//hosc, 24Mhz
+		cpu_freq = 24000; 			//unit is khz
+	}else if(2 == reg_val){
+		//get pll_factor
+		reg_val = *(volatile int *)(cmu_reg + 0x00);
+		factor_p = 0x3 & (reg_val >> 16);
+		factor_p = 1 << factor_p;		//1/2/4/8
+		factor_n = 0x1f & (reg_val >> 8); 	//the range is 0-31
+		factor_k = (0x3 & (reg_val >> 4)) + 1; 	//the range is 1-4
+		factor_m = (0x3 & (reg_val >> 0)) + 1; 	//the range is 1-4
+		
+		//cpu_freq = (24000*factor_n*factor_k)/(factor_p*factor_m);
+		cpu_freq = raw_lib_udiv(24000*factor_n*factor_k, factor_p*factor_m);
+		//msg("cpu_freq = dec(%d). \n", cpu_freq);
+		//busy_waiting();
+	}
+	
+}
+
+/*
+ * input para range: 1-1000 us, so the max us_cnt equal = 1008*1000;
+ */	
+void delay_us(__u32 us)
+{
+	__u32 us_cnt = 0;
+	__u32 cur = 0;
+	__u32 target = 0;
+	//__u32 cnt = 0;
+
+	
+	us_cnt = ((cpu_freq/1000) + 1)*us;
+	cur = get_cyclecount();
+	target = cur - overhead + us_cnt;
+
+#if 1
+	while(!counter_after_eq(cur, target)){
+		cur = get_cyclecount();
+		//cnt++;
+	}
 #endif
+	
+
+#if 0
+	__s32 s_cur = 0;
+	__s32 s_target = 0;
+	__s32 result = 0;
+
+	s_cur = (__s32)(cur);
+	s_target = (__s32)(target);
+	result = s_cur - s_target;
+	if(s_cur - s_target >= 0){
+		cnt++;
+	}
+	while((typecheck(__u32, cur) && \
+			typecheck(__u32, target) && \
+			((__s32)(cur) - (__s32)(target) >= 0))){
+		
+			s_cur = (__s32)(cur);
+			s_target = (__s32)(target);
+			if(s_cur - s_target >= 0){
+				cnt++;				
+			}
+			cur = get_cyclecount();
+	}
+#endif
+	//busy_waiting();
+
+	
+	return;
+}
+
+void delay_ms(__u32 ms)
+{
+	delay_us(ms*1000);
+	
+	return;
+}
+
 
