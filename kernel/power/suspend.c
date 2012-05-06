@@ -26,7 +26,8 @@
 #include <trace/events/power.h>
 
 #include "power.h"
-#include "./../../arch/arm/mach-sun5i/pm/pm.h"
+//#include "./../../arch/arm/mach-sun5i/pm/pm.h"
+#undef GET_CYCLE_CNT
 
 #ifdef GET_CYCLE_CNT
 static int before_syscore_resume = 0;
@@ -177,11 +178,7 @@ static int suspend_enter(suspend_state_t state)
 	error = syscore_suspend();
 	if (!error) {
 		if (!(suspend_test(TEST_CORE) || pm_wakeup_pending())) {
-			save_mem_status(BEFORE_EARLY_SUSPEND | 0x10);
-			//busy_waiting();
 			error = suspend_ops->enter(state);
-			save_mem_status(LATE_RESUME_START |0x0f);
-			//busy_waiting();
 			events_check_enabled = false;
 			
 		}
@@ -235,8 +232,6 @@ int suspend_devices_and_enter(suspend_state_t state)
 	}
 	//suspend_console();
 	suspend_test_start();
-	save_mem_status(BEFORE_EARLY_SUSPEND | 0x20);
-	//busy_waiting();
 	error = dpm_suspend_start(PMSG_SUSPEND);
 	if (error) {
 		printk(KERN_ERR "PM: Some devices failed to suspend\n");
@@ -255,8 +250,6 @@ int suspend_devices_and_enter(suspend_state_t state)
 	printk("#before_dpm_resume_end# = #%x#. \n", before_dpm_resume_end);
 #endif
 	dpm_resume_end(PMSG_RESUME);
-	save_mem_status(BEFORE_EARLY_SUSPEND | 0x40);
-	//busy_waiting();
 
 #ifdef GET_CYCLE_CNT
 	before_test_finish = get_cyclecount();

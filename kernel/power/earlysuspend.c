@@ -22,7 +22,13 @@
 #include <linux/workqueue.h>
 
 #include "power.h"
-#include "./../../arch/arm/mach-sun5i/pm/pm.h"
+
+/*
+ * notice: if u want to get cycle cnt, u need to include arch related head files.
+ * because the way to get cycle cnt is related with arch.
+ */
+//#include "./../../arch/arm/mach-sun5i/pm/pm.h"
+#undef GET_CYCLE_CNT
 
 enum {
 	DEBUG_USER_STATE = 1U << 0,

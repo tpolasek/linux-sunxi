@@ -32,7 +32,8 @@
 #include "../base.h"
 #include "power.h"
 
-#include "./../../../arch/arm/mach-sun5i/pm/pm.h"
+//#include "./../../../arch/arm/mach-sun5i/pm/pm.h"
+#undef GET_CYCLE_CNT
 
 #ifdef GET_CYCLE_CNT
 static int before_device_resume = 0;
