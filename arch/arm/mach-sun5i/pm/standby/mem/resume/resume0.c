@@ -23,8 +23,12 @@ extern char *resume1_bin_end;
 static int (*resume1)(void);
 
 #ifdef GET_CYCLE_CNT
-static int start = 0;
-static int end = 0;
+static __u32 start = 0;
+static __u32 end = 0;
+static __u32 enter_start = 0;
+static __u32 before_restore_training_area = 0;
+static __u32 before_prepare_resume1 = 0;
+static __u32 after_prepare_resume1 = 0;
 #endif
 
 #ifdef RETURN_FROM_RESUME0_WITH_MMU
@@ -72,6 +76,15 @@ int main(void)
 	save_sp_nommu();
 #endif
 #endif
+
+#ifndef GET_CYCLE_CNT
+	init_perfcounters(1, 0);
+#endif
+
+#ifdef GET_CYCLE_CNT
+	enter_start = get_cyclecount();
+#endif
+
 
 	//busy_waiting();
 #ifdef SET_COPRO_REG
@@ -121,11 +134,19 @@ int main(void)
 	/*never get here.*/
 	save_mem_status(RUSUME0_START | 0x04);
 #else
+#ifdef GET_CYCLE_CNT
+	before_restore_training_area = get_cyclecount();
+#endif
+
 	save_mem_status_nommu(RUSUME0_START |0x02);
 	save_sun5i_mem_status_nommu(RUSUME0_START |0x05);
 	standby_preload_tlb_nommu();
 	/*restore dram training area*/
 	standby_memcpy((void *)DRAM_BASE_ADDR_PA, (void *)DRAM_BACKUP_BASE_ADDR2_PA, sizeof(__u32)*DRAM_TRANING_SIZE);
+
+#ifdef GET_CYCLE_CNT
+	before_prepare_resume1 = get_cyclecount();
+#endif
 
 	//busy_waiting();
 	resume1 = (int (*)(void))SRAM_FUNC_START_PA;	
@@ -135,6 +156,10 @@ int main(void)
 	save_mem_status_nommu(RUSUME0_START | 0x03);
 	save_sun5i_mem_status_nommu(RUSUME0_START |0x06);
 	//busy_waiting();
+#ifdef GET_CYCLE_CNT
+	after_prepare_resume1 = get_cyclecount();
+#endif
+
 
 #ifdef GET_CYCLE_CNT
 #ifdef CONFIG_ARCH_SUN4I	
