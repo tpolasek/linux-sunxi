@@ -1214,6 +1214,7 @@ static int i2c_sunxi_resume(struct platform_device *pdev)
 	}
 
 	aw_twi_soft_reset(i2c->base_addr);
+	aw_twi_send_clk_9pulse(i2c->base_addr);
 
 	i2c_dbg("[i2c%d] resume okay.. \n", i2c->bus_num);
 	return 0;
