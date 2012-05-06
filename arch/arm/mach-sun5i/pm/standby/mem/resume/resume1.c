@@ -178,6 +178,7 @@ int main(void)
 	start = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x08);
 	end = get_cyclecount();
 	*(volatile __u32 *)(SUN5I_STATUS_REG - 0x08) = end - start;
+	//busy_waiting();
 	//*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = get_cyclecount();
 	//record start
 	*(volatile __u32 *)(SUN5I_STATUS_REG  - 0x0c) = get_cyclecount();
@@ -246,7 +247,9 @@ void restore_ccmu(void)
 	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
 	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
 	//25us * 400
-	standby_mdelay(400);
+	//standby_mdelay(400);
+	change_runtime_env(1);
+	delay_ms(10);
 
 	/*setting clock division ratio*/
 	/* set clock division cpu:axi:ahb:apb =  1:1:2:2*/
@@ -263,12 +266,16 @@ void restore_ccmu(void)
 	/* enable pll */
 	mem_clk_pllenable();
 	//25us * 40 * 10
-	standby_mdelay(400);
+	//standby_mdelay(400);
+	change_runtime_env(1);
+	delay_ms(10);
 	
 	/* switch cpu clock to core pll */
 	mem_clk_core2pll();
 	//25us* 40 * 10
-	standby_mdelay(400);
+	//standby_mdelay(400);
+	change_runtime_env(1);
+	delay_ms(10);
 	//busy_waiting();
 
 	/* gating on dram clock */
@@ -284,4 +291,6 @@ void restore_ccmu(void)
 	//standby_mdelay(1000);
 	return;
 }
+
+
 
