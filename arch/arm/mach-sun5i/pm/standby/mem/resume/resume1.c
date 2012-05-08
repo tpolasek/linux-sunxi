@@ -113,6 +113,7 @@ int main(void)
 	
 	//save_mem_status(RESUME1_START |0x05);
 	save_sun5i_mem_status(RESUME1_START |0x05);
+	mem_clk_init();
 	standby_twi_init(AXP_IICBUS);
 	//save_mem_status(RESUME1_START |0x06);
 	save_sun5i_mem_status(RESUME1_START |0x06);
