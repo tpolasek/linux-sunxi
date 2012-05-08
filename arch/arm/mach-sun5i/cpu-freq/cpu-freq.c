@@ -604,7 +604,6 @@ static int sun4i_cpufreq_getcur(struct sun4i_cpu_freq_t *cfg)
 
 /* variable for backup cpu frequency configuration */
 static struct sun4i_cpu_freq_t suspend_freq;
-static __u32 suspend_vdd = 0;
 
 /*
 *********************************************************************************************************
