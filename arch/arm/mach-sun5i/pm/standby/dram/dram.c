@@ -355,10 +355,42 @@ __s32 DRAMC_retraining(void)
     }
 }
 
+/*
+ * backup dram calibration value
+ */
+void backup_dram_cal_val(void)
+{
+	__u32 value;
+	__u8 reg_addr_1st = 0x0a;
+	__u8 reg_addr_2nd = 0x0b;
+	__u8 reg_addr_3rd = 0x0c;
+	__u8 reg_val;
+	
+	value = mctl_read_w(SDR_ZQSR) & 0xfffff;
+	//busy_waiting();
+
+	reg_val = value&0xff;
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,reg_addr_1st, &reg_val)){
+		busy_waiting();
+	}
+
+	reg_val = (value>>8)&0xff;
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,reg_addr_2nd, &reg_val)){
+		busy_waiting();
+	}
+
+	reg_val = (value>>16)&0x0f;
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,reg_addr_3rd, &reg_val)){
+		busy_waiting();
+	}
+
+	return;
+}
+
 void dram_power_save_process(void)
 {
-	__u32 reg_val;
-
+	backup_dram_cal_val();
+	
 	//put external SDRAM into self-fresh state
 	DRAMC_enter_selfrefresh();
 
