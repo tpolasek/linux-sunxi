@@ -85,9 +85,14 @@ __u32 get_cyclecount (void)
 
 void backup_perfcounter(void)
 {
+	//backup performance-counter ctrl reg
 	asm volatile ("MRC p15, 0, %0, c9, c12, 0\t\n": "=r"(backup_perf_counter_ctrl_reg)); 
+	
+	//backup enable reg
 	asm volatile ("MRC p15, 0, %0, c9, c12, 1\t\n": "=r"(backup_perf_counter_enable_reg)); 
+
 }
+	
 void init_perfcounters (__u32 do_reset, __u32 enable_divider)
 {
 	// in general enable all counters (including cycle counter)
@@ -117,10 +122,16 @@ void init_perfcounters (__u32 do_reset, __u32 enable_divider)
 
 	return;
 }
+
 void restore_perfcounter(void)
 {
+	
+	// restore performance-counter control-register:
 	asm volatile ("mcr p15, 0, %0, c9, c12, 0" : : "r"(backup_perf_counter_ctrl_reg));
+
+	// restore enable reg
 	asm volatile ("mcr p15, 0, %0, c9, c12, 1" : : "r"(backup_perf_counter_enable_reg));
+	
 }
 
 void reset_counter(void)

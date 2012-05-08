@@ -36,6 +36,9 @@
 #include "pm_i.h"
 //#include <linux/sw-uart-dbg.h>
 #include "mem_cpu.h"
+#include "standby/standby_clock.h"
+#include "standby/standby_power.h"
+#include "standby/standby_twi.h"
 
 //#define CROSS_MAPPING_STANDBY
 #define AW_PM_DBG   1
@@ -278,6 +281,8 @@ int aw_pm_begin(suspend_state_t state)
 	}
 	//set freq max
 	cpufreq_user_event_notify();
+	
+/*must init perfcounter, because delay_us and delay_ms is depandant perf counter*/
 #ifndef GET_CYCLE_CNT
 		backup_perfcounter();
 		init_perfcounters (1, 0);
@@ -348,6 +353,7 @@ static void aw_early_suspend(void)
 {
 	save_mem_status(EARLY_SUSPEND_START | 0x101);
 	//busy_waiting();
+	mem_ccu_save((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
 	save_mem_status(EARLY_SUSPEND_START | 0x102);
 	mem_clk_save(&(saved_clk_state));
 
@@ -366,6 +372,16 @@ static void aw_early_suspend(void)
 	mem_int_save(&(saved_int_state));
 
 	mem_sram_save(&(saved_sram_state));
+
+	//backup volt and freq state, after backup device state
+	standby_twi_init(AXP_IICBUS);
+	/* backup voltages */
+	mem_para_info.suspend_dcdc2 = standby_get_voltage(POWER_VOL_DCDC2);
+	mem_para_info.suspend_dcdc3 = standby_get_voltage(POWER_VOL_DCDC3);
+	/*backup bus ratio*/
+	mem_clk_getdiv(&mem_para_info.clk_div);
+	/*backup pll ration*/
+	mem_clk_get_pll_factor(&mem_para_info.pll_factor);
 	
 	//backup mmu
 	//busy_waiting();
@@ -710,7 +726,8 @@ static void aw_late_resume(void)
 #endif
 	mem_sram_restore(&(saved_sram_state));
 	save_sun5i_mem_status(LATE_RESUME_START | 0x2e);
-
+	
+	mem_ccu_restore((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
 #ifdef GET_CYCLE_CNT
 	late_resume_end = get_cyclecount();
 #endif
@@ -957,7 +974,7 @@ resume:
 	
 	//busy_waiting();
 	printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
-	printk("version 0.61. use delay_ms interface \n");
+	printk("version 0.62.  \n");
 	save_mem_status(LATE_RESUME_START |0x41);
 	save_sun5i_mem_status(LATE_RESUME_START | 0x0b);
 	//usy_waiting();

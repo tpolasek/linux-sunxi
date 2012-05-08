@@ -177,6 +177,8 @@ __s32 mem_gpio_save(struct gpio_state *pgpio_state);
 __s32 mem_gpio_restore(struct gpio_state *pgpio_state);
 __s32 mem_sram_save(struct sram_state *psram_state);
 __s32 mem_sram_restore(struct sram_state *psram_state);
+__s32 mem_ccu_save(__ccmu_reg_list_t *pReg);
+__s32 mem_ccu_restore(__ccmu_reg_list_t *pReg);
 
 
 #endif /*_PM_I_H*/

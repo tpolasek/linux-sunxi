@@ -14,6 +14,20 @@
 #include "pm_debug.h"
 #include "mem_cpu.h"
 
+struct clk_div_t {
+    __u32   cpu_div:4;      /* division of cpu clock, divide core_pll */
+    __u32   axi_div:4;      /* division of axi clock, divide cpu clock*/
+    __u32   ahb_div:4;      /* division of ahb clock, divide axi clock*/
+    __u32   apb_div:4;      /* division of apb clock, divide ahb clock*/
+    __u32   reserved:16;
+};
+struct pll_factor_t {
+    __u32   FactorM:2;          //bit0,  PLL1 Factor M
+    __u32   FactorK:2;          //bit4,  PLL1 factor K
+    __u32   FactorN:5;          //bit8,  PLL1 Factor N
+    __u32   PLLDivP:2;          //bit16, PLL1 output external divider P
+    __u32   reserved1:21;        //bit18, reserved
+};
 
 struct mmu_state {
 	/* CR0 */
@@ -41,7 +55,11 @@ struct aw_mem_para{
 	void **resume_pointer;
 	__u32 mem_flag;
 	__u32 suspend_vdd;
+	__u32 suspend_dcdc2;
+	__u32 suspend_dcdc3;
 	__u32 suspend_freq;
+	struct clk_div_t clk_div;
+	struct pll_factor_t pll_factor;
 	__u32 saved_runtime_context_svc[RUNTIME_CONTEXT_SIZE];
 	__u32 saved_dram_training_area[DRAM_TRANING_SIZE];
 	struct mmu_state saved_mmu_state;
