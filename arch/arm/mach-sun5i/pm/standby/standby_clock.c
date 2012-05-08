@@ -84,7 +84,6 @@ __s32 mem_clk_init(void)
     return 0;
 }
 
-
 /*
 *********************************************************************************************************
 *                           standby_clk_exit
@@ -437,13 +436,15 @@ __s32 mem_clk_setdiv(struct clk_div_t *clk_div)
 *********************************************************************************************************
 */
 
-__s32 mem_clk_set_pll_factor(void)
+__s32 mem_clk_set_pll_factor(struct pll_factor_t *pll_factor)
 {
 
-    CmuReg->Pll1Ctl.FactorN = 21;
-    CmuReg->Pll1Ctl.FactorK = 1;
-    CmuReg->Pll1Ctl.FactorM = 0;
-    CmuReg->Pll1Ctl.PLLDivP = 0;
+	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+    CmuReg->Pll1Ctl.FactorN = pll_factor->FactorN;
+    CmuReg->Pll1Ctl.FactorK = pll_factor->FactorK;
+    CmuReg->Pll1Ctl.FactorM = pll_factor->FactorM;
+    CmuReg->Pll1Ctl.PLLDivP = pll_factor->PLLDivP;
+	
 	//busy_waiting();
 
     return 0;

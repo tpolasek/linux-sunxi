@@ -213,8 +213,8 @@ void restore_ccmu(void)
 	
 	/* backup voltages */
 	//dcdc2 = 1400;
-	dcdc2 = mem_para_info.suspend_vdd;
-	dcdc3 = 1200;
+	dcdc2 = mem_para_info.suspend_dcdc2;
+	dcdc3 = mem_para_info.suspend_dcdc3;
 
 	/* set clock division cpu:axi:ahb:apb = 2:2:2:1 */
 #if 0
@@ -257,14 +257,18 @@ void restore_ccmu(void)
 	/* set clock division cpu:axi:ahb:apb =  1:3:2:2*/
 	
 	//standby_clk_getdiv(&clk_div);
-	tmp_clk_div.axi_div = 2;
-	tmp_clk_div.ahb_div = 1;
-	tmp_clk_div.apb_div = 1;
-	standby_clk_setdiv(&tmp_clk_div);
+	//tmp_clk_div.axi_div = 2;
+	//tmp_clk_div.ahb_div = 1;
+	//tmp_clk_div.apb_div = 1;
+	//standby_clk_setdiv(&tmp_clk_div);
+	/*setting clk div ratio*/
+	mem_clk_setdiv(&mem_para_info.clk_div);
+
 	
 	//busy_waiting();
 	/*setting pll factor: 1008M hz*/
-	mem_clk_set_pll_factor();
+	//mem_clk_set_pll_factor();
+	mem_clk_set_pll_factor(&mem_para_info.pll_factor);
 
 	
 	/* enable pll */

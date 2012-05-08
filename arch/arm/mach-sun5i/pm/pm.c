@@ -974,7 +974,7 @@ resume:
 	
 	//busy_waiting();
 	printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
-	printk("version 0.62.  \n");
+	printk("version 0.61. adjust cpu-freq from cpu-freq \n");
 	save_mem_status(LATE_RESUME_START |0x41);
 	save_sun5i_mem_status(LATE_RESUME_START | 0x0b);
 	//usy_waiting();
