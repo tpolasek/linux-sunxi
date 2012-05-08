@@ -853,19 +853,21 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 		
 		/* restore cpu frequency configuration */
 		__set_cpufreq_target(&suspend, &suspend_freq);
-#endif		
-		//last_vdd = 1400;
-		cpu_cur.pll = 384000000;
+#endif	
+
+#if 1
+		cpu_cur.pll = 1008000000;
 		cpu_cur.div.cpu_div = 1;
-		cpu_cur.div.axi_div = 1;
+		cpu_cur.div.axi_div = 3;
 		cpu_cur.div.ahb_div = 2;
 		cpu_cur.div.apb_div = 2;
 
 		sun4i_cpufreq_getcur(&suspend);
 		/* restore cpu frequency configuration */
 		__set_cpufreq_target(&suspend, &suspend_freq);
-
+#endif
 		ccmu_reg_restore((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
+
 
 #ifdef CONFIG_CPU_FREQ_DVFS	
 

@@ -207,9 +207,9 @@ void restore_ccmu(void)
 	}
 	
 	/* switch cpu clock to HOSC, and disable pll */
-	standby_clk_core2hosc();
+//	standby_clk_core2hosc();
 	//standby_clk_plldisable();
-	mem_clk_plldisable();
+//	mem_clk_plldisable();
 	
 	/* backup voltages */
 	//dcdc2 = 1400;
@@ -254,29 +254,32 @@ void restore_ccmu(void)
 
 	/*setting clock division ratio*/
 	/* set clock division cpu:axi:ahb:apb =  1:1:2:2*/
+	/* set clock division cpu:axi:ahb:apb =  1:3:2:2*/
+	
 	//standby_clk_getdiv(&clk_div);
-	//tmp_clk_div.axi_div = 0;
-	//tmp_clk_div.ahb_div = 1;
-	//tmp_clk_div.apb_div = 1;
-	//standby_clk_setdiv(&tmp_clk_div);
+	tmp_clk_div.axi_div = 2;
+	tmp_clk_div.ahb_div = 1;
+	tmp_clk_div.apb_div = 1;
+	standby_clk_setdiv(&tmp_clk_div);
 	
 	//busy_waiting();
-	/*setting pll factor: 384M hz*/
+	/*setting pll factor: 1008M hz*/
 	mem_clk_set_pll_factor();
+
 	
 	/* enable pll */
-	mem_clk_pllenable();
+	//mem_clk_pllenable();
 	//25us * 40 * 10
 	//standby_mdelay(400);
 	change_runtime_env(1);
-	delay_ms(10);
+	delay_ms(5);
 	
 	/* switch cpu clock to core pll */
-	mem_clk_core2pll();
+//	mem_clk_core2pll();
 	//25us* 40 * 10
 	//standby_mdelay(400);
-	change_runtime_env(1);
-	delay_ms(10);
+	//change_runtime_env(1);
+	//delay_ms(10);
 	//busy_waiting();
 
 	/* gating on dram clock */
