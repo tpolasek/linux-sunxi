@@ -68,11 +68,11 @@ __u32 get_mem_status(void);
 __u32 save_sun5i_mem_status_nommu(volatile __u32 val);
 __u32 save_sun5i_mem_status(volatile __u32 val);
 
-#ifdef GET_CYCLE_CNT
+
+void backup_perfcounter(void);
+void restore_perfcounter(void);
 __u32 get_cyclecount (void);
 void init_perfcounters (__u32 do_reset, __u32 enable_divider);
-#endif
-
 void reset_counter(void);
 void change_runtime_env(__u32 mmu_flag);
 void delay_us(__u32 us);

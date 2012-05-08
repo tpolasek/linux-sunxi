@@ -278,6 +278,10 @@ int aw_pm_begin(suspend_state_t state)
 	}
 	//set freq max
 	cpufreq_user_event_notify();
+#ifndef GET_CYCLE_CNT
+		backup_perfcounter();
+		init_perfcounters (1, 0);
+#endif
 
 
 	return 0;
@@ -953,7 +957,7 @@ resume:
 	
 	//busy_waiting();
 	printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
-	printk("version 0.61. merge to dev\n");
+	printk("version 0.61. use delay_ms interface \n");
 	save_mem_status(LATE_RESUME_START |0x41);
 	save_sun5i_mem_status(LATE_RESUME_START | 0x0b);
 	//usy_waiting();
@@ -1028,6 +1032,9 @@ void aw_pm_end(void)
 	//uart_init(2, 115200);
 	save_mem_status(LATE_RESUME_START |0x10);
 	//print_flag = 0;
+#ifndef GET_CYCLE_CNT
+			restore_perfcounter();
+#endif
 	PM_DBG("aw_pm_end!\n");
 }
 

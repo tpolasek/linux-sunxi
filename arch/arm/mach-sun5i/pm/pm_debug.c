@@ -3,6 +3,8 @@
 
 static __u32 cpu_freq = 0;
 static __u32 overhead = 0;
+static __u32 backup_perf_counter_ctrl_reg = 0;
+static __u32 backup_perf_counter_enable_reg = 0;
 #define CCU_REG_VA (0xF1c20000)
 #define CCU_REG_PA (0x01c20000)
 
@@ -81,6 +83,11 @@ __u32 get_cyclecount (void)
   return value;
 }
 
+void backup_perfcounter(void)
+{
+	asm volatile ("MRC p15, 0, %0, c9, c12, 0\t\n": "=r"(backup_perf_counter_ctrl_reg)); 
+	asm volatile ("MRC p15, 0, %0, c9, c12, 1\t\n": "=r"(backup_perf_counter_enable_reg)); 
+}
 void init_perfcounters (__u32 do_reset, __u32 enable_divider)
 {
 	// in general enable all counters (including cycle counter)
@@ -109,6 +116,11 @@ void init_perfcounters (__u32 do_reset, __u32 enable_divider)
 	asm volatile ("MCR p15, 0, %0, c9, c12, 3" : : "r"(value));
 
 	return;
+}
+void restore_perfcounter(void)
+{
+	asm volatile ("mcr p15, 0, %0, c9, c12, 0" : : "r"(backup_perf_counter_ctrl_reg));
+	asm volatile ("mcr p15, 0, %0, c9, c12, 1" : : "r"(backup_perf_counter_enable_reg));
 }
 
 void reset_counter(void)

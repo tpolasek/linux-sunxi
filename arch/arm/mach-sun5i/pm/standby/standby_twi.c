@@ -74,7 +74,9 @@ __s32 standby_twi_exit(void)
     /* softreset twi module  */
     twi_reg->reg_reset |= 0x1;
     /* delay */
-    standby_mdelay(10);
+    //standby_mdelay(10);
+    change_runtime_env(1);
+	delay_ms(10);
 
     /* restore clock division */
     twi_reg->reg_clkr = TwiClkRegBak;
