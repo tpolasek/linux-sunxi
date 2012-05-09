@@ -192,7 +192,7 @@ int main(void)
 	save_mem_status(SUSPEND_START |0x06);
 	standby_tmr_init();
 	save_mem_status(SUSPEND_START |0x07);
-	standby_twi_init(AXP_IICBUS);
+	mem_twi_init(AXP_IICBUS);
 	save_mem_status(SUSPEND_START |0x08);
 	mem_power_init();
     	save_mem_status(SUSPEND_START |0x09);

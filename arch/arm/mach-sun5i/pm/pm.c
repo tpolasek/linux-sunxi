@@ -374,7 +374,7 @@ static void aw_early_suspend(void)
 	mem_sram_save(&(saved_sram_state));
 
 	//backup volt and freq state, after backup device state
-	standby_twi_init(AXP_IICBUS);
+	mem_twi_init(AXP_IICBUS);
 	/* backup voltages */
 	mem_para_info.suspend_dcdc2 = standby_get_voltage(POWER_VOL_DCDC2);
 	mem_para_info.suspend_dcdc3 = standby_get_voltage(POWER_VOL_DCDC3);

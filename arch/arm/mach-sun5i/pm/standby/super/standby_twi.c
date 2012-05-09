@@ -43,12 +43,14 @@ static __twic_reg_t *twi_reg  = 0;
 *
 *********************************************************************************************************
 */
-__s32 standby_twi_init(int group)
+__s32 mem_twi_init(int group)
 {
     twi_reg  = TWI_REG_BASE[group];
     TwiClkRegBak = twi_reg->reg_clkr;
     TwiCtlRegBak = 0x80&twi_reg->reg_ctl;/* backup INT_EN;no need for BUS_EN(0xc0)  */
-    twi_reg->reg_clkr = (2<<3)|3;
+    //twi_reg->reg_clkr = (2<<3)|3; //100k
+    twi_reg->reg_clkr = (2<<3)|8; //400k
+    
     twi_reg->reg_reset |= 0x1;
 	
 	while(twi_reg->reg_reset&0x1);
@@ -148,7 +150,7 @@ void setup_twi_env(void)
 	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
 	
 	/*clk module : setting clk ratio, enable gating*/
-	*(volatile __u32 *)&CmuReg->Apb1ClkDiv |= (0x2>>16 | 0x1f);
+	*(volatile __u32 *)&CmuReg->Apb1ClkDiv = 0; //24M osc
 	*(volatile __u32 *)&CmuReg->Apb1Gate |= 0x01;
 	
 

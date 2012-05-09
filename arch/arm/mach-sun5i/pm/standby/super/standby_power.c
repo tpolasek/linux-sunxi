@@ -38,7 +38,7 @@ __s32 standby_power_init(void)
 {
     __u8	reg_val;
 
-	standby_twi_init(AXP_IICBUS);
+	mem_twi_init(AXP_IICBUS);
 
     #if(AXP_WAKEUP & AXP_WAKEUP_KEY)
     /* enable pek long/short */
