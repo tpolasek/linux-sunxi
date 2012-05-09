@@ -12,10 +12,9 @@ pm_tmp-y += ./mem_twi.o
 pm_tmp-y += ./mem_gpio.o
 pm_tmp-y += ./mem_sram.o
 pm_tmp-y += ./mem_ccu.o
-pm_tmp-y += ./standby/standby_power.o
-pm_tmp-y += ./standby/standby_twi.o
-pm_tmp-y += ./standby/standby_clock.o
 pm_tmp-y += ./pm_debug.o
 pm_tmp-y += ./pm.o
-pm_tmp-y += ./standby/stack.o
-
+pm_tmp-y += ./standby/super/stack.o
+pm_tmp-y += ./standby/super/standby_power.o
+pm_tmp-y += ./standby/super/standby_twi.o
+pm_tmp-y += ./standby/super/standby_clock.o

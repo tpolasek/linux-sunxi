@@ -25,9 +25,9 @@
 #include "mem_tmr.h"
 
 #include "mach/dram.h"
-#include "../../pm_config.h"
+#include "../../../pm_config.h"
 #include "../standby_i.h"
-#include "../../pm.h"
+#include "../../../pm.h"
 
 #endif //__MEM_I_H__
 

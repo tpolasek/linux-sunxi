@@ -17,7 +17,7 @@
 */
 #include "standby_i.h"
 
-#define TWI_CHECK_TIMEOUT       (0x2ff)
+#define TWI_CHECK_TIMEOUT       (0xf2ff) //how to decide proper value?
 
 static __twic_reg_t*   TWI_REG_BASE[3] = {
     (__twic_reg_t*)SW_VA_TWI0_IO_BASE,
@@ -50,7 +50,9 @@ __s32 standby_twi_init(int group)
     TwiCtlRegBak = 0x80&twi_reg->reg_ctl;/* backup INT_EN;no need for BUS_EN(0xc0)  */
     twi_reg->reg_clkr = (2<<3)|3;
     twi_reg->reg_reset |= 0x1;
-
+	
+	while(twi_reg->reg_reset&0x1);
+	
     return 0;
 }
 
@@ -72,7 +74,9 @@ __s32 standby_twi_exit(void)
     /* softreset twi module  */
     twi_reg->reg_reset |= 0x1;
     /* delay */
-    standby_mdelay(10);
+    //standby_mdelay(10);
+    change_runtime_env(1);
+	delay_ms(10);
 
     /* restore clock division */
     twi_reg->reg_clkr = TwiClkRegBak;
@@ -104,21 +108,21 @@ static int _standby_twi_stop(void)
     nop_read = twi_reg->reg_ctl;/* apb时钟低时必须假读一次stop bit,下一个周期才生效 */
     nop_read = nop_read;
     // 1. stop bit is zero.
-    while((twi_reg->reg_ctl & 0x10)&&(timeout--));
+    while((twi_reg->reg_ctl & 0x10)&&(--timeout));
     if(timeout == 0)
     {
         return -1;
     }
     // 2. twi fsm is idle(0xf8).
     timeout = TWI_CHECK_TIMEOUT;
-    while((0xf8 != twi_reg->reg_status)&&(timeout--));
+    while((0xf8 != twi_reg->reg_status)&&(--timeout));
     if(timeout == 0)
     {
         return -1;
     }
     // 3. twi scl & sda must high level.
     timeout = TWI_CHECK_TIMEOUT;
-    while((0x3a != twi_reg->reg_lctl)&&(timeout--));
+    while((0x3a != twi_reg->reg_lctl)&&(--timeout));
     if(timeout == 0)
     {
         return -1;
@@ -127,6 +131,36 @@ static int _standby_twi_stop(void)
     return 0;
 }
 
+/*
+*********************************************************************************************************
+*                           setup_twi_env
+*
+* Description: setup_env for twi transfer.
+*
+* Arguments  : none;
+*
+* Returns    : result;
+*********************************************************************************************************
+*/
+void setup_twi_env(void)
+{
+	__ccmu_reg_list_t   *CmuReg;
+	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+	
+	/*clk module : setting clk ratio, enable gating*/
+	*(volatile __u32 *)&CmuReg->Apb1ClkDiv |= (0x2>>16 | 0x1f);
+	*(volatile __u32 *)&CmuReg->Apb1Gate |= 0x01;
+	
+
+	/*setting gpio: twi0 sda, sck */
+	*(volatile __u32 *)(SW_VA_PORTC_IO_BASE + 0x24) |= 0x22;
+
+	/*twi module: twi ctrl , bus-en bit*/
+	*(volatile __u32 *)(SW_VA_TWI0_IO_BASE + 0x0c) |= 0x40;
+	
+	return;
+
+}
 
 /*
 *********************************************************************************************************
@@ -166,9 +200,10 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
     //1.Send Start
     twi_reg->reg_ctl |= 0x20;
     timeout = TWI_CHECK_TIMEOUT;
-    while((!(twi_reg->reg_ctl & 0x08))&&(timeout--));
+    while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
     if(timeout == 0)
     {
+    	busy_waiting();
         goto stop_out;
     }
     state_tmp = twi_reg->reg_status;
@@ -181,7 +216,7 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
     twi_reg->reg_data = (saddr<<1) | 0; /* slave address + write */
     twi_reg->reg_ctl &= 0xf7;/* clear int flag */
     timeout = TWI_CHECK_TIMEOUT;
-    while((!(twi_reg->reg_ctl & 0x08))&&(timeout--));
+    while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
     if(timeout == 0)
     {
         goto stop_out;
@@ -196,7 +231,7 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
     twi_reg->reg_data = baddr;
     twi_reg->reg_ctl &= 0xf7;/* clear int flag */
     timeout = TWI_CHECK_TIMEOUT;
-    while((!(twi_reg->reg_ctl & 0x08))&&(timeout--));
+    while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
     if(timeout == 0)
     {
         goto stop_out;
@@ -213,7 +248,7 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
         twi_reg->reg_data = *data;
         twi_reg->reg_ctl &= 0xf7;/* clear int flag */
         timeout = TWI_CHECK_TIMEOUT;
-        while((!(twi_reg->reg_ctl & 0x08))&&(timeout--));
+        while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
         if(timeout == 0)
         {
             goto stop_out;
@@ -229,7 +264,7 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
         //4. Send restart for read
         twi_reg->reg_ctl = (twi_reg->reg_ctl & 0xc0) | 0x20;/* set start+clear int flag */
         timeout = TWI_CHECK_TIMEOUT;
-        while((!(twi_reg->reg_ctl & 0x08))&&(timeout--));
+        while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
         if(timeout == 0)
         {
             goto stop_out;
@@ -244,7 +279,7 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
         twi_reg->reg_data = (saddr<<1) | 1;/* slave address+ read */
         twi_reg->reg_ctl &= 0xf7;/* clear int flag then 0x40 come in */
         timeout = TWI_CHECK_TIMEOUT;
-        while((!(twi_reg->reg_ctl & 0x08))&&(timeout--));
+        while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
         if(timeout == 0)
         {
             goto stop_out;
@@ -258,7 +293,162 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
         //6.Get data
         twi_reg->reg_ctl &= 0xf7;/* clear int flag then data come in */
         timeout = TWI_CHECK_TIMEOUT;
-        while((!(twi_reg->reg_ctl & 0x08))&&(timeout--));
+        while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
+        if(timeout == 0)
+        {
+            goto stop_out;
+        }
+        *data = twi_reg->reg_data;
+        state_tmp = twi_reg->reg_status;
+        if(state_tmp != 0x58)
+        {
+          goto stop_out;
+        }
+    }
+
+    ret = 0;
+
+stop_out:
+    //WRITE: step 5; READ: step 7
+    //Send Stop
+    _standby_twi_stop();
+
+    return ret;
+}
+
+/*
+*********************************************************************************************************
+*                                   twi_byte_rw_nommu
+*
+*Description: twi byte read and write.
+*
+*Arguments  : op        operation read or write;
+*             saddr     slave address;
+*             baddr     byte address;
+*             data      pointer to the data to be read or write;
+*
+*Return     : result;
+*               = EPDK_OK,      byte read or write successed;
+*               = EPDK_FAIL,    btye read or write failed!
+*********************************************************************************************************
+*/
+__s32 twi_byte_rw_nommu(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
+{
+    unsigned char state_tmp;
+    unsigned int   timeout;
+    int   ret = -1;
+
+    twi_reg = (__twic_reg_t *)SW_PA_TWI0_IO_BASE;
+    twi_reg->reg_efr = 0;/* 标准读写必须置0 */
+
+    state_tmp = twi_reg->reg_status;
+    if(state_tmp != 0xf8)
+    {
+        goto stop_out;
+    }
+
+    /* control registser bitmap
+         7      6       5     4       3       2    1    0
+      INT_EN  BUS_EN  START  STOP  INT_FLAG  ACK  NOT  NOT
+    */
+
+    //1.Send Start
+    twi_reg->reg_ctl |= 0x20;
+    timeout = TWI_CHECK_TIMEOUT;
+    while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
+    if(timeout == 0)
+    {
+    	busy_waiting();
+        goto stop_out;
+    }
+    state_tmp = twi_reg->reg_status;
+    if(state_tmp != 0x08)
+    {
+        goto stop_out;
+    }
+
+    //2.Send Slave Address
+    twi_reg->reg_data = (saddr<<1) | 0; /* slave address + write */
+    twi_reg->reg_ctl &= 0xf7;/* clear int flag */
+    timeout = TWI_CHECK_TIMEOUT;
+    while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
+    if(timeout == 0)
+    {
+        goto stop_out;
+    }
+    state_tmp = twi_reg->reg_status;
+    if(state_tmp != 0x18)
+    {
+        goto stop_out;
+    }
+
+    //3.Send Byte Address
+    twi_reg->reg_data = baddr;
+    twi_reg->reg_ctl &= 0xf7;/* clear int flag */
+    timeout = TWI_CHECK_TIMEOUT;
+    while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
+    if(timeout == 0)
+    {
+        goto stop_out;
+    }
+    state_tmp = twi_reg->reg_status;
+    if(state_tmp != 0x28)
+    {
+        goto stop_out;
+    }
+
+    if(op == TWI_OP_WR)
+    {
+        //4.Send Data to be write
+        twi_reg->reg_data = *data;
+        twi_reg->reg_ctl &= 0xf7;/* clear int flag */
+        timeout = TWI_CHECK_TIMEOUT;
+        while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
+        if(timeout == 0)
+        {
+            goto stop_out;
+        }
+        state_tmp = twi_reg->reg_status;
+        if(state_tmp != 0x28)
+        {
+            goto stop_out;
+        }
+    }
+    else
+    {
+        //4. Send restart for read
+        twi_reg->reg_ctl = (twi_reg->reg_ctl & 0xc0) | 0x20;/* set start+clear int flag */
+        timeout = TWI_CHECK_TIMEOUT;
+        while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
+        if(timeout == 0)
+        {
+            goto stop_out;
+        }
+        state_tmp = twi_reg->reg_status;
+        if(state_tmp != 0x10)
+        {
+            goto stop_out;
+        }
+
+        //5.Send Slave Address
+        twi_reg->reg_data = (saddr<<1) | 1;/* slave address+ read */
+        twi_reg->reg_ctl &= 0xf7;/* clear int flag then 0x40 come in */
+        timeout = TWI_CHECK_TIMEOUT;
+        while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
+        if(timeout == 0)
+        {
+            goto stop_out;
+        }
+        state_tmp = twi_reg->reg_status;
+        if(state_tmp != 0x40)
+        {
+            goto stop_out;
+        }
+
+        //6.Get data
+        twi_reg->reg_ctl &= 0xf7;/* clear int flag then data come in */
+        timeout = TWI_CHECK_TIMEOUT;
+        while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
         if(timeout == 0)
         {
             goto stop_out;

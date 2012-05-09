@@ -3,27 +3,73 @@
 INCLUDE   = -I. \
 	-I$(KDIR)/include \
 	-I$(KDIR)/arch/arm/mach-sun5i/include
-
-STANDBY_OBJ = common.o standby.o pm_debug.o stack.o standby_clock.o dram/dram.o dram/dram_init.o   \
-      standby_int.o standby_ir.o standby_key.o standby_power.o  \
-      standby_tmr.o standby_twi.o standby_usb.o standby_delay.o
-
-SUSPEND_OBJ = suspend.o pm_debug.o common.o stack.o standby_clock.o standby_twi.o standby_delay.o \
-	standby_int.o standby_tmr.o mem_power.o dram/dram.o dram/dram_init.o mem_mmu_pc_asm.o mem_cpu.o \
-	mem_mmu_pc.o
-
-RESUME1_OBJ = resume1.o mem_power.o pm_debug.o stack.o mem_mmu_pc.o mem_mmu_pc_asm.o standby_twi.o standby_delay.o \
-	standby_int.o standby_tmr.o common.o standby_clock.o mem_cpu.o standby_power.o dram/dram.o dram/dram_init.o \
-	mem_tmr.o
-
-RESUME0_OBJ = resume0.o mem_power.o pm_debug.o stack.o standby_twi.o standby_delay.o \
-	common.o standby_clock.o resume1_asm.o mem_mmu_pc_asm.o mem_cpu.o
+	
+STANDBY_OBJ = 	common.o         	\
+		standby.o        	\
+		stack.o          	\
+		standby_clock.o  	\
+		standby_int.o    	\
+		standby_ir.o     	\
+		standby_key.o    	\
+		standby_power.o  	\
+		standby_tmr.o    	\
+		standby_twi.o    	\
+		standby_usb.o    	\
+		standby_delay.o  	\
+		pm_debug.o       	\
+		dram/dram.o      	\
+		dram/dram_init.o
+	
+SUSPEND_OBJ =	./super/common.o              	\
+		./super/stack.o               	\
+		./super/standby_int.o         	\
+		./super/standby_tmr.o         	\
+		./super/standby_clock.o       	\
+		./super/standby_twi.o         	\
+		./super/standby_delay.o       	\
+		./super/mem/suspend/suspend.o 	\
+		./super/mem/mem_power.o       	\
+		./super/dram/dram.o           	\
+		./super/dram/dram_init.o      	\
+		pm_debug.o                    	\
+		mem_mmu_pc_asm.o              	\
+		mem_mmu_pc.o                  	\
+		mem_cpu.o                     	 
+	
+RESUME1_OBJ =	./super/common.o             \
+		./super/stack.o              \
+		./super/standby_twi.o        \
+		./super/standby_delay.o      \
+		./super/standby_clock.o      \
+		./super/standby_power.o      \
+		./super/standby_int.o        \
+		./super/standby_tmr.o        \
+		./super/dram/dram.o          \
+		./super/dram/dram_init.o     \
+		./super/mem/resume/resume1.o \
+		./super/mem/mem_power.o      \
+		./super/mem/mem_tmr.o        \
+		pm_debug.o                   \
+		mem_mmu_pc.o                 \
+		mem_mmu_pc_asm.o             \
+		mem_cpu.o                    
+	
+RESUME0_OBJ =	./super/common.o             \
+		./super/stack.o              \
+		./super/standby_twi.o        \
+		./super/standby_delay.o      \
+		./super/standby_clock.o      \
+		./super/resume1_asm.o        \
+		./super/mem/resume/resume0.o \
+		./super/mem/mem_power.o      \
+		pm_debug.o                   \
+		mem_mmu_pc_asm.o             \
+		mem_cpu.o                     
 	
 STANDBY_OUPUTFILE = standby
 SUSPEND_OUPUTFILE = suspend
 RESUME1_OUPUTFILE = resume1
 RESUME0_OUPUTFILE = resume0
-
 
 STANDBY_LD_FILE = standby.xn
 SUSPEND_LD_FILE = suspend.xn
@@ -39,7 +85,7 @@ all: standby suspend resume1 resume0
 standby:
 	$(CC) $(INCLUDE) $(CFLAGS) common.c           -o common.o
 	$(CC) $(INCLUDE) $(CFLAGS) standby.c          -o standby.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c    -o pm_debug.o
+	$(CC) $(INCLUDE) $(CFLAGS) stack.S            -o stack.o
 	$(CC) $(INCLUDE) $(CFLAGS) standby_clock.c    -o standby_clock.o
 	$(CC) $(INCLUDE) $(CFLAGS) standby_int.c      -o standby_int.o
 	$(CC) $(INCLUDE) $(CFLAGS) standby_ir.c       -o standby_ir.o
@@ -49,9 +95,9 @@ standby:
 	$(CC) $(INCLUDE) $(CFLAGS) standby_twi.c      -o standby_twi.o
 	$(CC) $(INCLUDE) $(CFLAGS) standby_usb.c      -o standby_usb.o
 	$(CC) $(INCLUDE) $(CFLAGS) standby_delay.S    -o standby_delay.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c    -o pm_debug.o 
 	$(CC) $(INCLUDE) $(CFLAGS) dram/dram.c        -o dram/dram.o
 	$(CC) $(INCLUDE) $(CFLAGS) dram/dram_init.c   -o dram/dram_init.o
-	$(CC) $(INCLUDE) $(CFLAGS) stack.S            -o stack.o
 
 	$(CROSS_COMPILE)ld -T $(STANDBY_LD_FILE)  -EL  $(STANDBY_OBJ) -o $(STANDBY_OUPUTFILE).elf  -Map $(STANDBY_OUPUTFILE).map
 	$(CROSS_COMPILE)objdump -D $(STANDBY_OUPUTFILE).elf > $(STANDBY_OUPUTFILE).lst
@@ -65,22 +111,21 @@ standby:
 	@echo well done!
 	
 suspend:
-	$(CC) $(INCLUDE) $(CFLAGS) ./mem/suspend/suspend.c                    -o suspend.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                            -o pm_debug.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./mem/mem_power.c                          -o mem_power.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./common.c                                 -o common.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./stack.S                                  -o stack.o
-	$(CC) $(INCLUDE) $(CFLAGS) standby_int.c                              -o standby_int.o
-	$(CC) $(INCLUDE) $(CFLAGS) standby_tmr.c                              -o standby_tmr.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_clock.c                          -o standby_clock.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_twi.c                            -o standby_twi.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_delay.S                          -o standby_delay.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./dram/dram.c                              -o dram/dram.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./dram/dram_init.c                         -o dram/dram_init.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc_asm.S                      -o mem_mmu_pc_asm.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc.c                          -o mem_mmu_pc.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_cpu.c			      -o mem_cpu.o
-
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/common.c                    -o ./super/common.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/stack.S                     -o ./super/stack.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_int.c               -o ./super/standby_int.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_tmr.c               -o ./super/standby_tmr.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_clock.c             -o ./super/standby_clock.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_twi.c               -o ./super/standby_twi.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_delay.S             -o ./super/standby_delay.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/suspend/suspend.c       -o ./super/mem/suspend/suspend.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_power.c             -o ./super/mem/mem_power.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram.c                 -o ./super/dram/dram.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram_init.c            -o ./super/dram/dram_init.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                     -o pm_debug.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc_asm.S               -o mem_mmu_pc_asm.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc.c                   -o mem_mmu_pc.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_cpu.c		       -o mem_cpu.o
 
 	$(CROSS_COMPILE)ld -T $(SUSPEND_LD_FILE)  -EL  $(SUSPEND_OBJ) -o $(SUSPEND_OUPUTFILE).elf  -Map $(SUSPEND_OUPUTFILE).map
 	$(CROSS_COMPILE)objdump -D $(SUSPEND_OUPUTFILE).elf > $(SUSPEND_OUPUTFILE).lst
@@ -88,29 +133,32 @@ suspend:
 
 	rm -rf *.o ../*.o
 
-	cp suspend.bin ./mem/suspend/suspend.code
+	cp suspend.bin ./super/mem/suspend/suspend.code
 
 	@echo ----------------------------------------
 	@echo well done!
 	
 resume1:
-	$(CC) $(INCLUDE) $(CFLAGS) ./mem/resume/resume1.c                     -o resume1.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./mem/mem_power.c                          -o mem_power.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./mem/mem_tmr.c                            -o mem_tmr.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                            -o pm_debug.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./common.c                                 -o common.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./stack.S                                  -o stack.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_twi.c                            -o standby_twi.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_delay.S                          -o standby_delay.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_clock.c                          -o standby_clock.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_power.c                          -o standby_power.o
-	$(CC) $(INCLUDE) $(CFLAGS) standby_int.c                              -o standby_int.o
-	$(CC) $(INCLUDE) $(CFLAGS) standby_tmr.c                              -o standby_tmr.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc.c                          -o mem_mmu_pc.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc_asm.S                      -o mem_mmu_pc_asm.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_cpu.c				-o mem_cpu.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./dram/dram.c                              -o dram/dram.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./dram/dram_init.c                         -o dram/dram_init.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/common.c                    -o ./super/common.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/stack.S                     -o ./super/stack.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_twi.c               -o ./super/standby_twi.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_delay.S             -o ./super/standby_delay.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_clock.c             -o ./super/standby_clock.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_power.c             -o ./super/standby_power.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_int.c               -o ./super/standby_int.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_tmr.c               -o ./super/standby_tmr.o
+	
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram.c                 -o ./super/dram/dram.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram_init.c            -o ./super/dram/dram_init.o
+	
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/resume/resume1.c        -o ./super/mem/resume/resume1.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_power.c             -o ./super/mem/mem_power.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_tmr.c               -o ./super/mem/mem_tmr.o
+	
+	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                     -o pm_debug.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc.c                   -o mem_mmu_pc.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc_asm.S               -o mem_mmu_pc_asm.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_cpu.c		       -o mem_cpu.o
 	
 	
 	$(CROSS_COMPILE)ld -T $(RESUME1_LD_FILE)  -EL  $(RESUME1_OBJ) -o $(RESUME1_OUPUTFILE).elf  -Map $(RESUME1_OUPUTFILE).map
@@ -119,23 +167,25 @@ resume1:
 
 	rm -rf *.o ../*.o
 
-	cp resume1.bin ./mem/resume/resume1.code
+	cp resume1.bin ./super/mem/resume/resume1.code
 
 	@echo ----------------------------------------
 	@echo well done!
 
 resume0:
-	$(CC) $(INCLUDE) $(CFLAGS) ./mem/resume/resume0.c           	      -o resume0.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./mem/mem_power.c                          -o mem_power.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./common.c                                 -o common.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./stack.S                                  -o stack.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                            -o pm_debug.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_twi.c                            -o standby_twi.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_delay.S                          -o standby_delay.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./standby_clock.c                          -o standby_clock.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./resume1_asm.S                            -o resume1_asm.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc_asm.S                      -o mem_mmu_pc_asm.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_cpu.c				-o mem_cpu.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/common.c                    -o ./super/common.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/stack.S                     -o ./super/stack.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_twi.c               -o ./super/standby_twi.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_delay.S             -o ./super/standby_delay.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_clock.c             -o ./super/standby_clock.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/resume1_asm.S               -o ./super/resume1_asm.o
+	
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/resume/resume0.c        -o ./super/mem/resume/resume0.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_power.c             -o ./super/mem/mem_power.o
+	
+	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                     -o pm_debug.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc_asm.S               -o mem_mmu_pc_asm.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_cpu.c		       -o mem_cpu.o
 	
 	$(CROSS_COMPILE)ld -T $(RESUME0_LD_FILE)  -EL  $(RESUME0_OBJ) -o $(RESUME0_OUPUTFILE).elf  -Map $(RESUME0_OUPUTFILE).map
 	$(CROSS_COMPILE)objdump -D $(RESUME0_OUPUTFILE).elf > $(RESUME0_OUPUTFILE).lst
@@ -143,7 +193,7 @@ resume0:
 
 	rm -rf *.o ../*.o
 
-	cp resume0.bin ./mem/resume/resume0.code
+	cp resume0.bin ./super/mem/resume/resume0.code
 
 	@echo ----------------------------------------
 	@echo well done!

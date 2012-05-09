@@ -7,7 +7,7 @@ SECTIONS
 	__suspend_start = . ;
 	.text 0x000000000 :
 	{
-		suspend.o(.text)
+		./super/mem/suspend/suspend.o(.text)
 		*(.text)
 	}
 	.rodata : { *(.rodata) }

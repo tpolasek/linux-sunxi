@@ -63,6 +63,26 @@ __s32 standby_clk_init(void)
     return 0;
 }
 
+/*
+*********************************************************************************************************
+*                           mem_clk_init
+*
+*Description: ccu init for platform standby
+*
+*Arguments  : none
+*
+*Return     : result,
+*
+*Notes      :
+*
+*********************************************************************************************************
+*/
+__s32 mem_clk_init(void)
+{
+    CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+
+    return 0;
+}
 
 /*
 *********************************************************************************************************
@@ -158,6 +178,27 @@ __s32 standby_clk_core2pll(void)
 
 /*
 *********************************************************************************************************
+*                                     mem_clk_core2pll
+*
+* Description: switch core clock to core pll, target cpu freq is 384M hz.
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+__s32 mem_clk_core2pll(void)
+{
+    CmuReg->SysClkDiv.AC328ClkSrc = 2;
+    /* cpu frequency is 384M hz */
+    cpu_ms_loopcnt = 9600;
+
+    return 0;
+}
+
+
+/*
+*********************************************************************************************************
 *                                     standby_clk_plldisable
 *
 * Description: disable dram pll.
@@ -180,6 +221,29 @@ __s32 standby_clk_plldisable(void)
     return 0;
 }
 
+/*
+*********************************************************************************************************
+*                                     mem_clk_plldisable
+*
+* Description: disable all pll except dram pll.
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+__s32 mem_clk_plldisable(void)
+{
+    CmuReg->Pll1Ctl.PLLEn = 0;
+    CmuReg->Pll2Ctl.PLLEn = 0;
+    CmuReg->Pll3Ctl.PLLEn = 0;
+    CmuReg->Pll4Ctl.PLLEn = 0;
+  //  CmuReg->Pll5Ctl.PLLEn = 0;
+    CmuReg->Pll6Ctl.PLLEn = 0;
+    CmuReg->Pll7Ctl.PLLEn = 0;
+
+    return 0;
+}
 
 /*
 *********************************************************************************************************
@@ -199,6 +263,30 @@ __s32 standby_clk_pllenable(void)
     CmuReg->Pll3Ctl.PLLEn = 1;
     CmuReg->Pll4Ctl.PLLEn = 1;
     CmuReg->Pll5Ctl.PLLEn = 1;
+    CmuReg->Pll6Ctl.PLLEn = 1;
+    CmuReg->Pll7Ctl.PLLEn = 1;
+
+    return 0;
+}
+
+/*
+*********************************************************************************************************
+*                                     mem_clk_pllenable
+*
+* Description: enable all pll except dram pll.
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+__s32 mem_clk_pllenable(void)
+{
+    CmuReg->Pll1Ctl.PLLEn = 1;
+    CmuReg->Pll2Ctl.PLLEn = 1;
+    CmuReg->Pll3Ctl.PLLEn = 1;
+    CmuReg->Pll4Ctl.PLLEn = 1;
+    //CmuReg->Pll5Ctl.PLLEn = 1;
     CmuReg->Pll6Ctl.PLLEn = 1;
     CmuReg->Pll7Ctl.PLLEn = 1;
 
@@ -309,6 +397,85 @@ __s32 standby_clk_setdiv(struct sun4i_clk_div_t  *clk_div)
     return 0;
 }
 
+/*
+*********************************************************************************************************
+*                                     mem_clk_setdiv
+*
+* Description: switch core clock to 32k low osc.
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+__s32 mem_clk_setdiv(struct clk_div_t *clk_div)
+{
+    if(!clk_div)
+    {
+        return -1;
+    }
+	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+	
+    CmuReg->SysClkDiv.AXIClkDiv = clk_div->axi_div;
+    CmuReg->SysClkDiv.AHBClkDiv = clk_div->ahb_div;
+    CmuReg->SysClkDiv.APB0ClkDiv = clk_div->apb_div;
+
+    return 0;
+}
+
+
+/*
+*********************************************************************************************************
+*                                     mem_clk_set_pll_factor
+*
+* Description: set pll factor, target cpu freq is 384M hz
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+
+__s32 mem_clk_set_pll_factor(struct pll_factor_t *pll_factor)
+{
+
+	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+    CmuReg->Pll1Ctl.FactorN = pll_factor->FactorN;
+    CmuReg->Pll1Ctl.FactorK = pll_factor->FactorK;
+    CmuReg->Pll1Ctl.FactorM = pll_factor->FactorM;
+    CmuReg->Pll1Ctl.PLLDivP = pll_factor->PLLDivP;
+	
+	//busy_waiting();
+
+    return 0;
+}
+
+/*
+*********************************************************************************************************
+*                                     mem_clk_get_pll_factor
+*
+* Description: set pll factor, target cpu freq is 384M hz
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+
+__s32 mem_clk_get_pll_factor(struct pll_factor_t *pll_factor)
+{
+	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+	
+    pll_factor->FactorN = CmuReg->Pll1Ctl.FactorN;
+    pll_factor->FactorK = CmuReg->Pll1Ctl.FactorK;
+    pll_factor->FactorM = CmuReg->Pll1Ctl.FactorM;
+    pll_factor->PLLDivP = CmuReg->Pll1Ctl.PLLDivP;
+
+	//busy_waiting();
+
+    return 0;
+}
+
 
 /*
 *********************************************************************************************************
@@ -321,7 +488,7 @@ __s32 standby_clk_setdiv(struct sun4i_clk_div_t  *clk_div)
 * Returns    : 0;
 *********************************************************************************************************
 */
-__s32 standby_clk_getdiv(struct sun4i_clk_div_t  *clk_div)
+__s32 standby_clk_getdiv(struct sun4i_clk_div_t *clk_div)
 {
     if(!clk_div)
     {
@@ -335,6 +502,31 @@ __s32 standby_clk_getdiv(struct sun4i_clk_div_t  *clk_div)
     return 0;
 }
 
+/*
+*********************************************************************************************************
+*                                     mem_clk_getdiv
+*
+* Description: switch core clock to 32k low osc.
+*
+* Arguments  : none
+*
+* Returns    : 0;
+*********************************************************************************************************
+*/
+__s32 mem_clk_getdiv(struct clk_div_t  *clk_div)
+{
+    if(!clk_div)
+    {
+        return -1;
+    }
+	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+	
+    clk_div->axi_div = CmuReg->SysClkDiv.AXIClkDiv;
+    clk_div->ahb_div = CmuReg->SysClkDiv.AHBClkDiv;
+    clk_div->apb_div = CmuReg->SysClkDiv.APB0ClkDiv;
+
+    return 0;
+}
 
 /*
 *********************************************************************************************************

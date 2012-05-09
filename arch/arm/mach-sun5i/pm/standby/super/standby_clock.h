@@ -48,6 +48,14 @@ void standby_clk_dramgating(int onoff);
 __s32 standby_clk_apb2losc(void);
 __s32 standby_clk_apb2hosc(void);
 
+__s32 mem_clk_init(void);
+__s32 mem_clk_plldisable(void);
+__s32 mem_clk_pllenable(void);
+__s32 mem_clk_set_pll_factor(struct pll_factor_t *pll_factor);
+__s32 mem_clk_get_pll_factor(struct pll_factor_t *pll_factor);
+__s32 mem_clk_setdiv(struct clk_div_t  *clk_div);
+__s32 mem_clk_getdiv(struct clk_div_t  *clk_div);
+
 extern __u32   cpu_ms_loopcnt;
 
 #endif  /* __STANDBY_CLOCK_H__ */

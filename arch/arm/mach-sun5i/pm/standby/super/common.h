@@ -7,38 +7,21 @@
 *                                    (c) Copyright 2006-2011, kevin.z China
 *                                             All Rights Reserved
 *
-* File    : standby_i.h
+* File    : common.h
 * By      : kevin.z
 * Version : v1.0
 * Date    : 2011-5-30 17:21
-* Descript:
+* Descript: common lib for standby.
 * Update  : date                auther      ver     notes
 *********************************************************************************************************
 */
-#ifndef __STANDBY_I_H__
-#define __STANDBY_I_H__
+#ifndef __COMMON_H__
+#define __COMMON_H__
 
-#include <linux/power/aw_pm.h>
-#include <mach/platform.h>
-
-#include "standby_cfg.h"
-#include "common.h"
-#include "standby_clock.h"
-#include "standby_key.h"
-#include "standby_power.h"
-#include "standby_usb.h"
-#include "standby_twi.h"
-#include "standby_ir.h"
-#include "standby_tmr.h"
-#include "standby_int.h"
-
-extern struct aw_pm_info  pm_info;
-
-
-static inline __u32 raw_lib_udiv(__u32 dividend, __u32 divisior)
+static inline __u64 standby_uldiv(__u64 dividend, __u32 divisior)
 {
-    __u32   tmpDiv = (__u32)divisior;
-    __u32   tmpQuot = 0;
+    __u64   tmpDiv = (__u64)divisior;
+    __u64   tmpQuot = 0;
     __s32   shift = 0;
 
     if(!divisior)
@@ -47,7 +30,7 @@ static inline __u32 raw_lib_udiv(__u32 dividend, __u32 divisior)
         return 0;
     }
 
-    while(!(tmpDiv & ((__u32)1<<31)))
+    while(!(tmpDiv & ((__u64)1<<63)))
     {
         tmpDiv <<= 1;
         shift ++;
@@ -73,5 +56,14 @@ static inline __u32 raw_lib_udiv(__u32 dividend, __u32 divisior)
 
 
 
-#endif  //__STANDBY_I_H__
+void standby_memcpy(void *dest, void *src, int n);
+void standby_mdelay(int ms);
+
+/*notice: all the delay cycle is measured by 60M hz 
+ *when in super standby, the os is running in 1008M
+ *so, the delay cycle need reconsideration.
+ */
+void standby_delay(int cycle);
+
+#endif  //__COMMON_H__
 
