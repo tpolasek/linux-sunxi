@@ -32,8 +32,15 @@ static char    *tmpPtr = (char *)&__bss_start;
 static __u32 status = 0; 
 
 #ifdef GET_CYCLE_CNT
-static int start = 0;
-static int end = 0;
+static __u32 start = 0;
+static __u32 before_restore_ccu = 0;
+static __u32 before_adjust_volt = 0;
+static __u32 before_first_delay_ms = 0;
+static __u32 after_first_delay_ms = 0;
+static __u32 before_adjust_pll = 0;
+static __u32 after_adjust_pll = 0;
+static __u32 after_restore_ccu = 0;
+static __u32 end = 0;
 #endif
 
 
@@ -129,7 +136,15 @@ int main(void)
 	//standby_delay(1);
 	//restore ccmu
 	//busy_waiting();
+#ifdef GET_CYCLE_CNT
+	before_restore_ccu = get_cyclecount();
+#endif
 	restore_ccmu();
+
+#ifdef GET_CYCLE_CNT
+	after_restore_ccu = get_cyclecount();
+#endif
+
 	//busy_waiting();
 #endif
 
@@ -245,12 +260,26 @@ void restore_ccmu(void)
 
 	//busy_waiting();
 	/* restore voltage for exit standby */
+
+#ifdef GET_CYCLE_CNT
+	before_adjust_volt = get_cyclecount();
+#endif
+
 	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
 	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
 	//25us * 400
 	//standby_mdelay(400);
+
+#ifdef GET_CYCLE_CNT
+	before_first_delay_ms = get_cyclecount();
+#endif
+
 	change_runtime_env(1);
 	delay_ms(10);
+	
+#ifdef GET_CYCLE_CNT
+	after_first_delay_ms = get_cyclecount();
+#endif
 
 	/*setting clock division ratio*/
 	/* set clock division cpu:axi:ahb:apb =  1:1:2:2*/
@@ -268,6 +297,11 @@ void restore_ccmu(void)
 	//busy_waiting();
 	/*setting pll factor: 1008M hz*/
 	//mem_clk_set_pll_factor();
+
+#ifdef GET_CYCLE_CNT
+	before_adjust_pll = get_cyclecount();
+#endif
+
 	mem_clk_set_pll_factor(&mem_para_info.pll_factor);
 
 	
@@ -278,6 +312,13 @@ void restore_ccmu(void)
 	change_runtime_env(1);
 	delay_ms(5);
 	
+#ifdef GET_CYCLE_CNT
+	after_adjust_pll = get_cyclecount();
+#endif
+
+	//busy_waiting();
+	//change_runtime_env(1);
+
 	/* switch cpu clock to core pll */
 //	mem_clk_core2pll();
 	//25us* 40 * 10
