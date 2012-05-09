@@ -136,7 +136,29 @@ disable_cache:
 disable_dcache: 
     push    {r0-r3}                                                                    
     MRC     p15, 0, r0, c1, c0, 0       /*read cr                  */
-    BIC	    r0, r0, #0x1 << 2
+    BIC	    r0, r0, #(0x1 << 2)
+    MCR     p15, 0, r0, c1, c0, 0       /*disable dcache                  */
+    ISB
+    pop     {r0-r3}
+    MOV     pc, lr
+
+    .text                                                                        
+    .globl disable_icache                                                          
+disable_icache: 
+    push    {r0-r3}                                                                    
+    MRC     p15, 0, r0, c1, c0, 0       /*read cr                  */
+    BIC	    r0, r0, #(0x1 << 12)
+    MCR     p15, 0, r0, c1, c0, 0       /*disable dcache                  */
+    ISB
+    pop     {r0-r3}
+    MOV     pc, lr
+
+    .text                                                                        
+    .globl enable_icache                                                          
+enable_icache: 
+    push    {r0-r3}                                                                    
+    MRC     p15, 0, r0, c1, c0, 0       /*read cr                  */
+    ORR	    r0, r0, #(0x1 << 12)
     MCR     p15, 0, r0, c1, c0, 0       /*disable dcache                  */
     ISB
     pop     {r0-r3}

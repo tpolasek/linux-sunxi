@@ -14,6 +14,7 @@ extern unsigned int save_sp_nommu(void);
 extern void standby_flush_tlb(void);
 extern void flush_icache(void);
 extern void flush_dcache(void);
+extern void enable_icache(void);
 extern void invalidate_dcache(void);
 extern void standby_preload_tlb_nommu(void);
 
@@ -106,6 +107,7 @@ int main(void)
 #ifdef FLUSH_ICACHE
 	//clean i cache
 	flush_icache();
+	enable_icache();
 	save_sun5i_mem_status_nommu(RUSUME0_START |0x03);
 #endif
 

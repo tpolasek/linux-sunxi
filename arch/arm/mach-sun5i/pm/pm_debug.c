@@ -206,7 +206,7 @@ void delay_us(__u32 us)
 	//__u32 cnt = 0;
 
 	
-	us_cnt = ((cpu_freq/1000) + 1)*us;
+	us_cnt = ((raw_lib_udiv(cpu_freq, 1000)) + 1)*us;
 	cur = get_cyclecount();
 	target = cur - overhead + us_cnt;
 
