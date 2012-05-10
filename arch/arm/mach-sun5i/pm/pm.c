@@ -39,6 +39,7 @@
 #include "standby/super/super_clock.h"
 #include "standby/super/super_power.h"
 #include "standby/super/super_twi.h"
+#include <mach/sys_config.h>
 
 //#define CROSS_MAPPING_STANDBY
 #define AW_PM_DBG   1
@@ -180,6 +181,8 @@ EXPORT_SYMBOL(standby_level);
 volatile int print_flag = 0;
 static bool mem_allocated_flag = false;
 static int dram_backup = 0;
+static int standby_mode = 0;
+
 extern void create_mapping(struct map_desc *md);
 extern void save_mapping(unsigned long vaddr);
 extern void restore_mapping(unsigned long vaddr);
@@ -209,27 +212,29 @@ extern void flush_dcache(void);
 static int aw_pm_valid(suspend_state_t state)
 {
     PM_DBG("valid\n");
-
+	
     if(!((state > PM_SUSPEND_ON) && (state < PM_SUSPEND_MAX))){
         PM_DBG("state (%d) invalid!\n", state);
         return 0;
     }
+
+	//if 1 == standby_mode, actually, mean mem corresponding with super standby 
 	if(PM_SUSPEND_STANDBY == state){
-#ifdef CROSS_MAPPING_STANDBY
-	standby_type = SUPER_STANDBY;
-#else
-	standby_type = NORMAL_STANDBY;
-#endif
+		if(1 == standby_mode){
+			standby_type = NORMAL_STANDBY;
+		}else{
+			standby_type = SUPER_STANDBY;
+		}
 	}else if(PM_SUSPEND_MEM == state){
-#ifdef CROSS_MAPPING_STANDBY
-	standby_type = NORMAL_STANDBY;
-#else
-	standby_type = SUPER_STANDBY;
-#endif
+		if(1 == standby_mode){
+			standby_type = SUPER_STANDBY;
+		}else{
+			standby_type = NORMAL_STANDBY;
+		}
 	}
 	
 	//allocat space for backup dram data
-	if(false == mem_allocated_flag){
+	if((false == mem_allocated_flag) && (SUPER_STANDBY == standby_type)){
 		mem_dram_traning_area_back = (__u32*)kmalloc(sizeof(__u32)*DRAM_TRANING_SIZE, GFP_KERNEL);
 		mem_dram_backup_area = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE, GFP_KERNEL);
 		mem_dram_backup_area1 = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE1, GFP_KERNEL);
@@ -266,19 +271,6 @@ int aw_pm_begin(suspend_state_t state)
     PM_DBG("%d state begin\n", state);
 	clear_mem_flag();
 
-	if(PM_SUSPEND_STANDBY == state){
-#ifdef CROSS_MAPPING_STANDBY
-		standby_type = SUPER_STANDBY;
-#else
-		standby_type = NORMAL_STANDBY;
-#endif
-	}else if(PM_SUSPEND_MEM == state){
-#ifdef CROSS_MAPPING_STANDBY
-		standby_type = NORMAL_STANDBY;
-#else
-		standby_type = SUPER_STANDBY;
-#endif
-	}
 	//set freq max
 	cpufreq_user_event_notify();
 	
@@ -1110,8 +1102,20 @@ static struct platform_suspend_ops aw_pm_ops = {
 static int __init aw_pm_init(void)
 {
     PM_DBG("aw_pm_init!\n");
+	int ret = 0;
+	
+	if(SCRIPT_PARSER_OK != script_parser_fetch("pm_para", "standby_mode", &standby_mode, 1)){
+		pr_err("%s: script_parser_fetch err. \n", __func__);
+		standby_mode = 0;
+	}else{
+		pr_info("standby_mode = %d. \n", standby_mode);
+		if(1 != standby_mode){
+			pr_err("%s: not support super standby. \n",  __func__);
+		}
+	}
+	
     suspend_set_ops(&aw_pm_ops);
-
+	
     return 0;
 }
 
