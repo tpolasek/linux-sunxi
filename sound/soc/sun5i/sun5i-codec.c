@@ -1403,7 +1403,7 @@ static int snd_sun5i_codec_suspend(struct platform_device *pdev,pm_message_t sta
  */
 static int snd_sun5i_codec_resume(struct platform_device *pdev)
 {
-	printk("[audio codec]:resume start\n");
+//	printk("[audio codec]:resume start\n");
 	if (-1 == clk_enable(codec_moduleclk)){
 		printk("open codec_moduleclk failed; \n");
 	}
@@ -1416,11 +1416,11 @@ static int snd_sun5i_codec_resume(struct platform_device *pdev)
 		codec_wr_control(SUN5I_DAC_FIFOC ,  0x1,28, 0x1);
 		
 		writel(bias_reg_val, (baseaddr + (SUN5I_BIAS_CRT)));
-		printk("enter audio super standby resume\n");
+//		printk("enter audio super standby resume\n");
 	}
-	printk("audiocodec init 0xf1c22c38 is:%x\n", *(volatile int *)0xf1c22c38);
+//	printk("audiocodec init 0xf1c22c38 is:%x\n", *(volatile int *)0xf1c22c38);
 	queue_work(resume_work_queue, &codec_resume_work);
-	printk("[audio codec]:resume end\n");
+//	printk("[audio codec]:resume end\n");
 	return 0;	
 }
 

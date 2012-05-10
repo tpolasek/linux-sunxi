@@ -1106,7 +1106,7 @@ void set_nand_pio(void)
 
 			//iounmap(gpio_base);
 	#else
-			printk("[NAND] nand gpio_request\n");
+			pr_info("[NAND] nand gpio_request\n");
 			nand_handle = gpio_request_ex("nand_para",NULL);
 			if(nand_handle == 0)
 			{
@@ -1453,7 +1453,7 @@ static int nand_suspend(struct platform_device *plat_dev, pm_message_t state)
 {
 	int i=0;
 
-	printk("[NAND] nand_suspend \n");
+	pr_debug("[NAND] nand_suspend \n");
 
 	if(NORMAL_STANDBY== standby_type)
 	{
@@ -1479,7 +1479,7 @@ static int nand_suspend(struct platform_device *plat_dev, pm_message_t state)
 	}
 	else if(SUPER_STANDBY == standby_type)
 	{
-	printk("nand super standy mode suspend\n");
+	pr_debug("nand super standy mode suspend\n");
 #if 1
 		if(!IS_IDLE){
 			for(i=0;i<10;i++){
@@ -1512,7 +1512,7 @@ static int nand_suspend(struct platform_device *plat_dev, pm_message_t state)
 #endif
 
 	}
-		printk("[NAND] nand_suspend ok \n");
+		pr_debug("[NAND] nand_suspend ok \n");
 		return 0;
 }
 
@@ -1524,7 +1524,7 @@ static int nand_resume(struct platform_device *plat_dev)
 {
     __s32 ret;
 
-	printk("[NAND] nand_resume \n");
+	pr_debug("[NAND] nand_resume \n");
 	if(NORMAL_STANDBY== standby_type){
 		//process for normal standby
 	set_nand_pio();
@@ -1539,8 +1539,7 @@ static int nand_resume(struct platform_device *plat_dev)
 	}else if(SUPER_STANDBY == standby_type){
 		int i;
 
-		printk("nand super standy mode resume \n");
-		//process for normal standby
+		//pr_debug("nand super standy mode resume \n");
 		set_nand_pio();
 
 		#ifndef USE_SYS_CLK
