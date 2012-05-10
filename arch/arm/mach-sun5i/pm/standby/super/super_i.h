@@ -4,30 +4,35 @@
 *                                        AllWinner Linux Platform Develop Kits
 *                                                   Kernel Module
 *
-*                                    (c) Copyright 2006-2011, yanggq.young China
+*                                    (c) Copyright 2006-2011, kevin.z China
 *                                             All Rights Reserved
 *
-* File    : mem_i.h
-* By      : yanggq.young
+* File    : standby_i.h
+* By      : kevin.z
 * Version : v1.0
-* Date    : 2011-11-30 17:21
+* Date    : 2011-5-30 17:21
 * Descript:
 * Update  : date                auther      ver     notes
 *********************************************************************************************************
 */
-#ifndef __MEM_I_H__
-#define __MEM_I_H__
+#ifndef __SUPER_I_H__
+#define __SUPER_I_H__
 
+#include "../../pm_config.h"
+#include "../../pm_types.h"
+#include "../../pm.h"
 #include <linux/power/aw_pm.h>
 #include <mach/platform.h>
 
-#include "mem_power.h"
-#include "mem_tmr.h"
+#include "super_cfg.h"
+#include "common.h"
+#include "super_clock.h"
+#include "super_power.h"
+#include "super_twi.h"
+#include "super_tmr.h"
+#include "super_int.h"
 
-#include "mach/dram.h"
-#include "../../../pm_config.h"
-#include "../super_i.h"
-#include "../../../pm.h"
+extern struct aw_pm_info  pm_info;
 
-#endif //__MEM_I_H__
+#endif  //__SUPER_I_H__
 

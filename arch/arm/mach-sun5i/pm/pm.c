@@ -36,9 +36,9 @@
 #include "pm_i.h"
 //#include <linux/sw-uart-dbg.h>
 #include "mem_cpu.h"
-#include "standby/super/standby_clock.h"
-#include "standby/super/standby_power.h"
-#include "standby/super/standby_twi.h"
+#include "standby/super/super_clock.h"
+#include "standby/super/super_power.h"
+#include "standby/super/super_twi.h"
 
 //#define CROSS_MAPPING_STANDBY
 #define AW_PM_DBG   1

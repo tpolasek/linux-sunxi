@@ -22,11 +22,11 @@ STANDBY_OBJ = 	common.o         	\
 	
 SUSPEND_OBJ =	./super/common.o              	\
 		./super/stack.o               	\
-		./super/standby_int.o         	\
-		./super/standby_tmr.o         	\
-		./super/standby_clock.o       	\
-		./super/standby_twi.o         	\
-		./super/standby_delay.o       	\
+		./super/super_int.o         	\
+		./super/super_tmr.o         	\
+		./super/super_clock.o       	\
+		./super/super_twi.o         	\
+		./super/super_delay.o       	\
 		./super/mem/suspend/suspend.o 	\
 		./super/mem/mem_power.o       	\
 		./super/dram/dram.o           	\
@@ -38,12 +38,12 @@ SUSPEND_OBJ =	./super/common.o              	\
 	
 RESUME1_OBJ =	./super/common.o             \
 		./super/stack.o              \
-		./super/standby_twi.o        \
-		./super/standby_delay.o      \
-		./super/standby_clock.o      \
-		./super/standby_power.o      \
-		./super/standby_int.o        \
-		./super/standby_tmr.o        \
+		./super/super_twi.o        \
+		./super/super_delay.o      \
+		./super/super_clock.o      \
+		./super/super_power.o      \
+		./super/super_int.o        \
+		./super/super_tmr.o        \
 		./super/dram/dram.o          \
 		./super/dram/dram_init.o     \
 		./super/mem/resume/resume1.o \
@@ -56,9 +56,9 @@ RESUME1_OBJ =	./super/common.o             \
 	
 RESUME0_OBJ =	./super/common.o             \
 		./super/stack.o              \
-		./super/standby_twi.o        \
-		./super/standby_delay.o      \
-		./super/standby_clock.o      \
+		./super/super_twi.o        \
+		./super/super_delay.o      \
+		./super/super_clock.o      \
 		./super/resume1_asm.o        \
 		./super/mem/resume/resume0.o \
 		./super/mem/mem_power.o      \
@@ -113,11 +113,11 @@ standby:
 suspend:
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/common.c                    -o ./super/common.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/stack.S                     -o ./super/stack.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_int.c               -o ./super/standby_int.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_tmr.c               -o ./super/standby_tmr.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_clock.c             -o ./super/standby_clock.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_twi.c               -o ./super/standby_twi.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_delay.S             -o ./super/standby_delay.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_int.c               -o ./super/super_int.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_tmr.c               -o ./super/super_tmr.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_clock.c             -o ./super/super_clock.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_twi.c               -o ./super/super_twi.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_delay.S             -o ./super/super_delay.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/suspend/suspend.c       -o ./super/mem/suspend/suspend.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_power.c             -o ./super/mem/mem_power.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram.c                 -o ./super/dram/dram.o
@@ -141,12 +141,12 @@ suspend:
 resume1:
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/common.c                    -o ./super/common.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/stack.S                     -o ./super/stack.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_twi.c               -o ./super/standby_twi.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_delay.S             -o ./super/standby_delay.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_clock.c             -o ./super/standby_clock.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_power.c             -o ./super/standby_power.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_int.c               -o ./super/standby_int.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_tmr.c               -o ./super/standby_tmr.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_twi.c               -o ./super/super_twi.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_delay.S             -o ./super/super_delay.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_clock.c             -o ./super/super_clock.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_power.c             -o ./super/super_power.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_int.c               -o ./super/super_int.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_tmr.c               -o ./super/super_tmr.o
 	
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram.c                 -o ./super/dram/dram.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram_init.c            -o ./super/dram/dram_init.o
@@ -175,9 +175,9 @@ resume1:
 resume0:
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/common.c                    -o ./super/common.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/stack.S                     -o ./super/stack.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_twi.c               -o ./super/standby_twi.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_delay.S             -o ./super/standby_delay.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/standby_clock.c             -o ./super/standby_clock.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_twi.c               -o ./super/super_twi.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_delay.S             -o ./super/super_delay.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_clock.c             -o ./super/super_clock.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/resume1_asm.S               -o ./super/resume1_asm.o
 	
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/resume/resume0.c        -o ./super/mem/resume/resume0.o
