@@ -70,7 +70,7 @@
 #define PRE_DISABLE_MMU    //actually, mean ,prepare condition to disable mmu
 #endif 
 
-#define VERIFY_RESTORE_STATUS
+//#define VERIFY_RESTORE_STATUS
 
 /* define major number for power manager */
 #define AW_PMU_MAJOR    267
@@ -1102,7 +1102,6 @@ static struct platform_suspend_ops aw_pm_ops = {
 static int __init aw_pm_init(void)
 {
     PM_DBG("aw_pm_init!\n");
-	int ret = 0;
 	
 	if(SCRIPT_PARSER_OK != script_parser_fetch("pm_para", "standby_mode", &standby_mode, 1)){
 		pr_err("%s: script_parser_fetch err. \n", __func__);
