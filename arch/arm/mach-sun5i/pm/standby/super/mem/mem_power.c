@@ -203,6 +203,9 @@ void mem_power_off_nommu(void)
 	 *when reach here, mean twi transfer err, 
 	 *and cpu are not shut down.
 	 */
+	 
+	/* cpu enter sleep, wait wakeup by interrupt */
+    asm("WFI");
 	while(1);
 	
 	return;
