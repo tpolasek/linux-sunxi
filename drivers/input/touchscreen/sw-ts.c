@@ -69,7 +69,7 @@ static int tp_flag = 0;
 //#define PRINT_REPORT_DATA_INFO
 //#define PRINT_TASKLET_INFO
 #define CONFIG_TOUCHSCREEN_SUN4I_DEBUG
-//#define PRINT_SUSPEND_INFO
+#define PRINT_SUSPEND_INFO
 //#define PRINT_FILTER_DOUBLE_POINT_STATUS_INFO
 //#define PRINT_ORIENTATION_INFO
 //#define FIX_ORIENTATION
@@ -349,7 +349,7 @@ static void sun4i_ts_suspend(struct early_suspend *h)
 	struct sun4i_ts_data *ts = container_of(h, struct sun4i_ts_data, early_suspend);
     */
     #ifdef PRINT_SUSPEND_INFO
-		printk("[%s] enter standby state: %d. \n", __FUNCTION__, (int)standby_type);
+		printk(KERN_INFO"[%s] enter standby state: %d. \n", __FUNCTION__, (int)standby_type);
     #endif
 	/*process for normal standby*/
 	if (NORMAL_STANDBY == standby_type) {
@@ -366,7 +366,7 @@ static void sun4i_ts_resume(struct early_suspend *h)
 	struct sun4i_ts_data *ts = container_of(h, struct sun4i_ts_data, early_suspend);
     */
     #ifdef PRINT_SUSPEND_INFO
-	printk("[%s] return from standby state: %d. \n", __FUNCTION__, (int)standby_type);
+	printk(KERN_INFO"[%s] return from standby state: %d. \n", __FUNCTION__, (int)standby_type);
     #endif    
 	/*process for normal standby*/
 	if (NORMAL_STANDBY == standby_type) {

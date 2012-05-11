@@ -1524,7 +1524,7 @@ static int nand_resume(struct platform_device *plat_dev)
 {
     __s32 ret;
 
-	pr_debug("[NAND] nand_resume \n");
+	printk(KERN_INFO"[NAND] nand_resume \n");
 	if(NORMAL_STANDBY== standby_type){
 		//process for normal standby
 	set_nand_pio();
