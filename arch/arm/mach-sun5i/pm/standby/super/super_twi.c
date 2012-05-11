@@ -49,7 +49,7 @@ __s32 mem_twi_init(int group)
     TwiClkRegBak = twi_reg->reg_clkr;
     TwiCtlRegBak = 0x80&twi_reg->reg_ctl;/* backup INT_EN;no need for BUS_EN(0xc0)  */
     //twi_reg->reg_clkr = (2<<3)|3; //100k
-    twi_reg->reg_clkr = (2<<3)|8; //400k
+    twi_reg->reg_clkr = (5<<3)|0; //400k, M = 5, N=0;
     
     twi_reg->reg_reset |= 0x1;
 	
