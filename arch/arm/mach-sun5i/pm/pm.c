@@ -918,7 +918,7 @@ resume:
 
 		printk("#invalidate_data_time_period# = #%x#, \n \
 				before_restore_processor = %x, after_restore_process = %x. \n \
-				#restore_period# =# %x# \n", invalidate_data_time, before_restore_processor, \
+				#restore_period# =#%x# \n", invalidate_data_time, before_restore_processor, \
 				after_restore_process, after_restore_process - before_restore_processor);
 
 		printk("late_resume_start = %x. \n", late_resume_start);
