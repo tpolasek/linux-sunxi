@@ -628,35 +628,20 @@ static int sun4i_cpufreq_suspend(struct cpufreq_policy *policy)
 
 	if (NORMAL_STANDBY == standby_type) {
 		/*process for normal standby*/
-		printk("[%s] normal standby enter\n", __FUNCTION__);
-    sun4i_cpufreq_getcur(&suspend_freq);
+		printk(KERN_INFO"[%s] normal standby enter\n", __FUNCTION__);
+		sun4i_cpufreq_getcur(&suspend_freq);
 
-    /* set cpu frequency to 60M hz for standby */
-    suspend.pll = 60000000;
-    suspend.div.cpu_div = 1;
-    suspend.div.axi_div = 1;
-    suspend.div.ahb_div = 1;
-    suspend.div.apb_div = 2;
-    __set_cpufreq_target(&suspend_freq, &suspend);
+		/* set cpu frequency to 60M hz for standby */
+		suspend.pll = 60000000;
+		suspend.div.cpu_div = 1;
+		suspend.div.axi_div = 1;
+		suspend.div.ahb_div = 1;
+		suspend.div.apb_div = 2;
+		__set_cpufreq_target(&suspend_freq, &suspend);
 	
 	} else if(SUPER_STANDBY == standby_type) {
 		/*process for super standby*/	
-		CPUFREQ_DBG("[%s] super standby enter: \n", __FUNCTION__);
-#if 0
-		//backup suspend freq
-		sun4i_cpufreq_getcur(&suspend_freq);
-
-		/*backup suspend vdd*/
-		//suspend_vdd = regulator_get_voltage(corevdd);
-		suspend_vdd = last_vdd;
-		mem_para_info.suspend_vdd = suspend_vdd;
-		mem_para_info.suspend_freq = suspend.pll;
-		CPUFREQ_DBG("backup suspend_vdd = %d. freq = %u. \n", suspend_vdd, suspend_freq.pll);
-
-		//ccmu_reg_backup((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
-#else 
-		printk("do nothing. \n");
-#endif
+		printk(KERN_INFO"[%s] super standby enter: do nothing\n", __FUNCTION__);
 	}
 
 
@@ -688,64 +673,15 @@ static int sun4i_cpufreq_resume(struct cpufreq_policy *policy)
 	CPUFREQ_DBG("%s: resuming with policy %p\n", __func__, policy);
 	if (NORMAL_STANDBY == standby_type) {
 		/*process for normal standby*/
-		printk("[%s] normal standby resume\n", __FUNCTION__);
-    sun4i_cpufreq_getcur(&suspend);
+		printk(KERN_INFO"[%s] normal standby resume\n", __FUNCTION__);
+		sun4i_cpufreq_getcur(&suspend);
 
-    /* restore cpu frequency configuration */
-    __set_cpufreq_target(&suspend, &suspend_freq);
+		/* restore cpu frequency configuration */
+		__set_cpufreq_target(&suspend, &suspend_freq);
 
-	CPUFREQ_DBG("%s: resuming done\n", __func__);
 	} else if(SUPER_STANDBY == standby_type) {
 		/*process for super standby*/	
-		CPUFREQ_DBG("[%s] super standby resume: to %u hz\n", __FUNCTION__, suspend_freq.pll);
-#if 0
-		sun4i_cpufreq_getcur(&suspend);
-
-		/*restore vdd*/
-		if(regulator_set_voltage(corevdd, suspend_vdd*1000, suspend_vdd*1000)) {
-			CPUFREQ_INF("try to set voltage failed!\n");
-			new_vdd = last_vdd;
-		}
-		last_vdd = new_vdd;
-		
-		printk("restore suspend_vdd = %d. succeed. \n", suspend_vdd);
-		
-		/* restore cpu frequency configuration */
-		__set_cpufreq_target(&suspend, &suspend_freq);
-#endif		
-		//last_vdd = 1400;
-#if 0
-		cpu_cur.pll = 1008000000;
-		cpu_cur.div.cpu_div = 1;
-		cpu_cur.div.axi_div = 3;
-		cpu_cur.div.ahb_div = 2;
-		cpu_cur.div.apb_div = 2;
-
-		sun4i_cpufreq_getcur(&suspend);
-		/* restore cpu frequency configuration */
-		__set_cpufreq_target(&suspend, &suspend_freq);
-		//ccmu_reg_restore((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
-#endif
-	
-
-#ifdef CONFIG_CPU_FREQ_DVFS	
-
-#if 0
-		//type corevdd is not visible in the file.
-		corevdd.max_uV = 0;
-		corevdd->rdev = 0;
-		((struct regulator *)corevdd)->min_uV = 1000000;
-		(*corevdd).max_uV = 1400000;
-#endif
-
-#if 0
-		/*can not all this interface at this point, why?*/
-		regulator_set_voltage(corevdd, last_vdd*1000, last_vdd*1000);
-#endif
-
-#endif
-		//print_flag = 1;
-		CPUFREQ_DBG("%s: resuming done\n", __func__);
+		printk(KERN_INFO"[%s] super standby resume: do nothing\n", __FUNCTION__);
 	}
 
 	return 0;
