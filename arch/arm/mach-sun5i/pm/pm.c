@@ -343,7 +343,7 @@ int aw_pm_prepare_late(void)
 *Notes      : 
 *********************************************************************************************************
 */
-static void aw_early_suspend(void)
+static int aw_early_suspend(void)
 {
 	//backup device state
 	mem_ccu_save((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
@@ -665,8 +665,10 @@ mem_enter:
 		mem_para_info.mem_flag = 1;
 		standby_level = STANDBY_WITH_POWER_OFF;
 		mem_para_info.resume_pointer = (void *)&&mem_enter;
-		aw_early_suspend();
-		return -1;
+		if(0 != aw_early_suspend()){
+			return -1;
+		}
+		
 		
 resume:
 		aw_late_resume();
