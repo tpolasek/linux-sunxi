@@ -31,19 +31,6 @@ static __u32 sp_backup;
 static char    *tmpPtr = (char *)&__bss_start;
 static __u32 status = 0; 
 
-#ifdef GET_CYCLE_CNT
-static __u32 start = 0;
-static __u32 before_restore_ccu = 0;
-static __u32 before_adjust_volt = 0;
-static __u32 before_first_delay_ms = 0;
-static __u32 after_first_delay_ms = 0;
-static __u32 before_adjust_pll = 0;
-static __u32 after_adjust_pll = 0;
-static __u32 after_restore_ccu = 0;
-static __u32 end = 0;
-#endif
-
-
 #ifdef RETURN_FROM_RESUME0_WITH_MMU
 #define MMU_OPENED
 #undef POWER_OFF
@@ -124,21 +111,11 @@ int main(void)
 	//twi freq?
 	setup_twi_env();
 	mem_twi_init(AXP_IICBUS);
-	//save_mem_status(RESUME1_START |0x06);
-	save_sun5i_mem_status(RESUME1_START |0x06);
-
 	//save_mem_status(RESUME1_START |0x07);
 	save_sun5i_mem_status(RESUME1_START |0x07);
 
 #ifdef POWER_OFF
-#ifdef GET_CYCLE_CNT
-	before_restore_ccu = get_cyclecount();
-#endif
 	restore_ccmu();
-#ifdef GET_CYCLE_CNT
-	after_restore_ccu = get_cyclecount();
-#endif
-
 #endif
 
 	/*restore pmu config*/
@@ -150,9 +127,6 @@ int main(void)
 	mem_tmr_init();
 	mem_tmr_disable_watchdog();
 #endif
-	
-	/*restore module status, why masked?*/
-	//standby_twi_exit();
 
 //before jump to late_resume	
 #ifdef FLUSH_TLB
@@ -167,30 +141,6 @@ int main(void)
 	//save_mem_status(RESUME1_START |0xa);
 	save_sun5i_mem_status(RESUME1_START |0xa);
 	flush_icache();
-#endif
-	//save_mem_status(RESUME1_START |0xb);
-	
-	save_sun5i_mem_status(RESUME1_START |0xb);
-	//save_sun5i_mem_status(status);
-	//busy_waiting();
-#ifdef GET_CYCLE_CNT
-#ifdef CONFIG_ARCH_SUN4I
-	//record resume1 time period in 0c reg 
-	start = *(volatile __u32 *)(PERMANENT_REG  + 0x0c);
-	end = get_cyclecount();
-	*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = end - start;
-	//*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = get_cyclecount();
-	//record start
-	*(volatile __u32 *)(PERMANENT_REG  + 0x00) = get_cyclecount();
-#elif defined CONFIG_ARCH_SUN5I
-	start = *(volatile __u32 *)(SUN5I_STATUS_REG - 0x08);
-	end = get_cyclecount();
-	*(volatile __u32 *)(SUN5I_STATUS_REG - 0x08) = end - start;
-	//busy_waiting();
-	//*(volatile __u32 *)(PERMANENT_REG  + 0x0c) = get_cyclecount();
-	//record start
-	*(volatile __u32 *)(SUN5I_STATUS_REG  - 0x0c) = get_cyclecount();
-#endif
 #endif
 
 	//before jump, invalidate data
@@ -216,33 +166,15 @@ void restore_ccmu(void)
 	dcdc2 = mem_para_info.suspend_dcdc2;
 	dcdc3 = mem_para_info.suspend_dcdc3;
 
-#ifdef GET_CYCLE_CNT
-	before_adjust_volt = get_cyclecount();
-#endif
-
 	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
 	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
-
-#ifdef GET_CYCLE_CNT
-	before_first_delay_ms = get_cyclecount();
-#endif
 	change_runtime_env(1);
 	delay_ms(10);
-#ifdef GET_CYCLE_CNT
-	after_first_delay_ms = get_cyclecount();
-#endif
 
 	mem_clk_setdiv(&mem_para_info.clk_div);
-
-#ifdef GET_CYCLE_CNT
-	before_adjust_pll = get_cyclecount();
-#endif
 	mem_clk_set_pll_factor(&mem_para_info.pll_factor);
 	change_runtime_env(1);
 	delay_ms(5);
-#ifdef GET_CYCLE_CNT
-	after_adjust_pll = get_cyclecount();
-#endif
 
 	/* gating on dram clock */
 	//standby_clk_dramgating(1);
