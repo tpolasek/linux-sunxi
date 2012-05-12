@@ -119,7 +119,9 @@ static __u32 *mem_dram_backup_area2 = NULL;
 static __u32 *mem_dram_backup_compare_area2 = NULL;
 #endif
 
+#ifdef CONFIG_CPU_FREQ_USR_EVNT_NOTIFY
 extern void cpufreq_user_event_notify(void);
+#endif
 
 static struct map_desc mem_sram_md = { 
 	.virtual = MEM_SW_VA_SRAM_BASE,         
@@ -269,17 +271,17 @@ static int aw_pm_valid(suspend_state_t state)
 int aw_pm_begin(suspend_state_t state)
 {
     PM_DBG("%d state begin\n", state);
-	clear_mem_flag();
 
 	//set freq max
+#ifdef CONFIG_CPU_FREQ_USR_EVNT_NOTIFY
 	cpufreq_user_event_notify();
+#endif
 	
 /*must init perfcounter, because delay_us and delay_ms is depandant perf counter*/
 #ifndef GET_CYCLE_CNT
 		backup_perfcounter();
 		init_perfcounters (1, 0);
 #endif
-
 
 	return 0;
 }
@@ -875,7 +877,7 @@ resume:
 
 #endif
 
-#if 1
+#if 0
 	printk(KERN_EMERG"KERN_EMERG. \n");
 	printk(KERN_ALERT"KERN_ALERT. \n");
 	printk(KERN_CRIT"KERN_CRIT. \n");
@@ -883,6 +885,7 @@ resume:
 	printk(KERN_WARNING"KERN_WARNING. \n");
 	printk(KERN_NOTICE"KERN_NOTICE. \n");
 	printk(KERN_INFO"KERN_INFO. \n");
+	printk(KERN_DEBUG"KERN_DEBUG. \n");
 	pr_info("pr info. \n");
 	pr_debug("pr debug. \n");
 	printk("printk .\n");
