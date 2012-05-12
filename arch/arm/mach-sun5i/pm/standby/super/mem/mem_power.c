@@ -150,9 +150,12 @@ void mem_power_off(void)
 	twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x12, &reg_val);
 #endif
 
+	/* cpu enter sleep, wait wakeup by interrupt */
+    asm("WFI");
+
 	/*never get here.
-	 *when reach here, mean twi transfer err, 
-	 *and cpu are not shut down.
+	 *when reach here, mean twi transfer err, and cpu are not shut down.
+	 * wfi have been  changed.
 	 */
 	while(1);
 	
@@ -199,13 +202,13 @@ void mem_power_off_nommu(void)
 	twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x12, &reg_val);
 #endif
 
-	/*never get here.
-	 *when reach here, mean twi transfer err, 
-	 *and cpu are not shut down.
-	 */
-	 
 	/* cpu enter sleep, wait wakeup by interrupt */
     asm("WFI");
+
+	/*never get here.
+	 *when reach here, mean twi transfer err, and cpu are not shut down.
+	 * wfi have been  changed.
+	 */
 	while(1);
 	
 	return;

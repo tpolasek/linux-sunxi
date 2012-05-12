@@ -745,46 +745,23 @@ static int aw_pm_enter(suspend_state_t state)
 {
 	asm volatile ("stmfd sp!, {r1-r12, lr}" );
 	int (*standby)(struct aw_pm_info *arg) = 0;
-	//static int enter_flag = 0;
+
 
 #if 1	
-	save_mem_status(BEFORE_EARLY_SUSPEND |0x01);
-	//busy_waiting();
-	
-	PM_DBG("enter state %d\n", state);
-        
+	PM_DBG("enter state %d\n", state);     
 	if(NORMAL_STANDBY== standby_type){
-		//busy_waiting();
 		standby = (int (*)(struct aw_pm_info *arg))SRAM_FUNC_START;
-		//busy_waiting();
 		//move standby code to sram
 		memcpy((void *)SRAM_FUNC_START, (void *)&standby_bin_start, (int)&standby_bin_end - (int)&standby_bin_start);
-		//busy_waiting();
 		/* config system wakeup evetn type */
 		standby_info.standby_para.event = SUSPEND_WAKEUP_SRC_EXINT | SUSPEND_WAKEUP_SRC_ALARM;
 		/* goto sram and run */
 		standby(&standby_info);
-		//udelay(10);
-		//busy_waiting();
-		save_mem_status(LATE_RESUME_START |0x30);
-		mdelay(10);	//add delay before jump, more stable. reason? 
-		//busy_waiting();
 	}else if(SUPER_STANDBY == standby_type){
 mem_enter:
-		//save_mem_status(BEFORE_EARLY_SUSPEND |0x02);
-		save_sun5i_mem_status(BEFORE_EARLY_SUSPEND |0x02);
-		//busy_waiting();
-		//invalidate period
-		
 		if( 1 == mem_para_info.mem_flag){
-			//check the stack status
-			//busy_waiting();
 #if 1
-			//after disable cache, u need to sync cache
-			//disable_dcache();
-			//disable_cache();
-			//disable_l2cache();
-			//disable_program_flow_prediction();
+
 #ifdef GET_CYCLE_CNT
 #ifdef CONFIG_ARCH_SUN4I
 			resume0_period = *(volatile __u32 *)(0xf1c20d28);
@@ -810,99 +787,41 @@ mem_enter:
 			invalidate_instruct_time = get_cyclecount();
 #endif
 #endif
-			//busy_waiting();
 			
 			invalidate_branch_predictor();
 			save_sun5i_mem_status(LATE_RESUME_START |0x04);
-			//flush_icache();
-			//flush_dcache();
-			
-			//save_mem_status(LATE_RESUME_START |0x10);
-			//busy_waiting();
-			//flush_tlb_all();
-			//save_mem_status(LATE_RESUME_START |0x1e);
-			//busy_waiting();
-			
+	
 			//must be called to invalidate I-cache inner shareable?
 			// I+BTB cache invalidate
 			__cpuc_flush_icache_all();
 			save_sun5i_mem_status(LATE_RESUME_START |0x05);
-			//__cpuc_flush_kern_all();
-			//__cpuc_flush_user_all();
-			//clean i/d cache
-			//flush_icache();
-			/*notice: will corrupt r0 - r11*/
-			//busy_waiting();
-			//invalidate_dcache();
-			//construc r0-r11
-			//clear_reg_context();
-			//flush_tlb_all();
+
 #ifdef GET_CYCLE_CNT
 			invalidate_instruct_time = get_cyclecount() - invalidate_instruct_time;
 
 			before_restore_processor = get_cyclecount();
 #endif
 			//disable 0x0000 <---> 0x0000 mapping
-			//busy_waiting();
  			restore_processor_state();
- 			//save_sun5i_mem_status(LATE_RESUME_START |0x06);
- 			//busy_waiting();
- 			//disable_dcache();
- 			//busy_waiting();
  			save_sun5i_mem_status(LATE_RESUME_START |0x16);
  #ifdef GET_CYCLE_CNT
  			after_restore_process = get_cyclecount();
- #endif
- 			
+ #endif	
  			//destroy 0x0000 <---> 0x0000 mapping
 			restore_mapping(MEM_SW_VA_SRAM_BASE);
 			save_sun5i_mem_status(LATE_RESUME_START |0x07);
-			
-			//flush_tlb_all();
-			
 			mem_arch_resume();
-
-			
-			//before suspend and after resume, require context be the same 
-			//save_mem_status(LATE_RESUME_START |0x0c);
-			//how the 0x0000,0000 space invalid? flush tlb
-			//busy_waiting(); 
-			
-
-			//save_mem_status(LATE_RESUME_START |0x0d);
-			//busy_waiting();	
-
-			save_mem_status(LATE_RESUME_START |0x0e);
-			save_sun5i_mem_status(LATE_RESUME_START |0x08);
-			//busy_waiting();
-
-			//flush tlb?
-
-			//
 #endif	
 			goto resume;
 		}
-		save_mem_status(BEFORE_EARLY_SUSPEND | 0x03);
-		//busy_waiting();
+
 		save_runtime_context(mem_para_info.saved_runtime_context_svc);
 		mem_para_info.mem_flag = 1;
 		standby_level = STANDBY_WITH_POWER_OFF;
-		save_mem_status(BEFORE_EARLY_SUSPEND | 0x04);
-		//busy_waiting();
-		save_mem_status(BEFORE_EARLY_SUSPEND | 0x05);
-		//busy_waiting();
 		mem_para_info.resume_pointer = (void *)&&mem_enter;
-		//busy_waiting();
-		save_mem_status(BEFORE_EARLY_SUSPEND | 0x06);
-
-		//busy_waiting();
 		aw_early_suspend();
 		
 resume:
-
-		//here, uart not ok, need after clk restore?
-		//printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
-		save_mem_status(LATE_RESUME_START | 0x01);
 		save_sun5i_mem_status(LATE_RESUME_START | 0x09);
 		aw_late_resume();
 		
@@ -955,21 +874,24 @@ resume:
 	}
 
 #endif
-	save_mem_status(LATE_RESUME_START |0x40);
-	save_sun5i_mem_status(LATE_RESUME_START | 0x0a);
+
 #if 1
-	//busy_waiting();
-	//print_flag = 1;
-	//busy_waiting();
-	//uart_init(2, 115200);
+	printk(KERN_EMERG"KERN_EMERG. \n");
+	printk(KERN_ALERT"KERN_ALERT. \n");
+	printk(KERN_CRIT"KERN_CRIT. \n");
+	printk(KERN_ERR"KERN_ERR. \n");
+	printk(KERN_WARNING"KERN_WARNING. \n");
+	printk(KERN_NOTICE"KERN_NOTICE. \n");
+	printk(KERN_INFO"KERN_INFO. \n");
+	pr_info("pr info. \n");
+	pr_debug("pr debug. \n");
+	printk("printk .\n");
+
 #endif
-	
-	//busy_waiting();
-	printk("%s: %s, %d. \n", __FILE__,  __func__, __LINE__);
-	printk("version 0.61. adjust cpu-freq from cpu-freq \n");
+
+	printk("version 0.63. rm trivial debug code.\n");
 	save_mem_status(LATE_RESUME_START |0x41);
 	save_sun5i_mem_status(LATE_RESUME_START | 0x0b);
-	//usy_waiting();
 	save_sun5i_mem_status(dram_backup);
 	enable_cache();
 	asm volatile ("ldmfd sp!, {r1-r12, lr}" );

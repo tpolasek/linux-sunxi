@@ -142,19 +142,6 @@ int main(void)
 #endif	
 	save_mem_status(SUSPEND_START);
 
-#if 0
-#ifdef FLUSH_DCACHE
-	//clean & invalidate
-	flush_dcache();
-#endif	
-
-#ifdef FLUSH_ICACHE
-	//invalidate i cache
-	flush_icache();
-#endif
-#endif
-
-
 	/* flush data and instruction tlb, there is 32 items of data tlb and 32 items of instruction tlb,
 	The TLB is normally allocated on a rotating basis. The oldest entry is always the next allocated */
 #ifdef FLUSH_TLB
@@ -176,15 +163,8 @@ int main(void)
 #endif	
 	/* clear bss segment */
 	do{*tmpPtr ++ = 0;}while(tmpPtr <= (char *)&__bss_end);
-	
-
-
 	save_mem_status(SUSPEND_START |0x04);	
 
-	//busy_waiting();
-	/* copy standby parameter from dram */
-	//standby_memcpy(&pm_info, arg, sizeof(pm_info));
-	
 	/* initialise standby modules */
 	standby_clk_init();
 	save_mem_status(SUSPEND_START |0x05);
@@ -195,13 +175,8 @@ int main(void)
 	mem_twi_init(AXP_IICBUS);
 	save_mem_status(SUSPEND_START |0x08);
 	mem_power_init();
-    	save_mem_status(SUSPEND_START |0x09);
+    save_mem_status(SUSPEND_START |0x09);
 	
-	//backup resume flag
-	//busy_waiting();
-	//save_mem_flag();
-	save_mem_status(SUSPEND_START |0x0a);
-
 	//just for test
 	/*restore pmu config*/
 	//busy_waiting();
@@ -253,21 +228,6 @@ int main(void)
 	//return 0;
 #endif
 
-#if 0
-#ifdef FLUSH_TLB
-	standby_flush_tlb();
-#endif
-
-#ifdef FLUSH_ICACHE
-	//clean i/d cache
-	flush_icache();
-#endif
-
-#ifdef INVALIDATE_DCACHE
-	invalidate_dcache();
-#endif
-#endif
-
 #ifdef DISABLE_INVALIDATE_CACHE
 	disable_cache_invalidate();
 	//busy_waiting();
@@ -277,7 +237,7 @@ int main(void)
 	//busy_waiting();
 	//start watch dog
 	/* enable watch-dog to reset cpu */
-    	standby_tmr_enable_watchdog();
+    standby_tmr_enable_watchdog();
 	save_mem_status(SUSPEND_START |0x11);
 	//while(1);
 #endif
@@ -305,13 +265,12 @@ int main(void)
 #endif 
 
 #ifdef MEM_POWER_OFF
-	    	/*power off*/
-		//busy_waiting();
+	    /*power off*/
 		/*NOTICE: not support to power off yet after disable mmu.
 		  * because twi use virtual addr. 
 		  */
-	    	mem_power_off_nommu();
-	    	save_mem_status_nommu(SUSPEND_START |0x15);
+    	mem_power_off_nommu();
+    	save_mem_status_nommu(SUSPEND_START |0x15);
 #endif
 
 #else

@@ -58,17 +58,9 @@ static __u32 after_prepare_resume1 = 0;
 //#define INVALIDATE_DCACHE
 #endif
 
-
-
 // #define no_save __attribute__ ((section(".no_save")))
 int main(void)
 {
-	//stack?
-#if 0
-	volatile __u32 loop_flag = 1;
-	while(1 == loop_flag);
-	
-#endif
 
 #ifdef SWITCH_STACK
 #ifdef MMU_OPENED

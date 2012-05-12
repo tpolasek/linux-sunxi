@@ -131,26 +131,17 @@ int main(void)
 	save_sun5i_mem_status(RESUME1_START |0x07);
 
 #ifdef POWER_OFF
-	//standby_clk_pllenable();
-	//save_mem_status(RESUME1_START + 0x06);
-	//standby_mdelay(10);
-	//standby_delay(1);
-	//restore ccmu
-	//busy_waiting();
 #ifdef GET_CYCLE_CNT
 	before_restore_ccu = get_cyclecount();
 #endif
 	restore_ccmu();
-
 #ifdef GET_CYCLE_CNT
 	after_restore_ccu = get_cyclecount();
 #endif
 
-	//busy_waiting();
 #endif
 
 	/*restore pmu config*/
-	//busy_waiting();
 #ifdef POWER_OFF
 	mem_power_exit();
 	//save_mem_status(RESUME1_START |0x8);
@@ -222,45 +213,8 @@ void restore_ccmu(void)
 		dram_hostport_on_off(i, 0);
 	}
 	
-	/* switch cpu clock to HOSC, and disable pll */
-//	standby_clk_core2hosc();
-	//standby_clk_plldisable();
-//	mem_clk_plldisable();
-	
-	/* backup voltages */
-	//dcdc2 = 1400;
 	dcdc2 = mem_para_info.suspend_dcdc2;
 	dcdc3 = mem_para_info.suspend_dcdc3;
-
-	/* set clock division cpu:axi:ahb:apb = 2:2:2:1 */
-#if 0
-	standby_clk_getdiv(&clk_div);
-	tmp_clk_div.axi_div = 0;
-	tmp_clk_div.ahb_div = 0;
-	tmp_clk_div.apb_div = 0;
-	standby_clk_setdiv(&tmp_clk_div);
-#endif
-	/* swtich apb1 to losc */
-	//standby_clk_apb2losc();
-	
-	/* switch cpu to 32k */
-	//standby_clk_core2losc();
-	/*delay period? 10/32k= 300us*/
-	//standby_mdelay(10);
-
-	//restore
-
-	/* switch clock to hosc */
-	//standby_clk_core2hosc();
-	/* swtich apb1 to hosc */
-	//standby_clk_apb2hosc();
-	/* restore clock division */
-	//standby_clk_setdiv(&clk_div);
-
-	//standby_mdelay(10);
-
-	//busy_waiting();
-	/* restore voltage for exit standby */
 
 #ifdef GET_CYCLE_CNT
 	before_adjust_volt = get_cyclecount();
@@ -268,65 +222,27 @@ void restore_ccmu(void)
 
 	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
 	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
-	//25us * 400
-	//standby_mdelay(400);
 
 #ifdef GET_CYCLE_CNT
 	before_first_delay_ms = get_cyclecount();
 #endif
-
 	change_runtime_env(1);
 	delay_ms(10);
-	
 #ifdef GET_CYCLE_CNT
 	after_first_delay_ms = get_cyclecount();
 #endif
 
-	/*setting clock division ratio*/
-	/* set clock division cpu:axi:ahb:apb =  1:1:2:2*/
-	/* set clock division cpu:axi:ahb:apb =  1:3:2:2*/
-	
-	//standby_clk_getdiv(&clk_div);
-	//tmp_clk_div.axi_div = 2;
-	//tmp_clk_div.ahb_div = 1;
-	//tmp_clk_div.apb_div = 1;
-	//standby_clk_setdiv(&tmp_clk_div);
-	/*setting clk div ratio*/
 	mem_clk_setdiv(&mem_para_info.clk_div);
-
-	
-	//busy_waiting();
-	/*setting pll factor: 1008M hz*/
-	//mem_clk_set_pll_factor();
 
 #ifdef GET_CYCLE_CNT
 	before_adjust_pll = get_cyclecount();
 #endif
-
 	mem_clk_set_pll_factor(&mem_para_info.pll_factor);
-
-	
-	/* enable pll */
-	//mem_clk_pllenable();
-	//25us * 40 * 10
-	//standby_mdelay(400);
 	change_runtime_env(1);
 	delay_ms(5);
-	
 #ifdef GET_CYCLE_CNT
 	after_adjust_pll = get_cyclecount();
 #endif
-
-	//busy_waiting();
-	//change_runtime_env(1);
-
-	/* switch cpu clock to core pll */
-//	mem_clk_core2pll();
-	//25us* 40 * 10
-	//standby_mdelay(400);
-	//change_runtime_env(1);
-	//delay_ms(10);
-	//busy_waiting();
 
 	/* gating on dram clock */
 	//standby_clk_dramgating(1);
@@ -337,8 +253,7 @@ void restore_ccmu(void)
 	for(i=16; i<31; i++){
 		dram_hostport_on_off(i, 1);
 	}
-	
-	//standby_mdelay(1000);
+
 	return;
 }
 
