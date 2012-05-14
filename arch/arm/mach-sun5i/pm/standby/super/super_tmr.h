@@ -92,7 +92,8 @@ enum tmr_event_type_e{
     TMR_EVENT_ALARM,
 };
 
-
+void mem_tmr_init(void);
+void mem_tmr_disable_watchdog(void);
 
 #endif  //__SUPER_TMR_H__
 

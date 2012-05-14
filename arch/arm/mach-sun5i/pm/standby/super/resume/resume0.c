@@ -8,7 +8,7 @@
  * and excecute these code, and jump to sram for continuing resume.
  */
 
- #include "./../mem_i.h"
+ #include "./../super_i.h"
 
 extern unsigned int save_sp_nommu(void);
 extern void mem_flush_tlb(void);

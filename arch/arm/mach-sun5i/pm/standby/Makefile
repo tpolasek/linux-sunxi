@@ -27,9 +27,8 @@ SUSPEND_OBJ =	./super/common.o              	\
 		./super/super_clock.o       	\
 		./super/super_twi.o         	\
 		./super/super_delay.o       	\
-		./super/mem/suspend/suspend.o 	\
-		./super/mem/mem_power.o       	\
-		./super/mem/mem_tmr.o       	\
+		./super/super_power.o       	\
+		./super/suspend/suspend.o 	\
 		./super/dram/dram.o           	\
 		./super/dram/dram_init.o      	\
 		pm_debug.o                    	\
@@ -47,9 +46,7 @@ RESUME1_OBJ =	./super/common.o             \
 		./super/super_tmr.o        \
 		./super/dram/dram.o          \
 		./super/dram/dram_init.o     \
-		./super/mem/resume/resume1.o \
-		./super/mem/mem_power.o      \
-		./super/mem/mem_tmr.o        \
+		./super/resume/resume1.o \
 		pm_debug.o                   \
 		mem_mmu_pc.o                 \
 		mem_mmu_pc_asm.o             \
@@ -61,8 +58,7 @@ RESUME0_OBJ =	./super/common.o             \
 		./super/super_delay.o      \
 		./super/super_clock.o      \
 		./super/resume1_asm.o        \
-		./super/mem/resume/resume0.o \
-		./super/mem/mem_power.o      \
+		./super/resume/resume0.o \
 		pm_debug.o                   \
 		mem_mmu_pc_asm.o             \
 		mem_cpu.o                     
@@ -118,10 +114,10 @@ suspend:
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_tmr.c               -o ./super/super_tmr.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_clock.c             -o ./super/super_clock.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_twi.c               -o ./super/super_twi.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_power.c             -o ./super/super_power.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_delay.S             -o ./super/super_delay.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/suspend/suspend.c       -o ./super/mem/suspend/suspend.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_power.c             -o ./super/mem/mem_power.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_tmr.c             -o ./super/mem/mem_tmr.o
+	
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/suspend/suspend.c       -o ./super/suspend/suspend.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram.c                 -o ./super/dram/dram.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram_init.c            -o ./super/dram/dram_init.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                     -o pm_debug.o
@@ -135,7 +131,7 @@ suspend:
 
 	rm -rf *.o ../*.o
 
-	cp suspend.bin ./super/mem/suspend/suspend.code
+	cp suspend.bin ./super/suspend/suspend.code
 
 	@echo ----------------------------------------
 	@echo well done!
@@ -147,15 +143,14 @@ resume1:
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_delay.S             -o ./super/super_delay.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_clock.c             -o ./super/super_clock.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_power.c             -o ./super/super_power.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_int.c               -o ./super/super_int.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_tmr.c               -o ./super/super_tmr.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_int.c               -o ./super/super_int.o
 	
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram.c                 -o ./super/dram/dram.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram_init.c            -o ./super/dram/dram_init.o
 	
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/resume/resume1.c        -o ./super/mem/resume/resume1.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_power.c             -o ./super/mem/mem_power.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_tmr.c               -o ./super/mem/mem_tmr.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/resume/resume1.c        -o ./super/resume/resume1.o
+
 	
 	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                     -o pm_debug.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc.c                   -o mem_mmu_pc.o
@@ -169,7 +164,7 @@ resume1:
 
 	rm -rf *.o ../*.o
 
-	cp resume1.bin ./super/mem/resume/resume1.code
+	cp resume1.bin ./super/resume/resume1.code
 
 	@echo ----------------------------------------
 	@echo well done!
@@ -182,8 +177,7 @@ resume0:
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_clock.c             -o ./super/super_clock.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/resume1_asm.S               -o ./super/resume1_asm.o
 	
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/resume/resume0.c        -o ./super/mem/resume/resume0.o
-	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_power.c             -o ./super/mem/mem_power.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/resume/resume0.c        -o ./super/resume/resume0.o
 	
 	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                     -o pm_debug.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./../mem_mmu_pc_asm.S               -o mem_mmu_pc_asm.o
@@ -195,7 +189,7 @@ resume0:
 
 	rm -rf *.o ../*.o
 
-	cp resume0.bin ./super/mem/resume/resume0.code
+	cp resume0.bin ./super/resume/resume0.code
 
 	@echo ----------------------------------------
 	@echo well done!

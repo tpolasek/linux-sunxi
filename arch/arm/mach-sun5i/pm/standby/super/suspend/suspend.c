@@ -8,7 +8,7 @@
  * before dram enter self-refresh,cpu can not access dram.
  */
  
-#include "./../mem_i.h"
+#include "./../super_i.h"
 
 extern char *__bss_start;
 extern char *__bss_end;

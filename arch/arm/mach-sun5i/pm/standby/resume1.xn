@@ -7,7 +7,7 @@ SECTIONS
 	__resume1_start = . ;
 	.text 0x00000000 :
 	{
-		./super/mem/resume/resume1.o(.text)
+		./super/resume/resume1.o(.text)
 		*(.text)
 	}
 	.rodata : { *(.rodata) }

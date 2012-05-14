@@ -1,6 +1,6 @@
 /* these code will be removed to sram.
  * function: open the mmu, and jump to dram, for continuing resume*/
-#include "./../mem_i.h"
+#include "./../super_i.h"
 
 extern unsigned int save_sp(void);
 extern int jump_to_resume(void* pointer, __u32 *addr);
