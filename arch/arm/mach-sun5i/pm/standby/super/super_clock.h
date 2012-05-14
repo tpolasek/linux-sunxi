@@ -30,23 +30,7 @@ struct sun4i_clk_div_t {
     __u32   reserved:16;
 };
 
-
-__s32 standby_clk_init(void);
-__s32 standby_clk_exit(void);
-__s32 standby_clk_core2losc(void);
-__s32 standby_clk_core2hosc(void);
-__s32 standby_clk_core2pll(void);
-__s32 standby_clk_plldisable(void);
-__s32 standby_clk_pllenable(void);
-__s32 standby_clk_hoscdisable(void);
-__s32 standby_clk_hoscenable(void);
-__s32 standby_clk_ldodisable(void);
-__s32 standby_clk_ldoenable(void);
-__s32 standby_clk_setdiv(struct sun4i_clk_div_t  *clk_div);
-__s32 standby_clk_getdiv(struct sun4i_clk_div_t  *clk_div);
-void standby_clk_dramgating(int onoff);
-__s32 standby_clk_apb2losc(void);
-__s32 standby_clk_apb2hosc(void);
+void mem_clk_dramgating(int onoff);
 
 __s32 mem_clk_init(void);
 __s32 mem_clk_plldisable(void);

@@ -18,114 +18,6 @@
 #include "super_i.h"
 
 
-//==============================================================================
-// POWER CHECK FOR SYSTEM STANDBY
-//==============================================================================
-
-
-/*
-*********************************************************************************************************
-*                           standby_power_init
-*
-* Description: init power for standby.
-*
-* Arguments  : none;
-*
-* Returns    : result;
-*********************************************************************************************************
-*/
-__s32 standby_power_init(void)
-{
-    __u8	reg_val;
-
-	mem_twi_init(AXP_IICBUS);
-
-    #if(AXP_WAKEUP & AXP_WAKEUP_KEY)
-    /* enable pek long/short */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN3, &reg_val);
-	reg_val |= 0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN3, &reg_val);
-    #endif
-
-    #if(AXP_WAKEUP & AXP_WAKEUP_LOWBATT)
-    /* enable low voltage warning */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN4, &reg_val);
-	reg_val |= 0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN4, &reg_val);
-    /* clear pending */
-	reg_val = 0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQ4, &reg_val);
-    #endif
-
-    #if(AXP_WAKEUP & AXP_WAKEUP_USB)
-    /* enable usb plug-in / plug-out */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN1, &reg_val);
-	reg_val |= 0x03<<2;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN1, &reg_val);
-    #endif
-
-    #if(AXP_WAKEUP & AXP_WAKEUP_AC)
-    /* enable ac plug-in / plug-out */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN1, &reg_val);
-	reg_val |= 0x03<<5;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN1, &reg_val);
-    #endif
-
-    return 0;
-}
-
-
-/*
-*********************************************************************************************************
-*                           standby_power_exit
-*
-* Description: exit power for standby.
-*
-* Arguments  : none;
-*
-* Returns    : result;
-*********************************************************************************************************
-*/
-__s32 standby_power_exit(void)
-{
-    __u8    reg_val;
-
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQ4, &reg_val);
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x0E, &reg_val);
-
-    #if(AXP_WAKEUP & AXP_WAKEUP_KEY)
-    /* disable pek long/short */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN3, &reg_val);
-	reg_val &= ~0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN3, &reg_val);
-    #endif
-
-    #if(AXP_WAKEUP & AXP_WAKEUP_LOWBATT)
-    /* disable low voltage warning */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN4, &reg_val);
-	reg_val &= ~0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN4, &reg_val);
-    #endif
-
-    #if(AXP_WAKEUP & AXP_WAKEUP_USB)
-    /* enable usb plug-in / plug-out */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN1, &reg_val);
-	reg_val &= ~(0x03<<2);
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN1, &reg_val);
-    #endif
-
-    #if(AXP_WAKEUP & AXP_WAKEUP_AC)
-    /* enable ac plug-in / plug-out */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN1, &reg_val);
-	reg_val &= ~(0x03<<5);
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN1, &reg_val);
-    #endif
-
-    standby_twi_exit();
-    return 0;
-}
-
-
 static inline int check_range(struct axp_info *info,__s32 voltage)
 {
 	if (voltage < info->min_uV || voltage > info->max_uV)
@@ -164,9 +56,9 @@ static inline struct axp_info *find_info(int id)
 
 /*
 *********************************************************************************************************
-*                           standby_set_voltage
+*                           mem_set_voltage
 *
-*Description: set voltage for standby;
+*Description: set voltage for mem;
 *
 *Arguments  : type      voltage type, defined as "enum power_vol_type_e";
 *             voltage   voltage value, based on "mv";
@@ -177,7 +69,7 @@ static inline struct axp_info *find_info(int id)
 *
 *********************************************************************************************************
 */
-void  standby_set_voltage(enum power_vol_type_e type, __s32 voltage)
+void  mem_set_voltage(enum power_vol_type_e type, __s32 voltage)
 {
 	struct axp_info *info = 0;
 	__u8 val, mask, reg_val;
@@ -230,9 +122,9 @@ void  standby_set_voltage(enum power_vol_type_e type, __s32 voltage)
 
 /*
 *********************************************************************************************************
-*                           standby_get_voltage
+*                           mem_get_voltage
 *
-*Description: get voltage for standby;
+*Description: get voltage for mem;
 *
 *Arguments  : type  voltage type, defined as "enum power_vol_type_e";
 *
@@ -242,7 +134,7 @@ void  standby_set_voltage(enum power_vol_type_e type, __s32 voltage)
 *
 *********************************************************************************************************
 */
-__u32 standby_get_voltage(enum power_vol_type_e type)
+__u32 mem_get_voltage(enum power_vol_type_e type)
 {
 	struct axp_info *info = 0;
 	__u8 val, mask;

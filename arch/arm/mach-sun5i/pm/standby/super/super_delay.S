@@ -7,8 +7,8 @@
 #endif
 
     .text
-    .globl standby_delay
-standby_delay:
+    .globl mem_delay
+mem_delay:
 	push    {r0-r3}
 	ldr  	r1, =STANDBY_COEFFICIENT
 	mov	r3, r0

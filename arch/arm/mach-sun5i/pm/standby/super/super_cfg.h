@@ -19,7 +19,7 @@
 #define __SUPER_CFG_H__
 
 
-//config wakeup source for standby
+//config wakeup source for mem
 #define ALLOW_DISABLE_HOSC          (1)     // if allow disable hosc
 
 #define STANDBY_LDO1_VOL            (1300)  //LDO1 voltage value

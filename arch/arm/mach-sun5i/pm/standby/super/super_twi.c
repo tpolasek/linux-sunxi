@@ -33,7 +33,7 @@ static __twic_reg_t *twi_reg  = 0;
 
 /*
 *********************************************************************************************************
-*                                   standby_twi_init
+*                                   mem_twi_init
 *
 *Description: init twi transfer.
 *
@@ -61,7 +61,7 @@ __s32 mem_twi_init(int group)
 
 /*
 *********************************************************************************************************
-*                                   standby_twi_exit
+*                                   mem_twi_exit
 *
 *Description: exit twi transfer.
 *
@@ -71,12 +71,12 @@ __s32 mem_twi_init(int group)
 *
 *********************************************************************************************************
 */
-__s32 standby_twi_exit(void)
+__s32 mem_twi_exit(void)
 {
     /* softreset twi module  */
     twi_reg->reg_reset |= 0x1;
     /* delay */
-    //standby_mdelay(10);
+    //mem_mdelay(10);
     change_runtime_env(1);
 	delay_ms(10);
 
@@ -90,7 +90,7 @@ __s32 standby_twi_exit(void)
 
 /*
 *********************************************************************************************************
-*                                   _standby_twi_stop
+*                                   _mem_twi_stop
 *
 *Description: stop current twi transfer.
 *
@@ -100,7 +100,7 @@ __s32 standby_twi_exit(void)
 *
 *********************************************************************************************************
 */
-static int _standby_twi_stop(void)
+static int _mem_twi_stop(void)
 {
     unsigned int   nop_read;
     unsigned int   timeout = TWI_CHECK_TIMEOUT;
@@ -313,7 +313,7 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
 stop_out:
     //WRITE: step 5; READ: step 7
     //Send Stop
-    _standby_twi_stop();
+    _mem_twi_stop();
 
     return ret;
 }
@@ -468,7 +468,7 @@ __s32 twi_byte_rw_nommu(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *dat
 stop_out:
     //WRITE: step 5; READ: step 7
     //Send Stop
-    _standby_twi_stop();
+    _mem_twi_stop();
 
     return ret;
 }

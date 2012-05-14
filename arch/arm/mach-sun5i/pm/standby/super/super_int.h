@@ -11,7 +11,7 @@
 * By      : kevin.z
 * Version : v1.0
 * Date    : 2011-5-30 19:50
-* Descript: intterupt bsp for platform standby.
+* Descript: intterupt bsp for platform mem.
 * Update  : date                auther      ver     notes
 *********************************************************************************************************
 */
@@ -42,7 +42,7 @@ enum interrupt_source_e{
 
 
 /* define register for interrupt controller */
-struct standby_int_reg_t{
+struct mem_int_reg_t{
 
     volatile __u32   Vector;
     volatile __u32   BaseAddr;
@@ -74,10 +74,10 @@ struct standby_int_reg_t{
 };
 
 
-extern __s32 standby_int_init(void);
-extern __s32 standby_int_exit(void);
-extern __s32 standby_enable_int(enum interrupt_source_e src);
-extern __s32 standby_query_int(enum interrupt_source_e src);
+extern __s32 mem_int_init(void);
+extern __s32 mem_int_exit(void);
+extern __s32 mem_enable_int(enum interrupt_source_e src);
+extern __s32 mem_query_int(enum interrupt_source_e src);
 
 
 #endif  //__SUPER_INT_H__

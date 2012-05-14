@@ -37,7 +37,7 @@ void mctl_precharge_all(void)
 
 	//check whether command has been executed
 	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
-    standby_delay(0x100);
+    mem_delay(0x100);
 }
 
 void DRAMC_enter_selfrefresh(void)
@@ -65,7 +65,7 @@ void DRAMC_enter_selfrefresh(void)
 	reg_val |= 0x12U<<27;
 	mctl_write_w(SDR_DCR, reg_val);
 	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
-	standby_delay(0x100);
+	mem_delay(0x100);
 
 	//dram pad odt hold
 	mctl_write_w(SDR_DPCR, 0x1);
@@ -82,7 +82,7 @@ void mctl_mode_exit(void)
 
 	//check whether command has been executed
 	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
-	standby_delay(0x100);
+	mem_delay(0x100);
 }
 
 void DRAMC_exit_selfrefresh(void)
@@ -99,7 +99,7 @@ void DRAMC_exit_selfrefresh(void)
 	reg_val |= 0x13U<<27;
 	mctl_write_w(SDR_DCR, reg_val);
 	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
-    standby_delay(0x100);
+    mem_delay(0x100);
 
 	//enable auto-fresh
 	reg_val = mctl_read_w(SDR_DRR);
@@ -138,7 +138,7 @@ void DRAMC_enter_power_down(void)
 
 	//check whether command has been executed
 	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
-	standby_delay(0x100);
+	mem_delay(0x100);
 }
 
 void DRAMC_exit_power_down(void)
@@ -255,7 +255,7 @@ __u32 mctl_ahb_reset(void)
 	reg_val = mctl_read_w(DRAM_CCM_AHB_GATE_REG);
 	reg_val &=~(0x3<<14);
 	mctl_write_w(DRAM_CCM_AHB_GATE_REG,reg_val);
-    standby_delay(0x10);
+    mem_delay(0x10);
 
 	reg_val = mctl_read_w(DRAM_CCM_AHB_GATE_REG);
 	reg_val |=(0x3<<14);
@@ -311,7 +311,7 @@ __s32 DRAMC_retraining(void)
 		//dram clock on
 		DRAMC_clock_output_en(1);
 
-		standby_delay(0x10);
+		mem_delay(0x10);
 		while(mctl_read_w(SDR_CCR) & (0x1U<<31)) {};
 
 		mctl_enable_dllx();
@@ -341,7 +341,7 @@ __s32 DRAMC_retraining(void)
 
 		//dram pad hold release
 		mctl_write_w(SDR_DPCR, 0x0);
-		standby_delay(0x10000);
+		mem_delay(0x10000);
 
 		//scan read pipe value
 		mctl_itm_enable();

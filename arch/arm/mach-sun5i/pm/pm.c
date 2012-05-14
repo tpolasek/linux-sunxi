@@ -357,8 +357,8 @@ static int aw_early_suspend(void)
 	//backup volt and freq state, after backup device state
 	mem_twi_init(AXP_IICBUS);
 	/* backup voltages */
-	mem_para_info.suspend_dcdc2 = standby_get_voltage(POWER_VOL_DCDC2);
-	mem_para_info.suspend_dcdc3 = standby_get_voltage(POWER_VOL_DCDC3);
+	mem_para_info.suspend_dcdc2 = mem_get_voltage(POWER_VOL_DCDC2);
+	mem_para_info.suspend_dcdc3 = mem_get_voltage(POWER_VOL_DCDC3);
 	/*backup bus ratio*/
 	mem_clk_getdiv(&mem_para_info.clk_div);
 	/*backup pll ration*/
@@ -437,6 +437,8 @@ static int aw_early_suspend(void)
 #else
 	mem();
 #endif
+
+	return -1;
 
 }
 
@@ -582,6 +584,7 @@ mem_enter:
 		standby_level = STANDBY_WITH_POWER_OFF;
 		mem_para_info.resume_pointer = (void *)&&mem_enter;
 		if(0 != aw_early_suspend()){
+			mem_para_info.mem_flag = 0;
 			return -1;
 		}
 		

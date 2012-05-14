@@ -11,14 +11,14 @@
 * By      : kevin.z
 * Version : v1.0
 * Date    : 2011-5-30 20:13
-* Descript: interrupt for platform standby
+* Descript: interrupt for platform mem
 * Update  : date                auther      ver     notes
 *********************************************************************************************************
 */
 #include "super_i.h"
 
 static __u32    IrqEnReg[3], IrqMaskReg[3], IrqSelReg[3];
-static struct standby_int_reg_t  *IntcReg;
+static struct mem_int_reg_t  *IntcReg;
 
 
 
@@ -27,16 +27,16 @@ static struct standby_int_reg_t  *IntcReg;
 *********************************************************************************************************
 *                                       STANDBY INTERRUPT INITIALISE
 *
-* Description: standby interrupt initialise.
+* Description: mem interrupt initialise.
 *
 * Arguments  : none.
 *
 * Returns    : 0/-1;
 *********************************************************************************************************
 */
-__s32 standby_int_init(void)
+__s32 mem_int_init(void)
 {
-    IntcReg = (struct standby_int_reg_t *)SW_VA_INT_IO_BASE;
+    IntcReg = (struct mem_int_reg_t *)SW_VA_INT_IO_BASE;
 
     /* save interrupt controller registers */
     IrqEnReg[0] = IntcReg->IrqEn[0];
@@ -49,7 +49,7 @@ __s32 standby_int_init(void)
     IrqSelReg[1] = IntcReg->TypeSel[1];
     IrqSelReg[2] = IntcReg->TypeSel[2];
 
-    /* initialise interrupt enable and mask for standby */
+    /* initialise interrupt enable and mask for mem */
     IntcReg->IrqEn[0] = 0;
     IntcReg->IrqEn[1] = 0;
     IntcReg->IrqEn[2] = 0;
@@ -71,14 +71,14 @@ __s32 standby_int_init(void)
 *********************************************************************************************************
 *                                       STANDBY INTERRUPT INITIALISE
 *
-* Description: standby interrupt initialise.
+* Description: mem interrupt initialise.
 *
 * Arguments  : none.
 *
 * Returns    : 0/-1;
 *********************************************************************************************************
 */
-__s32 standby_int_exit(void)
+__s32 mem_int_exit(void)
 {
     /* restore interrupt registers */
     IntcReg->IrqEn[0] = IrqEnReg[0];
@@ -106,7 +106,7 @@ __s32 standby_int_exit(void)
 * Returns    : 0/-1;
 *********************************************************************************************************
 */
-__s32 standby_enable_int(enum interrupt_source_e src)
+__s32 mem_enable_int(enum interrupt_source_e src)
 {
     __u32   tmpGrp = (__u32)src >> 5;
     __u32   tmpSrc = (__u32)src & 0x1f;
@@ -130,7 +130,7 @@ __s32 standby_enable_int(enum interrupt_source_e src)
 * Returns    : 0/-1;
 *********************************************************************************************************
 */
-__s32 standby_query_int(enum interrupt_source_e src)
+__s32 mem_query_int(enum interrupt_source_e src)
 {
     __s32   result = 0;
     __u32   tmpGrp = (__u32)src >> 5;

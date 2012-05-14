@@ -11,7 +11,7 @@
 * By      : kevin.z
 * Version : v1.0
 * Date    : 2011-5-30 19:38
-* Descript: common lib for standby
+* Descript: common lib for mem
 * Update  : date                auther      ver     notes
 *********************************************************************************************************
 */
@@ -20,9 +20,9 @@
 
 /*
 *********************************************************************************************************
-*                           standby_memcpy
+*                           mem_memcpy
 *
-*Description: memory copy function for standby.
+*Description: memory copy function for mem.
 *
 *Arguments  :
 *
@@ -32,7 +32,7 @@
 *
 *********************************************************************************************************
 */
-void standby_memcpy(void *dest, void *src, int n)
+void mem_memcpy(void *dest, void *src, int n)
 {
     char    *tmp_src = (char *)src;
     char    *tmp_dst = (char *)dest;
@@ -64,8 +64,8 @@ void standby_memcpy(void *dest, void *src, int n)
 *
 *********************************************************************************************************
 */
-void standby_mdelay(int ms)
+void mem_mdelay(int ms)
 {
-    standby_delay(ms * cpu_ms_loopcnt);
+    mem_delay(ms * cpu_ms_loopcnt);
 }
 

@@ -12,7 +12,7 @@
 
 extern char *__bss_start;
 extern char *__bss_end;
-extern void standby_flush_tlb(void);
+extern void mem_flush_tlb(void);
 extern void flush_icache(void);
 extern void flush_dcache(void);
 extern void invalidate_dcache(void);
@@ -20,8 +20,8 @@ extern void invalidate_dcache(void);
 extern unsigned int save_sp(void);
 extern void restore_sp(unsigned int sp);
 extern int jump_to_resume0(void* pointer);
-extern void standby_flush_tlb(void);
-extern void standby_preload_tlb(void);
+extern void mem_flush_tlb(void);
+extern void mem_preload_tlb(void);
 void disable_cache_invalidate(void);
 void disable_mmu(void);
 void set_ttbr0(void);
@@ -111,7 +111,7 @@ void set_ttbr0(void);
 *********************************************************************************************************
 *                                   SUPER STANDBY EXECUTE IN SRAM
 *
-* Description: super standby ,suspend to ram entry in sram.
+* Description: super mem ,suspend to ram entry in sram.
 *
 * Arguments  : arg  pointer to the parameter that 
 *
@@ -145,18 +145,18 @@ int main(void)
 	/* flush data and instruction tlb, there is 32 items of data tlb and 32 items of instruction tlb,
 	The TLB is normally allocated on a rotating basis. The oldest entry is always the next allocated */
 #ifdef FLUSH_TLB
-	standby_flush_tlb();
+	mem_flush_tlb();
 	save_mem_status(SUSPEND_START |0x01);	
 #ifdef PRE_DISABLE_MMU
-	/* preload tlb for standby */
+	/* preload tlb for mem */
 	//busy_waiting();
-	//standby_preload_tlb_nommu(); //0x0000 mapping is not large enough for preload nommu tlb
+	//mem_preload_tlb_nommu(); //0x0000 mapping is not large enough for preload nommu tlb
 						//eg: 0x01c2.... is not in the 0x0000,0000 range.
-	standby_preload_tlb();
+	mem_preload_tlb();
 	save_mem_status(SUSPEND_START |0x02);	
 #else
-	/* preload tlb for standby */
-	standby_preload_tlb();
+	/* preload tlb for mem */
+	mem_preload_tlb();
 	save_mem_status(SUSPEND_START |0x03);	
 #endif
 
@@ -165,12 +165,12 @@ int main(void)
 	do{*tmpPtr ++ = 0;}while(tmpPtr <= (char *)&__bss_end);
 	save_mem_status(SUSPEND_START |0x04);	
 
-	/* initialise standby modules */
-	standby_clk_init();
+	/* initialise mem modules */
+	mem_clk_init();
 	save_mem_status(SUSPEND_START |0x05);
-	standby_int_init();
+	mem_int_init();
 	save_mem_status(SUSPEND_START |0x06);
-	standby_tmr_init();
+	mem_tmr_init();
 	save_mem_status(SUSPEND_START |0x07);
 	mem_twi_init(AXP_IICBUS);
 	save_mem_status(SUSPEND_START |0x08);
@@ -198,7 +198,7 @@ int main(void)
 	
 	/* gating off dram clock */
 	//busy_waiting();
-    	standby_clk_dramgating(0);
+    	mem_clk_dramgating(0);
 #ifdef GET_CYCLE_CNT
 	start = get_cyclecount() - start;
 	//busy_waiting();
@@ -223,7 +223,7 @@ int main(void)
 	}
 
 	save_mem_status(SUSPEND_START |0x10);
-	standby_mdelay(100);
+	mem_mdelay(100);
 
 	//return 0;
 #endif
@@ -237,17 +237,17 @@ int main(void)
 	//busy_waiting();
 	//start watch dog
 	/* enable watch-dog to reset cpu */
-    standby_tmr_enable_watchdog();
+    mem_tmr_enable_watchdog();
 	save_mem_status(SUSPEND_START |0x11);
 	//while(1);
 #endif
 
 #ifdef DISABLE_MMU
 	disable_mmu();
-	standby_flush_tlb();
+	mem_flush_tlb();
 	save_mem_status_nommu(SUSPEND_START |0x12);
 	//after disable mmu, it is time to preload nommu, need to access dram?
-	standby_preload_tlb_nommu();
+	mem_preload_tlb_nommu();
 	//while(1);
 #ifdef SET_COPRO_DEFAULT
 		set_copro_default();

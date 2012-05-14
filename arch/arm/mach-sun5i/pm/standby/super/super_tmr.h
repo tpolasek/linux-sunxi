@@ -84,7 +84,7 @@ typedef struct __STANDBY_TMR_REG
     // offset:0x120
     volatile __u32   TmrGpReg[4];
 
-} __standby_tmr_reg_t;
+} __mem_tmr_reg_t;
 
 
 enum tmr_event_type_e{
@@ -93,12 +93,6 @@ enum tmr_event_type_e{
 };
 
 
-__s32 standby_tmr_init(void);
-__s32 standby_tmr_exit(void);
-__s32 standby_tmr_query(enum tmr_event_type_e type);
-void standby_tmr_mdlay(int ms);
-void standby_tmr_enable_watchdog(void);
-void standby_tmr_disable_watchdog(void);
 
 #endif  //__SUPER_TMR_H__
 

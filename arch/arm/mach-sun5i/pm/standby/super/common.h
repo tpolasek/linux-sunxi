@@ -11,14 +11,14 @@
 * By      : kevin.z
 * Version : v1.0
 * Date    : 2011-5-30 17:21
-* Descript: common lib for standby.
+* Descript: common lib for mem.
 * Update  : date                auther      ver     notes
 *********************************************************************************************************
 */
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-static inline __u64 standby_uldiv(__u64 dividend, __u32 divisior)
+static inline __u64 mem_uldiv(__u64 dividend, __u32 divisior)
 {
     __u64   tmpDiv = (__u64)divisior;
     __u64   tmpQuot = 0;
@@ -56,14 +56,14 @@ static inline __u64 standby_uldiv(__u64 dividend, __u32 divisior)
 
 
 
-void standby_memcpy(void *dest, void *src, int n);
-void standby_mdelay(int ms);
+void mem_memcpy(void *dest, void *src, int n);
+void mem_mdelay(int ms);
 
 /*notice: all the delay cycle is measured by 60M hz 
- *when in super standby, the os is running in 1008M
+ *when in super mem, the os is running in 1008M
  *so, the delay cycle need reconsideration.
  */
-void standby_delay(int cycle);
+void mem_delay(int cycle);
 
 #endif  //__COMMON_H__
 

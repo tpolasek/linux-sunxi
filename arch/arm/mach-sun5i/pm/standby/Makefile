@@ -29,6 +29,7 @@ SUSPEND_OBJ =	./super/common.o              	\
 		./super/super_delay.o       	\
 		./super/mem/suspend/suspend.o 	\
 		./super/mem/mem_power.o       	\
+		./super/mem/mem_tmr.o       	\
 		./super/dram/dram.o           	\
 		./super/dram/dram_init.o      	\
 		pm_debug.o                    	\
@@ -120,6 +121,7 @@ suspend:
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/super_delay.S             -o ./super/super_delay.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/suspend/suspend.c       -o ./super/mem/suspend/suspend.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_power.c             -o ./super/mem/mem_power.o
+	$(CC) $(INCLUDE) $(CFLAGS) ./super/mem/mem_tmr.c             -o ./super/mem/mem_tmr.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram.c                 -o ./super/dram/dram.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./super/dram/dram_init.c            -o ./super/dram/dram_init.o
 	$(CC) $(INCLUDE) $(CFLAGS) ./../pm_debug.c                     -o pm_debug.o

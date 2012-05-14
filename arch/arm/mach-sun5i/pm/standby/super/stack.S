@@ -26,8 +26,8 @@ restore_sp:
 
 
     .text
-    .globl standby_flush_tlb
-standby_flush_tlb:
+    .globl mem_flush_tlb
+mem_flush_tlb:
     push    {r0-r3}
     DSB
     mov r0, #0
@@ -210,15 +210,15 @@ enable_program_flow_prediction:
     MOV     pc, lr
            
     .text
-    .globl standby_preload_tlb
-standby_preload_tlb:
+    .globl mem_preload_tlb
+mem_preload_tlb:
     push    {r0-r3}
     ldr r0, =0x0
     /* Write D-TLB Lockdown Register */
     MCR p15,0,r0,c10,c0,0  
     ISB
     
-    /* preload data tlb for standby io operation */
+    /* preload data tlb for mem io operation */
     ldr r0, =SW_VA_CCM_IO_BASE
     mcr p15, 0, r0, c10, c1, 0
     ldr r0, =SW_VA_TWI0_IO_BASE
@@ -236,7 +236,7 @@ standby_preload_tlb:
     ldr r0, =SW_VA_DRAM_IO_BASE
     mcr p15, 0, r0, c10, c1, 0
     
-    /* preload data tlb for standby code&data area */
+    /* preload data tlb for mem code&data area */
     ldr r0, =0xf0000000
     mcr p15, 0, r0, c10, c1, 0
     ldr r0, =0xf0000400
@@ -261,7 +261,7 @@ standby_preload_tlb:
     MCR p15,0,r0,c10,c0,1 
     ISB
         
-    /* preload instruction tlb for standby code&data area */
+    /* preload instruction tlb for mem code&data area */
     ldr r0, =0xf0000000
     mcr p15, 0, r0, c10, c1, 1
     ldr r0, =0xf0000400
@@ -285,15 +285,15 @@ standby_preload_tlb:
     mov pc,lr
 
     .text
-    .globl standby_preload_tlb_nommu
-standby_preload_tlb_nommu:
+    .globl mem_preload_tlb_nommu
+mem_preload_tlb_nommu:
     push    {r0-r3}
     ldr r0, =0x0
     /* Write D-TLB Lockdown Register */
     MCR p15,0,r0,c10,c0,0  
     ISB
     
-    /* preload data tlb for standby io operation */
+    /* preload data tlb for mem io operation */
     ldr r0, =SW_PA_CCM_IO_BASE
     mcr p15, 0, r0, c10, c1, 0
     ldr r0, =SW_PA_TWI0_IO_BASE
@@ -311,7 +311,7 @@ standby_preload_tlb_nommu:
     ldr r0, =SW_PA_DRAM_IO_BASE
     mcr p15, 0, r0, c10, c1, 0
     
-    /* preload data tlb for standby code&data area */
+    /* preload data tlb for mem code&data area */
     ldr r0, =0x00000000
     mcr p15, 0, r0, c10, c1, 0
     ldr r0, =0x00000400
@@ -336,7 +336,7 @@ standby_preload_tlb_nommu:
     MCR p15,0,r0,c10,c0,1 
     ISB
     
-    /* preload instruction tlb for standby code&data area */
+    /* preload instruction tlb for mem code&data area */
     ldr r0, =0x00000000
     mcr p15, 0, r0, c10, c1, 1
     ldr r0, =0x00000400

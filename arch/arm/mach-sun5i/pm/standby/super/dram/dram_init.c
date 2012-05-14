@@ -36,7 +36,7 @@ void mctl_ddr3_reset(void)
 	reg_val = mctl_read_w(SDR_CR);
 	reg_val &= ~(0x1<<12);
 	mctl_write_w(SDR_CR, reg_val);
-	standby_delay(0x100);
+	mem_delay(0x100);
 	reg_val = mctl_read_w(SDR_CR);
 	reg_val |= (0x1<<12);
 	mctl_write_w(SDR_CR, reg_val);
@@ -76,13 +76,13 @@ void mctl_enable_dll0(void)
     __u32 i = 0;
 
     mctl_write_w(SDR_DLLCR0, mctl_read_w(SDR_DLLCR0) & ~0x40000000 | 0x80000000);
-	standby_delay(0x100);
+	mem_delay(0x100);
 
     mctl_write_w(SDR_DLLCR0, mctl_read_w(SDR_DLLCR0) & ~0xC0000000);
-	standby_delay(0x1000);
+	mem_delay(0x1000);
 
     mctl_write_w(SDR_DLLCR0, mctl_read_w(SDR_DLLCR0) & ~0x80000000 | 0x40000000);
-    standby_delay(0x1000);
+    mem_delay(0x1000);
 }
 
 void mctl_enable_dllx(void)
@@ -104,20 +104,20 @@ void mctl_enable_dllx(void)
         mctl_write_w(SDR_DLLCR0+(i<<2), mctl_read_w(SDR_DLLCR0+(i<<2)) & ~0x40000000 | 0x80000000);
     }
 
-	standby_delay(0x100);
+	mem_delay(0x100);
 
     for(i=1; i<dll_num; i++)
     {
         mctl_write_w(SDR_DLLCR0+(i<<2), mctl_read_w(SDR_DLLCR0+(i<<2)) & ~0xC0000000);
     }
 
-	standby_delay(0x1000);
+	mem_delay(0x1000);
 
     for(i=1; i<dll_num; i++)
     {
         mctl_write_w(SDR_DLLCR0+(i<<2), mctl_read_w(SDR_DLLCR0+(i<<2)) & ~0x80000000 | 0x40000000);
     }
-    standby_delay(0x1000);
+    mem_delay(0x1000);
 }
 
 void mctl_disable_dll(void)
@@ -182,13 +182,13 @@ void mctl_setup_dram_clock(__u32 clk)
     reg_val &= ~(0x3<<4);
     reg_val |= 0x1<<4;                  //k factor
     reg_val &= ~(0x1f<<8);
-    reg_val |= (standby_uldiv((__u64)clk, 24)&0x1f)<<8;      //n factor
+    reg_val |= (mem_uldiv((__u64)clk, 24)&0x1f)<<8;      //n factor
     reg_val &= ~(0x3<<16);
     reg_val |= 0x1<<16;                 //p factor
     reg_val &= ~(0x1<<29);                                         //PLL on
     reg_val |= (__u32)0x1<<31;          //PLL En
     mctl_write_w(DRAM_CCM_SDRAM_PLL_REG, reg_val);
-    standby_delay(0x100000);
+    mem_delay(0x100000);
     reg_val = mctl_read_w(DRAM_CCM_SDRAM_PLL_REG);
 	reg_val |= 0x1<<29;
     mctl_write_w(DRAM_CCM_SDRAM_PLL_REG, reg_val);
@@ -202,11 +202,11 @@ void mctl_setup_dram_clock(__u32 clk)
     reg_val = mctl_read_w(DRAM_CCM_AHB_GATE_REG);
     reg_val &= ~(0x3<<14);
     mctl_write_w(DRAM_CCM_AHB_GATE_REG, reg_val);
-	standby_delay(0x1000);
+	mem_delay(0x1000);
     //then open it
     reg_val |= 0x3<<14;
     mctl_write_w(DRAM_CCM_AHB_GATE_REG, reg_val);
-	standby_delay(0x1000);
+	mem_delay(0x1000);
 }
 
 __s32 DRAMC_init(__dram_para_t *para)
@@ -273,7 +273,7 @@ __s32 DRAMC_init(__dram_para_t *para)
 
     //dram clock on
     DRAMC_clock_output_en(1);
-	standby_delay(0x10);
+	mem_delay(0x10);
     while(mctl_read_w(SDR_CCR) & (0x1U<<31)) {};
 
     mctl_enable_dllx();

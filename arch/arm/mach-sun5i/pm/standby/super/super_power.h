@@ -85,10 +85,8 @@ struct axp_info {
 
 #define AXP_WAKEUP              (AXP_WAKEUP_KEY | AXP_WAKEUP_LOWBATT | AXP_WAKEUP_USB | AXP_WAKEUP_AC)
 
-extern __s32 standby_power_init(void);
-extern __s32 standby_power_exit(void);
-extern void  standby_set_voltage(enum power_vol_type_e type, __s32 voltage);
-extern __u32 standby_get_voltage(enum power_vol_type_e type);
+extern void  mem_set_voltage(enum power_vol_type_e type, __s32 voltage);
+extern __u32 mem_get_voltage(enum power_vol_type_e type);
 
 
 #endif  /* __SUPER_POWER_H__ */

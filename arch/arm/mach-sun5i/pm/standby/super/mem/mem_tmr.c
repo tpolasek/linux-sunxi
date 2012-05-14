@@ -17,7 +17,7 @@
 */
 #include "mem_i.h"
 
-static __standby_tmr_reg_t  *TmrReg;
+static __mem_tmr_reg_t  *TmrReg;
 /*
 *********************************************************************************************************
 *                                     TIMER INIT
@@ -32,7 +32,7 @@ static __standby_tmr_reg_t  *TmrReg;
 void mem_tmr_init(void)
 {
     /* set timer register base */
-    TmrReg = (__standby_tmr_reg_t *)SW_VA_TIMERC_IO_BASE;
+    TmrReg = (__mem_tmr_reg_t *)SW_VA_TIMERC_IO_BASE;
     
     return;    
 }
@@ -54,7 +54,7 @@ void mem_tmr_init(void)
 void mem_tmr_disable_watchdog(void)
 {
 	/* set timer register base */
-	//TmrReg = (__standby_tmr_reg_t *)SW_VA_TIMERC_IO_BASE;
+	//TmrReg = (__mem_tmr_reg_t *)SW_VA_TIMERC_IO_BASE;
 	/* disable watch-dog reset */
 	TmrReg->DogMode &= ~(1<<1);
 	/* disable watch-dog */

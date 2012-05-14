@@ -7,7 +7,7 @@
 *                                    (c) Copyright 2006-2011, kevin.z China
 *                                             All Rights Reserved
 *
-* File    : standby_i.h
+* File    : super_i.h
 * By      : kevin.z
 * Version : v1.0
 * Date    : 2011-5-30 17:21

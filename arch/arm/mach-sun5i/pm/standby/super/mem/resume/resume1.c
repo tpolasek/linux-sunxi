@@ -5,11 +5,11 @@
 extern unsigned int save_sp(void);
 extern int jump_to_resume(void* pointer, __u32 *addr);
 extern void restore_mmu_state(struct mmu_state *saved_mmu_state);
-extern void standby_flush_tlb(void);
+extern void mem_flush_tlb(void);
 extern void flush_icache(void);
 extern void flush_dcache(void);
 extern void invalidate_dcache(void);
-extern void standby_preload_tlb_nommu(void);
+extern void mem_preload_tlb_nommu(void);
 extern void clear_reg_context(void);
 
 extern void disable_cache(void);
@@ -74,14 +74,14 @@ int main(void)
 #ifdef MMU_OPENED
 	save_mem_status(RESUME1_START |0x02);
 	//move other storage to sram: saved_resume_pointer(virtual addr), saved_mmu_state
-	standby_memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1), sizeof(mem_para_info));
+	mem_memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1), sizeof(mem_para_info));
 #else
-	standby_preload_tlb_nommu();
+	mem_preload_tlb_nommu();
 	/*switch stack*/
 	//save_mem_status_nommu(RESUME1_START |0x02);
 	save_sun5i_mem_status_nommu(RESUME1_START |0x02);
 	//move other storage to sram: saved_resume_pointer(virtual addr), saved_mmu_state
-	standby_memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1_PA), sizeof(mem_para_info));
+	mem_memcpy((void *)&mem_para_info, (void *)(DRAM_BACKUP_BASE_ADDR1_PA), sizeof(mem_para_info));
 	/*restore mmu configuration*/
 	//save_mem_status_nommu(RESUME1_START |0x03);
 	save_sun5i_mem_status_nommu(RESUME1_START |0x03);
@@ -96,8 +96,8 @@ int main(void)
 //after open mmu mapping
 #ifdef FLUSH_TLB
 	//busy_waiting();
-	standby_flush_tlb();
-	standby_preload_tlb();
+	mem_flush_tlb();
+	mem_preload_tlb();
 #endif
 	save_sun5i_mem_status(RESUME1_START |0x04);
 #ifdef FLUSH_ICACHE
@@ -133,7 +133,7 @@ int main(void)
 	//busy_waiting();
 	//save_mem_status(RESUME1_START |0x9);
 	save_sun5i_mem_status(RESUME1_START |0x9);
-	standby_flush_tlb();
+	mem_flush_tlb();
 #endif
 
 #ifdef FLUSH_ICACHE
@@ -152,7 +152,7 @@ int main(void)
 void restore_ccmu(void)
 {
 	/* gating off dram clock */
-	//standby_clk_dramgating(0);
+	//mem_clk_dramgating(0);
 	int i=0;
 	
 	for(i=0; i<6; i++){
@@ -166,8 +166,8 @@ void restore_ccmu(void)
 	dcdc2 = mem_para_info.suspend_dcdc2;
 	dcdc3 = mem_para_info.suspend_dcdc3;
 
-	standby_set_voltage(POWER_VOL_DCDC2, dcdc2);
-	standby_set_voltage(POWER_VOL_DCDC3, dcdc3);
+	mem_set_voltage(POWER_VOL_DCDC2, dcdc2);
+	mem_set_voltage(POWER_VOL_DCDC3, dcdc3);
 	change_runtime_env(1);
 	delay_ms(10);
 
@@ -177,7 +177,7 @@ void restore_ccmu(void)
 	delay_ms(5);
 
 	/* gating on dram clock */
-	//standby_clk_dramgating(1);
+	//mem_clk_dramgating(1);
 	for(i=0; i<6; i++){
 		dram_hostport_on_off(i, 1);
 	}
