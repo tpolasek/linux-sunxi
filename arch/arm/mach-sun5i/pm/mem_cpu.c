@@ -147,6 +147,7 @@ void __save_processor_state(struct saved_context *ctxt)
 	//save_mem_status(0x10b);
 	//busy_waiting();
 	asm volatile ("mrc p15, 1, %0, c9, c0, 0" : "=r"(ctxt->l2clr));
+	asm volatile ("mrc p15, 1, %0, c9, c0, 2" : "=r"(ctxt->l2cauxctrlr));
 #endif
 	/* CR10 */
 	//save_mem_status(0x10c);
@@ -171,6 +172,7 @@ void __save_processor_state(struct saved_context *ctxt)
 	/* CR12 */
 #ifdef CORTEX_A8
 	asm volatile ("mrc p15, 0, %0, c12, c0, 0" : "=r"(ctxt->snsvbar));
+	asm volatile ("mrc p15, 0, %0, c12, c0, 1" : "r"(ctxt->monvecbar));	
 #elif defined(CORTEX_A9)
 	asm volatile ("mrc p15, 0, %0, c12, c0, 0" : "=r"(ctxt->vbar));
 	asm volatile ("mrc p15, 0, %0, c12, c0, 1" : "=r"(ctxt->mvbar));
@@ -247,6 +249,7 @@ void __restore_processor_state(struct saved_context *ctxt)
 	asm volatile ("mcr p15, 0, %0, c9, c14, 2" : : "r"(ctxt->iecr));
 #ifdef CORTEX_A8
 	asm volatile ("mcr p15, 1, %0, c9, c0, 0" : : "r"(ctxt->l2clr));
+	asm volatile ("mcr p15, 1, %0, c9, c0, 2" : : "r"(ctxt->l2cauxctrlr)); 
 #endif
 	/* CR10 */
 #if 0
@@ -270,6 +273,7 @@ void __restore_processor_state(struct saved_context *ctxt)
 	/* CR12 */
 #ifdef CORTEX_A8
 	asm volatile ("mcr p15, 0, %0, c12, c0, 0" : : "r"(ctxt->snsvbar));
+	asm volatile ("mcr p15, 0, %0, c12, c0, 1" : : "r"(ctxt->monvecbar));	
 #elif defined(CORTEX_A9)
 	asm volatile ("mcr p15, 0, %0, c12, c0, 0" : : "r"(ctxt->vbar));
 	asm volatile ("mcr p15, 0, %0, c12, c0, 1" : : "r"(ctxt->mvbar));
@@ -360,7 +364,6 @@ void set_copro_default(void)
 #ifdef CORTEX_A8
 	asm volatile ("mcr p15, 1, %0, c9, c0, 0" : : "r"(ctxt->l2clr));
 	asm volatile ("mcr p15, 1, %0, c9, c0, 2" : : "r"(ctxt->l2cauxctrlr)); //?
-	
 #endif
 	/* CR10 */
 	asm volatile ("mcr p15, 0, %0, c10, c0, 0" : : "r"(ctxt->d_tlblr));
