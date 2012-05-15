@@ -90,7 +90,7 @@ extern void mem_power_exit(void);
 extern void mem_power_off(void);
 extern void mem_power_off_nommu(void);
 
-extern void  mem_set_voltage(enum power_vol_type_e type, __s32 voltage);
+extern __s32  mem_set_voltage(enum power_vol_type_e type, __s32 voltage);
 extern __u32 mem_get_voltage(enum power_vol_type_e type);
 
 

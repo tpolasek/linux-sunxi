@@ -166,8 +166,13 @@ void restore_ccmu(void)
 	dcdc2 = mem_para_info.suspend_dcdc2;
 	dcdc3 = mem_para_info.suspend_dcdc3;
 
-	mem_set_voltage(POWER_VOL_DCDC2, dcdc2);
-	mem_set_voltage(POWER_VOL_DCDC3, dcdc3);
+	while( 0 != mem_set_voltage(POWER_VOL_DCDC2, dcdc2)){
+			;
+		}
+	while(0 != mem_set_voltage(POWER_VOL_DCDC3, dcdc3)){
+			;
+	}
+	
 	change_runtime_env(1);
 	delay_ms(10);
 

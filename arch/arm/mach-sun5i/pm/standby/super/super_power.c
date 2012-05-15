@@ -63,24 +63,25 @@ static inline struct axp_info *find_info(int id)
 *Arguments  : type      voltage type, defined as "enum power_vol_type_e";
 *             voltage   voltage value, based on "mv";
 *
-*Return     : none;
-*
+*Return     : 0: succeed;
+*			-1: failed.
 *Notes      :
 *
 *********************************************************************************************************
 */
-void  mem_set_voltage(enum power_vol_type_e type, __s32 voltage)
+__s32  mem_set_voltage(enum power_vol_type_e type, __s32 voltage)
 {
 	struct axp_info *info = 0;
 	__u8 val, mask, reg_val;
+	__s32 ret = 0;
 
 	info = find_info(type);
 	if (info == 0) {
-		return;
+		return -1;
 	}
 
 	if (check_range(info, voltage)) {
-		return;
+		return -1;
 	}
 
 	if (type != POWER_VOL_LDO4)
@@ -109,14 +110,18 @@ void  mem_set_voltage(enum power_vol_type_e type, __s32 voltage)
 	val <<= info->vol_shift;
 	mask = ((1 << info->vol_nbits) - 1)  << info->vol_shift;
 
-	twi_byte_rw(TWI_OP_RD,AXP_ADDR,info->vol_reg, &reg_val);
+	if( 0 != twi_byte_rw(TWI_OP_RD,AXP_ADDR,info->vol_reg, &reg_val)){
+		return -1;
+	}
 
 	if ((reg_val & mask) != val) {
 		reg_val = (reg_val & ~mask) | val;
-		twi_byte_rw(TWI_OP_WR,AXP_ADDR,info->vol_reg, &reg_val);
+		if(0 != twi_byte_rw(TWI_OP_WR,AXP_ADDR,info->vol_reg, &reg_val)){
+			return -1;
+		}
 	}
 
-	return;
+	return ret;
 }
 
 
