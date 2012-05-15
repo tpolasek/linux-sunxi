@@ -172,7 +172,7 @@ void __save_processor_state(struct saved_context *ctxt)
 	/* CR12 */
 #ifdef CORTEX_A8
 	asm volatile ("mrc p15, 0, %0, c12, c0, 0" : "=r"(ctxt->snsvbar));
-	asm volatile ("mrc p15, 0, %0, c12, c0, 1" : "r"(ctxt->monvecbar));	
+	asm volatile ("mrc p15, 0, %0, c12, c0, 1" : "=r"(ctxt->monvecbar));	
 #elif defined(CORTEX_A9)
 	asm volatile ("mrc p15, 0, %0, c12, c0, 0" : "=r"(ctxt->vbar));
 	asm volatile ("mrc p15, 0, %0, c12, c0, 1" : "=r"(ctxt->mvbar));
