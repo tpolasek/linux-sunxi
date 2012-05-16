@@ -34,11 +34,7 @@
 #include <asm/mach/map.h>
 #include <asm/cacheflush.h>
 #include "pm_i.h"
-//#include <linux/sw-uart-dbg.h>
-#include "mem_cpu.h"
-#include "standby/super/super_clock.h"
-#include "standby/super/super_power.h"
-#include "standby/super/super_twi.h"
+
 #include <mach/sys_config.h>
 
 //#define CROSS_MAPPING_STANDBY

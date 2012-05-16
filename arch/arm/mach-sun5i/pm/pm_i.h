@@ -12,6 +12,10 @@
 #include <mach/ccmu_regs.h>
 #include "pm.h"
 
+#include "standby/super/super_clock.h"
+#include "standby/super/super_power.h"
+#include "standby/super/super_twi.h"
+
 
 /* define register for interrupt controller */
 typedef struct __MEM_INT_REG{

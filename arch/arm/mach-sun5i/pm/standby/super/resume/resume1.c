@@ -25,8 +25,6 @@ static struct aw_mem_para mem_para_info;
 extern char *__bss_start;
 extern char *__bss_end;
 static __u32 dcdc2, dcdc3;
-static struct sun4i_clk_div_t  clk_div;
-static struct sun4i_clk_div_t  tmp_clk_div;
 static __u32 sp_backup;
 static char    *tmpPtr = (char *)&__bss_start;
 static __u32 status = 0; 

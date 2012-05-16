@@ -22,16 +22,8 @@
 #include <mach/ccmu_regs.h>
 
 
-struct sun4i_clk_div_t {
-    __u32   cpu_div:4;      /* division of cpu clock, divide core_pll */
-    __u32   axi_div:4;      /* division of axi clock, divide cpu clock*/
-    __u32   ahb_div:4;      /* division of ahb clock, divide axi clock*/
-    __u32   apb_div:4;      /* division of apb clock, divide ahb clock*/
-    __u32   reserved:16;
-};
 
 void mem_clk_dramgating(int onoff);
-
 __s32 mem_clk_init(void);
 __s32 mem_clk_plldisable(void);
 __s32 mem_clk_pllenable(void);
