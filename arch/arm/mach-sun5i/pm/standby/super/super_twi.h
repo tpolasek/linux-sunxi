@@ -47,6 +47,8 @@ enum twi_op_type_e{
 extern __s32 mem_twi_init(int group);
 extern __s32 mem_twi_exit(void);
 extern __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data);
+extern __s32 twi_byte_rw_nommu(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data);
+
 extern void setup_twi_env(void);
 
 
