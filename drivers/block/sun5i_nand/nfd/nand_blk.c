@@ -1393,7 +1393,11 @@ static int nand_resume(struct platform_device *plat_dev)
 =======
 	printk("[NAND] nand_resume \n");
 	NAND_ClkEnable();
+<<<<<<< HEAD
 >>>>>>> update nand driver to v2.10
+=======
+	NAND_PIORequest();
+>>>>>>> modify hynix 20nm H27UBG8T2C bug
 
 	up(&mytr.nand_ops_mutex);
 	}else if(SUPER_STANDBY == standby_type){
