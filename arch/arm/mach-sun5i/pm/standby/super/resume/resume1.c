@@ -24,7 +24,7 @@ static struct aw_mem_para mem_para_info;
 
 extern char *__bss_start;
 extern char *__bss_end;
-static __u32 dcdc2, dcdc3;
+static __s32 dcdc2, dcdc3;
 static __u32 sp_backup;
 static char    *tmpPtr = (char *)&__bss_start;
 static __u32 status = 0; 
@@ -166,7 +166,7 @@ void restore_ccmu(void)
 
 	while( 0 != mem_set_voltage(POWER_VOL_DCDC2, dcdc2)){
 			;
-		}
+	}
 	while(0 != mem_set_voltage(POWER_VOL_DCDC3, dcdc3)){
 			;
 	}

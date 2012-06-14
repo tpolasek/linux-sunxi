@@ -108,11 +108,10 @@ __u32 mem_dram_backup_area1[DRAM_BACKUP_SIZE1];
 __u32 mem_dram_backup_area2[DRAM_BACKUP_SIZE2]; //for training area
 __u32 mem_dram_backup_compare_area2[DRAM_COMPARE_SIZE]; //for compare area
 #else
-static __u32 *mem_dram_traning_area_back = NULL;
+//static __u32 *mem_dram_traning_area_back = NULL;
 static __u32 *mem_dram_backup_area = NULL;
 static __u32 *mem_dram_backup_area1 = NULL;
 static __u32 *mem_dram_backup_area2 = NULL;
-static __u32 *mem_dram_backup_compare_area2 = NULL;
 #endif
 
 #ifdef CONFIG_CPU_FREQ_USR_EVNT_NOTIFY
@@ -180,6 +179,8 @@ volatile int print_flag = 0;
 static bool mem_allocated_flag = false;
 static int dram_backup = 0;
 static int standby_mode = 0;
+static int suspend_status_flag = 0;
+
 
 extern void create_mapping(struct map_desc *md);
 extern void save_mapping(unsigned long vaddr);
@@ -233,11 +234,21 @@ static int aw_pm_valid(suspend_state_t state)
 	
 	//allocat space for backup dram data
 	if((false == mem_allocated_flag) && (SUPER_STANDBY == standby_type)){
-		mem_dram_traning_area_back = (__u32*)kmalloc(sizeof(__u32)*DRAM_TRANING_SIZE, GFP_KERNEL);
 		mem_dram_backup_area = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE, GFP_KERNEL);
+		if(!mem_dram_backup_area){
+			goto malloc_mem_dram_backup_area_err;
+		}
+		
 		mem_dram_backup_area1 = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE1, GFP_KERNEL);
+		if(!mem_dram_backup_area1){
+			goto malloc_mem_dram_backup_area1_err;
+		}
+		
 		mem_dram_backup_area2 = (__u32*)kmalloc(sizeof(__u32)*DRAM_BACKUP_SIZE2, GFP_KERNEL);
-		mem_dram_backup_compare_area2 = (__u32*)kmalloc(sizeof(__u32)*DRAM_COMPARE_SIZE, GFP_KERNEL);	
+		if(!mem_dram_backup_area2){
+			goto malloc_mem_dram_backup_area2_err;
+		}
+		
 		mem_allocated_flag = true;	
 #ifdef GET_CYCLE_CNT
 	// init counters:
@@ -247,6 +258,16 @@ static int aw_pm_valid(suspend_state_t state)
 
 	//print_flag = 0;
     return 1;
+	
+malloc_mem_dram_backup_area2_err:
+	kfree(mem_dram_backup_area1);
+malloc_mem_dram_backup_area1_err:
+	kfree(mem_dram_backup_area);
+malloc_mem_dram_backup_area_err:
+	mem_allocated_flag = false;
+	
+	return 0;
+
 }
 
 
@@ -336,11 +357,16 @@ int aw_pm_prepare_late(void)
 *
 *Return     : return 0 is process successed;
 *
-*Notes      : 
+*Notes      : -1: data is ok;
+*			-2: data has been destory.
 *********************************************************************************************************
 */
 static int aw_early_suspend(void)
 {
+#define MAX_RETRY_TIMES (5)
+
+	__s32 retry = MAX_RETRY_TIMES;
+	
 	//backup device state
 	mem_ccu_save((__ccmu_reg_list_t *)(SW_VA_CCM_IO_BASE));
 	mem_clk_save(&(saved_clk_state));
@@ -353,8 +379,24 @@ static int aw_early_suspend(void)
 	//backup volt and freq state, after backup device state
 	mem_twi_init(AXP_IICBUS);
 	/* backup voltages */
-	mem_para_info.suspend_dcdc2 = mem_get_voltage(POWER_VOL_DCDC2);
-	mem_para_info.suspend_dcdc3 = mem_get_voltage(POWER_VOL_DCDC3);
+	while(-1 == (mem_para_info.suspend_dcdc2 = mem_get_voltage(POWER_VOL_DCDC2)) && --retry){
+		;
+	}
+	if(0 == retry){
+		return -1;
+	}else{
+		retry = MAX_RETRY_TIMES;
+	}	
+
+	while(-1 == (mem_para_info.suspend_dcdc3 = mem_get_voltage(POWER_VOL_DCDC3)) && --retry){
+		;
+	}
+	if(0 == retry){
+		return -1;
+	}else{
+		retry = MAX_RETRY_TIMES;
+	}	
+
 	/*backup bus ratio*/
 	mem_clk_getdiv(&mem_para_info.clk_div);
 	/*backup pll ration*/
@@ -434,7 +476,7 @@ static int aw_early_suspend(void)
 	mem();
 #endif
 
-	return -1;
+	return -2;
 
 }
 
@@ -458,7 +500,7 @@ static int verify_restore(void *src, void *dest, int count)
 	
 	while(count--){
 		if(*(s+(count)) != *(d+(count))){
-			busy_waiting();
+			//busy_waiting();
 			return -1;
 		}
 	}
@@ -506,18 +548,18 @@ static void aw_late_resume(void)
 	if(0 != (ret = (verify_restore((void *)mem_dram_backup_area2, (void *)DRAM_BACKUP_BASE_ADDR2, sizeof(__u32)*DRAM_BACKUP_SIZE2)))){
 		save_mem_status(LATE_RESUME_START |0x21);
 		save_sun5i_mem_status(LATE_RESUME_START | 0x31);
-		busy_waiting();
+		//busy_waiting();
 	}
 
 	if(0 != (ret = verify_restore((void *)mem_dram_backup_area1, (void *)DRAM_BACKUP_BASE_ADDR1, sizeof(__u32)*DRAM_BACKUP_SIZE1))){
 		save_mem_status(LATE_RESUME_START |0x22);
 		save_sun5i_mem_status(LATE_RESUME_START | 0x32);
-		busy_waiting();
+		//busy_waiting();
 	}
 	if(0 != (ret = verify_restore((void *)mem_dram_backup_area, (void *)DRAM_BACKUP_BASE_ADDR, sizeof(__u32)*DRAM_BACKUP_SIZE))){
 		save_mem_status(LATE_RESUME_START |0x23);
 		save_sun5i_mem_status(LATE_RESUME_START | 0x33);
-		busy_waiting();
+		//busy_waiting();
 	}
 #endif
 
@@ -532,6 +574,31 @@ static void aw_late_resume(void)
 
 	return;
 }
+
+void check_int_src(void)
+{
+#define INT_REG_0 (0x10) 
+#define INT_REG_1 (0x14)
+#define INT_REG_2 (0x18)
+
+
+	u32 data_0 = 0;
+	u32 data_1 = 0;
+	u32 data_2 = 0;
+	
+	data_0 = *(volatile unsigned int *)(SW_VA_INT_IO_BASE + INT_REG_0);
+	data_1 = *(volatile unsigned int *)(SW_VA_INT_IO_BASE + INT_REG_1);
+	data_2 = *(volatile unsigned int *)(SW_VA_INT_IO_BASE + INT_REG_2);
+
+	pr_info("INT_REG_0 = %d \n", data_0);
+	pr_info("INT_REG_1 = %d \n", data_1);
+	pr_info("INT_REG_2 = %d \n", data_2);
+
+	return;
+
+}
+
+
 
 /*
 *********************************************************************************************************
@@ -550,6 +617,9 @@ static int aw_pm_enter(suspend_state_t state)
 {
 	asm volatile ("stmfd sp!, {r1-r12, lr}" );
 	int (*standby)(struct aw_pm_info *arg) = 0;
+	int result = 0;
+	
+	suspend_status_flag = 0;
 	
 	PM_DBG("enter state %d\n", state);     
 	if(NORMAL_STANDBY== standby_type){
@@ -560,6 +630,7 @@ static int aw_pm_enter(suspend_state_t state)
 		standby_info.standby_para.event = SUSPEND_WAKEUP_SRC_EXINT | SUSPEND_WAKEUP_SRC_ALARM;
 		/* goto sram and run */
 		standby(&standby_info);
+		check_int_src();
 	}else if(SUPER_STANDBY == standby_type){
 mem_enter:
 		if( 1 == mem_para_info.mem_flag){
@@ -579,17 +650,34 @@ mem_enter:
 		mem_para_info.mem_flag = 1;
 		standby_level = STANDBY_WITH_POWER_OFF;
 		mem_para_info.resume_pointer = (void *)&&mem_enter;
-		if(0 != aw_early_suspend()){
-			mem_para_info.mem_flag = 0;
-			return -1;
+		//busy_waiting();
+		result = aw_early_suspend();
+		if(-2 == result){
+			//mem_para_info.mem_flag = 1;
+			//busy_waiting();
+			suspend_status_flag = 2;
+			goto mem_enter;
+		}else if(-1 == result){
+			suspend_status_flag = 1;
+			goto suspend_err;
 		}
 		
 resume:
+	
+#ifdef IO_MEASURE
+	io_init();
+	io_high(0);
+#endif
 		aw_late_resume();
 		save_sun5i_mem_status(dram_backup);
+		//have been disable dcache in resume1
 		enable_cache();
 				
 	}
+
+suspend_err:
+
+	pr_info("suspend_status_flag = %d. \n", suspend_status_flag);
 
 	asm volatile ("ldmfd sp!, {r1-r12, lr}" );
 	return 0;
@@ -657,11 +745,19 @@ void aw_pm_end(void)
 	
 	//standby_type = NON_STANDBY;
 	//uart_init(2, 115200);
-	save_mem_status(LATE_RESUME_START |0x10);
+	//save_mem_status(LATE_RESUME_START |0x10);
 	//print_flag = 0;
 #ifndef GET_CYCLE_CNT
+	#ifndef IO_MEASURE
 			restore_perfcounter();
+	#endif
 #endif
+
+#ifdef IO_MEASURE
+	io_init();
+	io_high(1);
+#endif
+
 	PM_DBG("aw_pm_end!\n");
 }
 
@@ -755,11 +851,9 @@ static void __exit aw_pm_exit(void)
 {
 	PM_DBG("aw_pm_exit!\n");
 	if(true == mem_allocated_flag){
-		kfree(mem_dram_traning_area_back);
 		kfree(mem_dram_backup_area);
 		kfree(mem_dram_backup_area1);
 		kfree(mem_dram_backup_area2);
-		kfree(mem_dram_backup_compare_area2);
 		mem_allocated_flag = false;
 	}
 	suspend_set_ops(NULL);

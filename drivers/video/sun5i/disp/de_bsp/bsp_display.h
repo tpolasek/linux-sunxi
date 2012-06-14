@@ -38,6 +38,7 @@
 #include <mach/aw_ccu.h>
 #include <mach/system.h>
 #include <linux/types.h>
+#include <linux/timer.h>
 
 typedef unsigned int __hdle;
 

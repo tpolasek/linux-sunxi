@@ -9,9 +9,12 @@
  */
  
 #include "./../super_i.h"
+#define RETRY_TIMES (5)
 
 extern char *__bss_start;
 extern char *__bss_end;
+static int retry = RETRY_TIMES;
+
 extern void mem_flush_tlb(void);
 extern void flush_icache(void);
 extern void flush_dcache(void);
@@ -24,7 +27,12 @@ extern void mem_flush_tlb(void);
 extern void mem_preload_tlb(void);
 void disable_cache_invalidate(void);
 void disable_mmu(void);
+void enable_mmu(void);
 void set_ttbr0(void);
+static __s32 suspend_with_nommu(void);
+static __s32 suspend_with_mmu(void);
+
+
 
 #ifdef RETURN_FROM_RESUME0_WITH_MMU
 #define SWITCH_STACK
@@ -88,7 +96,7 @@ void set_ttbr0(void);
 #define FLUSH_TLB
 #define FLUSH_ICACHE
 #define INVALIDATE_DCACHE
-#define SET_COPRO_DEFAULT 
+//#define SET_COPRO_DEFAULT 
 #endif
 
 #ifdef WATCH_DOG_RESET
@@ -140,52 +148,53 @@ int main(void)
 	sp_backup = save_sp();
 #endif
 #endif	
-	save_mem_status(SUSPEND_START);
+	save_sun5i_mem_status(SUSPEND_START);
 
 	/* flush data and instruction tlb, there is 32 items of data tlb and 32 items of instruction tlb,
 	The TLB is normally allocated on a rotating basis. The oldest entry is always the next allocated */
 #ifdef FLUSH_TLB
 	mem_flush_tlb();
-	save_mem_status(SUSPEND_START |0x01);	
+	save_sun5i_mem_status(SUSPEND_START |0x01);	
 #ifdef PRE_DISABLE_MMU
 	/* preload tlb for mem */
 	//busy_waiting();
 	//mem_preload_tlb_nommu(); //0x0000 mapping is not large enough for preload nommu tlb
 						//eg: 0x01c2.... is not in the 0x0000,0000 range.
 	mem_preload_tlb();
-	save_mem_status(SUSPEND_START |0x02);	
+	save_sun5i_mem_status(SUSPEND_START |0x02);	
 #else
 	/* preload tlb for mem */
 	mem_preload_tlb();
-	save_mem_status(SUSPEND_START |0x03);	
+	save_sun5i_mem_status(SUSPEND_START |0x03);	
 #endif
 
 #endif	
+
 	/* clear bss segment */
 	do{*tmpPtr ++ = 0;}while(tmpPtr <= (char *)&__bss_end);
-	save_mem_status(SUSPEND_START |0x04);	
+	save_sun5i_mem_status(SUSPEND_START |0x04);	
 
 	/* initialise mem modules */
 	mem_clk_init();
-	save_mem_status(SUSPEND_START |0x05);
+	save_sun5i_mem_status(SUSPEND_START |0x05);
 	mem_int_init();
-	save_mem_status(SUSPEND_START |0x06);
+	save_sun5i_mem_status(SUSPEND_START |0x06);
 	mem_tmr_init();
-	save_mem_status(SUSPEND_START |0x07);
+	save_sun5i_mem_status(SUSPEND_START |0x07);
 	mem_twi_init(AXP_IICBUS);
-	save_mem_status(SUSPEND_START |0x08);
-	mem_power_init();
-    save_mem_status(SUSPEND_START |0x09);
-	
-	//just for test
-	/*restore pmu config*/
+	save_sun5i_mem_status(SUSPEND_START |0x08);
+
 	//busy_waiting();
-#ifdef DIRECT_RETRUN
-	mem_power_exit();
-	save_mem_status(RESUME1_START |0x0b);
+	while(mem_power_init()&&--retry){
+		;
+	}
+	if(0 == retry){
+		goto mem_power_init_err;
+	}else{
+		retry = RETRY_TIMES;
+	}
+    save_sun5i_mem_status(SUSPEND_START |0x09);
 	
-	return 0;
-#endif
 
 	/* dram enter self-refresh */
 	//busy_waiting();
@@ -193,12 +202,13 @@ int main(void)
 #ifdef GET_CYCLE_CNT
 	start = get_cyclecount();
 #endif
-	dram_power_save_process();
+	if(dram_power_save_process()){
+		goto suspend_dram_err;
+	}
 	//save_mem_status(SUSPEND_START |0x0c);
 	
 	/* gating off dram clock */
-	//busy_waiting();
-    	mem_clk_dramgating(0);
+    mem_clk_dramgating(0);
 #ifdef GET_CYCLE_CNT
 	start = get_cyclecount() - start;
 	//busy_waiting();
@@ -206,111 +216,115 @@ int main(void)
 	save_mem_status(SUSPEND_START |0x0d);
 #endif
 
-#ifdef INIT_DRAM
-	//busy_waiting();
-	
-	/*init dram*/
-	dram_size = init_DRAM( );                                // ³õÊ¼»¯DRAM
-	if(dram_size)
-	{
-		save_mem_status(SUSPEND_START |0x0e);
-		//printk("dram size =%d\n", dram_size);
-	}
-	else
-	{
-		save_mem_status(SUSPEND_START |0x0f);
-		//printk("initializing SDRAM Fail.\n");
-	}
-
-	save_mem_status(SUSPEND_START |0x10);
-	mem_mdelay(100);
-
-	//return 0;
-#endif
-
-#ifdef DISABLE_INVALIDATE_CACHE
-	disable_cache_invalidate();
-	//busy_waiting();
-#endif
-
-#ifdef START_WATCH_DOG
-	//busy_waiting();
-	//start watch dog
-	/* enable watch-dog to reset cpu */
-    mem_tmr_enable_watchdog();
-	save_mem_status(SUSPEND_START |0x11);
-	//while(1);
-#endif
-
 #ifdef DISABLE_MMU
-	disable_mmu();
-	mem_flush_tlb();
-	save_mem_status_nommu(SUSPEND_START |0x12);
-	//after disable mmu, it is time to preload nommu, need to access dram?
-	mem_preload_tlb_nommu();
-	//while(1);
+	if(suspend_with_nommu()){
+		goto suspend_err;
+	}
+#else
+	if(suspend_with_mmu()){
+		goto suspend_err;
+	}
+#endif	
+	//notice: never get here, so need watchdog, not busy_waiting.
+
+
+suspend_err:
+	init_DRAM();	
+suspend_dram_err:
+mem_power_init_err:
+	
+    while(mem_power_exit()&&--retry){
+		;
+	}
+	if(0 == retry){
+		return -1;
+	}else{
+		retry = RETRY_TIMES;
+	}
+
+	return -1;
+}
+
+__s32 suspend_with_nommu(void)
+{
+		disable_mmu();
+		mem_flush_tlb();
+		save_mem_status_nommu(SUSPEND_START |0x12);
+		//after disable mmu, it is time to preload nommu, need to access dram?
+		mem_preload_tlb_nommu();
+		//while(1);
+#ifdef SET_COPRO_DEFAULT
+			set_copro_default();
+			save_mem_status_nommu(SUSPEND_START |0x13);
+			//busy_waiting();
+			//fake_busy_waiting();
+#endif
+	
+#ifdef JUMP_WITH_NOMMU
+			save_mem_status_nommu(SUSPEND_START |0x14);
+			//before jump, disable mmu
+			//busy_waiting();
+			//jump_to_resume0_nommu(0x40100000);
+			jump_to_resume0(0x40100000);
+#endif 
+	
+#ifdef MEM_POWER_OFF
+			/*power off*/
+			/*NOTICE: not support to power off yet after disable mmu.
+			  * because twi use virtual addr. 
+			  */
+			while(mem_power_off_nommu()&&--retry){
+				;
+			}
+			if(0 == retry){
+				goto mem_power_off_nommu_err;
+				
+			}else{
+				retry = RETRY_TIMES;
+			}
+			save_mem_status_nommu(SUSPEND_START |0x15);
+#endif
+			return 0;
+
+mem_power_off_nommu_err:
+	enable_mmu();
+	return -1;
+
+}
+
+__s32 suspend_with_mmu(void)
+{
+	
 #ifdef SET_COPRO_DEFAULT
 		set_copro_default();
-		save_mem_status_nommu(SUSPEND_START |0x13);
+		save_mem_status(SUSPEND_START |0x13);
 		//busy_waiting();
 		//fake_busy_waiting();
 #endif
-
-#ifdef JUMP_WITH_NOMMU
-		save_mem_status_nommu(SUSPEND_START |0x14);
-		//before jump, disable mmu
+	
+	
+#ifdef MEM_POWER_OFF
+			/*power off*/
 		//busy_waiting();
-		//jump_to_resume0_nommu(0x40100000);
-		jump_to_resume0(0x40100000);
-#endif 
-
-#ifdef MEM_POWER_OFF
-	    /*power off*/
-		/*NOTICE: not support to power off yet after disable mmu.
-		  * because twi use virtual addr. 
-		  */
-    	mem_power_off_nommu();
-    	save_mem_status_nommu(SUSPEND_START |0x15);
+			while(mem_power_off()&&--retry){
+				;
+			}
+			if(0 == retry){
+				return -1;
+			}else{
+				retry = RETRY_TIMES;
+			}			
+			save_mem_status(SUSPEND_START |0x0f);
 #endif
-
-#else
-
-#ifdef SET_COPRO_DEFAULT
-	set_copro_default();
-	save_mem_status(SUSPEND_START |0x13);
-	//busy_waiting();
-	//fake_busy_waiting();
-#endif
-
-
-#ifdef MEM_POWER_OFF
-    	/*power off*/
-	//busy_waiting();
-    	mem_power_off();
-    	save_mem_status(SUSPEND_START |0x0f);
-#endif
-
+	
 #ifdef WITH_MMU
-	//busy_waiting();
-	save_mem_status(SUSPEND_START |0x0f);
-	//busy_waiting();
-	jump_to_resume0(0xc0100000);
+		//busy_waiting();
+		save_mem_status(SUSPEND_START |0x0f);
+		//busy_waiting();
+		jump_to_resume0(0xc0100000);
 #endif
 
-#endif	
-	//notice: never get here, so need watchdog, not busy_waiting.
-#ifndef DIRECT_RETRUN
-{
+		return 0;
 
-#ifdef CONFIG_ARCH_SUN4I
-#if 0
-	#define CPU_CONFIG_REG (0X01C20D3C)
-	__u32 val = *(volatile __u32 *)(CPU_CONFIG_REG);
-	*(volatile __u32 *)(PERMANENT_REG_PA  + 0x04) = val;
-#endif
-#endif
-	busy_waiting();
-}		
-#endif
-    
 }
+

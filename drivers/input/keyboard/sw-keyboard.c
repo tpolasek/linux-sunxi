@@ -177,9 +177,9 @@ static void sun4i_keyboard_suspend(struct early_suspend *h)
 	/*int ret;
 	struct sun4i_keyboard_data *ts = container_of(h, struct sun4i_keyboard_data, early_suspend);
       */
-#ifdef PRINT_SUSPEND_INFO
+    #ifdef PRINT_SUSPEND_INFO
 	printk("[%s] enter standby state: %d. \n", __FUNCTION__, (int)standby_type);
-#endif
+    #endif
     
 	if (NORMAL_STANDBY == standby_type) {
 

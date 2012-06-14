@@ -1163,7 +1163,7 @@ static int nand_suspend(struct platform_device *plat_dev, pm_message_t state)
 		if(i==10){
 			return -EBUSY;
 		}else{
-			down(&mytr.nand_ops_mutex);
+		down(&mytr.nand_ops_mutex);
 
 		NAND_ClkDisable();
 		NAND_PIORelease();

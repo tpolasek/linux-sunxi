@@ -20,7 +20,6 @@
 
 
 static __ccmu_reg_list_t   *CmuReg;;
-static __u32    ccu_reg_back[7];
 __u32   cpu_ms_loopcnt;
 
 //==============================================================================

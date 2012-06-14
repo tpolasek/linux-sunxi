@@ -45,7 +45,7 @@
 #define RUNTIME_CONTEXT_SIZE (14 * sizeof(__u32)) //r0-r13
 
 #define DRAM_COMPARE_DATA_ADDR (0xc0100000) //1Mbytes offset
-#define DRAM_COMPARE_SIZE (0x200000) //16K*4 bytes = 64K.
+#define DRAM_COMPARE_SIZE (0x10000) //?
 
 
 //for mem mapping

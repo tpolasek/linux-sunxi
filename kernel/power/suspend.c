@@ -26,15 +26,6 @@
 #include <trace/events/power.h>
 
 #include "power.h"
-//#include "./../../arch/arm/mach-sun5i/pm/pm.h"
-#undef GET_CYCLE_CNT
-
-#ifdef GET_CYCLE_CNT
-static int before_syscore_resume = 0;
-static int before_dpm_resume_noirq = 0;
-static int before_test_finish = 0;
-static int before_dpm_resume_end = 0;
-#endif
 
 const char *const pm_states[PM_SUSPEND_MAX] = {
 #ifdef CONFIG_EARLYSUSPEND
@@ -180,12 +171,7 @@ static int suspend_enter(suspend_state_t state)
 		if (!(suspend_test(TEST_CORE) || pm_wakeup_pending())) {
 			error = suspend_ops->enter(state);
 			events_check_enabled = false;
-			
 		}
-#ifdef GET_CYCLE_CNT
-		before_syscore_resume = get_cyclecount();
-		printk("#before_syscore_resume# = #%x#. \n", before_syscore_resume);
-#endif
 		syscore_resume();
 	}
 
@@ -199,10 +185,6 @@ static int suspend_enter(suspend_state_t state)
 	if (suspend_ops->wake)
 		suspend_ops->wake();
 
-#ifdef GET_CYCLE_CNT
-	before_dpm_resume_noirq = get_cyclecount();
-	printk("#before_dpm_resume_noirq# = #%x#. \n", before_dpm_resume_noirq);
-#endif
 	dpm_resume_noirq(PMSG_RESUME);
 
  Platform_finish:
@@ -245,16 +227,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 
  Resume_devices:
 	suspend_test_start();
-#ifdef GET_CYCLE_CNT
-	before_dpm_resume_end = get_cyclecount();
-	printk("#before_dpm_resume_end# = #%x#. \n", before_dpm_resume_end);
-#endif
 	dpm_resume_end(PMSG_RESUME);
-
-#ifdef GET_CYCLE_CNT
-	before_test_finish = get_cyclecount();
-	printk("#before_test_finish# = #%x#. \n", before_test_finish);
-#endif
 	suspend_test_finish("resume devices");
 	//resume_console();
  Close:

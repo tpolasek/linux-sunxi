@@ -92,6 +92,8 @@ extern void mctl_enable_dll0(void);
 extern void mctl_enable_dllx(void);
 extern void mctl_disable_dll(void);
 extern void DRAMC_hostport_on_off(__u32 port_idx, __u32 on);
+extern __s32 init_DRAM(void);
+
 
 #endif  //__DRAM_REG_H__
 

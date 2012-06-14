@@ -1,4 +1,6 @@
-#include "./../pm_config.h"
+#include "./../../pm_config.h"
+
+#define ENABLE_SUPER_STANDBY
 
 #ifdef ENABLE_SUPER_STANDBY
 #define STANDBY_COEFFICIENT (17)

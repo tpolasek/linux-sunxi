@@ -28,6 +28,7 @@
 
 
 //#define GET_CYCLE_CNT
+//#define IO_MEASURE
 
 /*
  * Check at compile time that something is of a particular type.
@@ -77,6 +78,9 @@ void reset_counter(void);
 void change_runtime_env(__u32 mmu_flag);
 void delay_us(__u32 us);
 void delay_ms(__u32 ms);
+void io_init(void);
+void io_high(int num);
+
 
 #endif /*_PM_DEBUG_H*/
 

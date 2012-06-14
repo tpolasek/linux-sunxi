@@ -77,6 +77,7 @@ int axp_usbvolflag = 0;
 static int flag_cou = 0;
 
 static int change_flag = 0;
+
 void Cou_Count_Clear(struct	axp_charger	*charger);
 void Set_Rest_Cap(struct axp_charger *charger, int rest_cap);
 int	Get_Bat_Coulomb_Count(struct axp_charger *charger);
@@ -634,6 +635,19 @@ static void axp_pressshort(struct axp_charger *charger)
 	input_sync(powerkeydev);
 }
 
+static void axp_keyup(struct axp_charger *charger)
+{
+	DBG_PSY_MSG("power key up\n");
+	input_report_key(powerkeydev, KEY_POWER, 0);
+	input_sync(powerkeydev);
+}
+
+static void axp_keydown(struct axp_charger *charger)
+{
+	DBG_PSY_MSG("power key down\n");
+	input_report_key(powerkeydev, KEY_POWER, 1);
+	input_sync(powerkeydev);
+}
 static void axp_capchange(struct axp_charger *charger)
 {
 	uint8_t val;
@@ -681,6 +695,7 @@ static int axp_battery_event(struct notifier_block *nb, unsigned long event,
 	struct axp_charger *charger =
 	container_of(nb, struct axp_charger, nb);
     uint8_t w[9];
+
 	w[0] = (uint8_t) ((event) & 0xFF);
 	w[1] = POWER20_INTSTS2;
 	w[2] = (uint8_t) ((event >> 8) & 0xFF);
@@ -689,31 +704,43 @@ static int axp_battery_event(struct notifier_block *nb, unsigned long event,
 	w[5] = POWER20_INTSTS4;
 	w[6] = (uint8_t) ((event >> 24) & 0xFF);
 	w[7] = POWER20_INTSTS5;
-	w[8] = (uint8_t) (((uint64_t) event >> 32) & 0xFF);
+	w[8] = (uint8_t) ((event) & 0xFF);
+//	w[8] = (uint8_t) (((uint64_t) event >> 32) & 0xFF);
+	if((bool)data==0){
+		if(event & (AXP20_IRQ_BATIN|AXP20_IRQ_BATRE)) {
+			axp_capchange(charger);
+		}
 
-	if(event & (AXP20_IRQ_BATIN|AXP20_IRQ_BATRE)) {
-		axp_capchange(charger);
+		if(event & (AXP20_IRQ_ACIN|AXP20_IRQ_USBIN|AXP20_IRQ_ACOV|AXP20_IRQ_USBOV|AXP20_IRQ_CHAOV
+					|AXP20_IRQ_CHAST|AXP20_IRQ_TEMOV|AXP20_IRQ_TEMLO)) {
+			axp_change(charger);
+		}
+
+		if(event & (AXP20_IRQ_ACRE|AXP20_IRQ_USBRE)) {
+			axp_change(charger);
+		}
+
+		if(event & AXP20_IRQ_PEKLO) {
+			axp_presslong(charger);
+		}
+
+		if(event & AXP20_IRQ_PEKSH) {
+			axp_pressshort(charger);
+		}
 	}
+	else{
 
-	if(event & (AXP20_IRQ_ACIN|AXP20_IRQ_USBIN|AXP20_IRQ_ACOV|AXP20_IRQ_USBOV|AXP20_IRQ_CHAOV
-				|AXP20_IRQ_CHAST|AXP20_IRQ_TEMOV|AXP20_IRQ_TEMLO)) {
-		axp_change(charger);
+		if((event) & AXP20_IRQ_PEKFE>>32) {
+			axp_keydown(charger);
+		}
+
+		if((event) & AXP20_IRQ_PEKRE>>32) {
+			axp_keyup(charger);
+		}
 	}
-
-	if(event & (AXP20_IRQ_ACRE|AXP20_IRQ_USBRE)) {
-		axp_change(charger);
-	}
-
-	if(event & AXP20_IRQ_PEKLO) {
-		axp_presslong(charger);
-	}
-
-	if(event & AXP20_IRQ_PEKSH) {
-		axp_pressshort(charger);
-	}
-
-	DBG_PSY_MSG("event = 0x%x\n",(int) event);
+	
 	axp_writes(charger->master,POWER20_INTSTS1,9,w);
+	DBG_PSY_MSG("%s, %d, event = 0x%x \n", __func__, __LINE__, event);
 
 	return 0;
 }

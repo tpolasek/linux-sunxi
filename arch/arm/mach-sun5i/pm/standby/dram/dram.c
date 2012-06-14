@@ -355,7 +355,7 @@ __s32 DRAMC_retraining(void)
     }
 }
 
-void dram_power_save_process(void)
+__s32 dram_power_save_process(void)
 {
 	__u32 reg_val;
 
@@ -367,6 +367,8 @@ void dram_power_save_process(void)
 
 	//disable and reset all DLL
 	mctl_disable_dll();
+
+	return 0;
 }
 __u32 dram_power_up_process(void)
 {

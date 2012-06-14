@@ -367,6 +367,11 @@ disable_mmu:
                 BIC r1, #0x1000
                 BIC r1, #0x0007
                 BIC r1, #0x
+                b __turn_mmu_off
+                .align 5
+                
+                .type __turn_mmu_off, %function
+__turn_mmu_off:
                 /*write cr: disable cache and mmu*/
                 MCR p15,0,r1,c1,c0,0
 		/*read id reg*/
@@ -375,3 +380,27 @@ disable_mmu:
                 mov r3, r3 
                 /*return*/
                 mov pc, lr
+
+    .text
+    .globl enable_mmu
+enable_mmu:
+		/*read cr*/
+                MRC p15,0,r1,c1,c0,0
+                ORR r1, #0x1000
+                ORR r1, #0x0007
+                ORR r1, #0x
+                b __turn_mmu_on
+                .align 5
+                
+                .type __turn_mmu_on, %function
+__turn_mmu_on:
+                /*write cr: disable cache and mmu*/
+                MCR p15,0,r1,c1,c0,0
+		/*read id reg*/
+                mrc p15, 0, r3, c0, c0, 0 
+                mov r3, r3
+                mov r3, r3 
+                /*return*/
+                mov pc, lr
+
+

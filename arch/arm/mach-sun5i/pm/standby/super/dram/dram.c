@@ -11,6 +11,7 @@
 */
 #include "dram_i.h"
 
+static __s32 backup_dram_cal_val(void);
 
 /*
 *********************************************************************************************************
@@ -358,38 +359,52 @@ __s32 DRAMC_retraining(void)
 /*
  * backup dram calibration value
  */
-void backup_dram_cal_val(void)
+static __s32 backup_dram_cal_val(void)
 {
+
 	__u32 value;
 	__u8 reg_addr_1st = 0x0a;
 	__u8 reg_addr_2nd = 0x0b;
 	__u8 reg_addr_3rd = 0x0c;
 	__u8 reg_val;
+
 	
 	value = mctl_read_w(SDR_ZQSR) & 0xfffff;
 	//busy_waiting();
 
 	reg_val = value&0xff;
 	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,reg_addr_1st, &reg_val)){
-		busy_waiting();
+		return -1;
 	}
 
 	reg_val = (value>>8)&0xff;
 	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,reg_addr_2nd, &reg_val)){
-		busy_waiting();
+		return -1;
 	}
 
 	reg_val = (value>>16)&0x0f;
 	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,reg_addr_3rd, &reg_val)){
-		busy_waiting();
+		return -1;
 	}
 
-	return;
+	return 0;
 }
 
-void dram_power_save_process(void)
+__s32 dram_power_save_process(void)
 {
-	backup_dram_cal_val();
+	#define MAX_RETRY_TIMES (5)
+	
+	__s32 retry = MAX_RETRY_TIMES;
+	
+	//backup_dram_cal_val();
+	while((-1 == backup_dram_cal_val()) && --retry){
+		;
+	}
+	if(0 == retry){
+		return -1;
+	}else{
+		retry = MAX_RETRY_TIMES;
+	}	
 	
 	//put external SDRAM into self-fresh state
 	DRAMC_enter_selfrefresh();
@@ -399,6 +414,8 @@ void dram_power_save_process(void)
 
 	//disable and reset all DLL
 	mctl_disable_dll();
+
+	return 0;
 }
 __u32 dram_power_up_process(void)
 {

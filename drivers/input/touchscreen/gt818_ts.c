@@ -41,9 +41,9 @@
 #include "ctp_platform_ops.h"
 
 #define FOR_TSLIB_TEST
-#define PRINT_INT_INFO
+//#define PRINT_INT_INFO
 //#define PRINT_POINT_INFO
-#define PRINT_SUSPEND_INFO
+//#define PRINT_SUSPEND_INFO
 #define TEST_I2C_TRANSFER
 //#define DEBUG
 
@@ -469,6 +469,7 @@ static void ctp_reset(void)
 {
 	printk("%s. \n", __func__);
 	if(gpio_reset_enable){
+		gpio_set_one_pin_io_status(gpio_reset_hdle, 1, "ctp_reset");
 		if(EGPIO_SUCCESS != gpio_write_one_pin_value(gpio_reset_hdle, 0, "ctp_reset")){
 			printk("%s: err when operate gpio. \n", __func__);
 		}
@@ -488,6 +489,7 @@ static void ctp_wakeup(void)
 {
 	printk("%s. \n", __func__);
 	if(1 == gpio_wakeup_enable){  
+		gpio_set_one_pin_io_status(gpio_wakeup_hdle, 1, "ctp_wakeup");
 		if(EGPIO_SUCCESS != gpio_write_one_pin_value(gpio_wakeup_hdle, 1, "ctp_wakeup")){
 			printk("%s: err when operate gpio. \n", __func__);
 		}
@@ -1084,13 +1086,9 @@ static int goodix_ts_power(struct goodix_ts_data * ts, int on)
 {
 	int ret = -1;
 	int retry=0;
-
+	
 	unsigned char i2c_control_buf[3] = {0x06,0x92,0x01};		//suspend cmd
-#if 0	
-//#ifdef INT_PORT	
-	if(ts != NULL && !ts->use_irq)
-		return -2;
-#endif		
+	
 	switch(on)
 	{
 		case 0:
@@ -1102,59 +1100,67 @@ static int goodix_ts_power(struct goodix_ts_data * ts, int on)
 			i2c_end_cmd(ts);                     //must
 			return ret;
 			
-		case 1:
-		
-			#ifdef INT_PORT	                     //suggest use INT PORT to wake up !!!
-		
-				//gpio_direction_output(INT_PORT, 0);
-				gpio_set_one_pin_io_status(gpio_int_hdle, 1, "ctp_int_port");
-				gpio_write_one_pin_value(gpio_int_hdle, 0, "ctp_int_port");
-				msleep(1);
-                          // gpio_direction_output(INT_PORT, 1);
-				gpio_set_one_pin_io_status(gpio_int_hdle, 1, "ctp_int_port");
-				gpio_write_one_pin_value(gpio_int_hdle, 1, "ctp_int_port");
-				  msleep(10);
-                          // gpio_direction_output(INT_PORT, 0);
-				gpio_set_one_pin_io_status(gpio_int_hdle, 1, "ctp_int_port");
-				gpio_write_one_pin_value(gpio_int_hdle, 0, "ctp_int_port");                          
-                          
-				//gpio_free(INT_PORT);
-				//s3c_gpio_setpull(INT_PORT, S3C_GPIO_PULL_NONE);
-				gpio_set_one_pin_pull(gpio_int_hdle, 0, "ctp_int_port");
-
-			
-				if(ts->use_irq) {
-				//	s3c_gpio_cfgpin(INT_PORT, INT_CFG);	//Set IO port as interrupt port	
-					ret = ctp_ops.set_irq_mode("ctp_para", "ctp_int_port", CTP_IRQ_MODE);
-					if(0 != ret){
-						printk("%s:ctp_ops.set_irq_mode err. \n", __func__);
-						return ret;
-					}
-				}
-				else {
-					//gpio_direction_input(INT_PORT);
-					//Config CTP_IRQ_NO as input
-					gpio_set_one_pin_io_status(gpio_int_hdle,0, "ctp_int_port");
-				}
-				
+		case 1:		
+			#ifdef INT_PORT	                     //suggest use INT PORT to wake up !!!						
 				if(STANDBY_WITH_POWER_OFF == standby_level){
+					//reset
+					ctp_ops.ts_reset();
+					//wakeup
+					ctp_ops.ts_wakeup();
+
+					//set to input floating
+					gpio_set_one_pin_io_status(gpio_wakeup_hdle, 0, "ctp_wakeup");
+				
 					for(retry=0; retry<3; retry++)
 					{
 						//pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
 						ret=goodix_init_panel(ts);
 						pr_info(KERN_INFO"goodix_init_panel ret is :%d\n",ret);
-
 						
 						if(ret != 0){
 							//Initiall failed
-							msleep(2);
+							msleep(50);
 							continue;
 						}
 						else{
 							break;
 						}
-						
 					}
+					
+					
+				}else if(STANDBY_WITH_POWER == standby_level){
+					//gpio_direction_output(INT_PORT, 0);
+					gpio_set_one_pin_io_status(gpio_int_hdle, 1, "ctp_int_port");
+					gpio_write_one_pin_value(gpio_int_hdle, 0, "ctp_int_port");
+					msleep(1);
+							  // gpio_direction_output(INT_PORT, 1);
+					gpio_set_one_pin_io_status(gpio_int_hdle, 1, "ctp_int_port");
+					gpio_write_one_pin_value(gpio_int_hdle, 1, "ctp_int_port");
+					  msleep(10);
+							  // gpio_direction_output(INT_PORT, 0);
+					gpio_set_one_pin_io_status(gpio_int_hdle, 1, "ctp_int_port");
+					gpio_write_one_pin_value(gpio_int_hdle, 0, "ctp_int_port"); 						 
+							  
+					//gpio_free(INT_PORT);
+					//s3c_gpio_setpull(INT_PORT, S3C_GPIO_PULL_NONE);
+					gpio_set_one_pin_pull(gpio_int_hdle, 0, "ctp_int_port");
+
+
+					if(ts->use_irq) {
+					//	s3c_gpio_cfgpin(INT_PORT, INT_CFG); //Set IO port as interrupt port 
+						ret = ctp_ops.set_irq_mode("ctp_para", "ctp_int_port", CTP_IRQ_MODE);
+						if(0 != ret){
+							printk("%s:ctp_ops.set_irq_mode err. \n", __func__);
+							return ret;
+						}
+					}
+					else {
+						//gpio_direction_input(INT_PORT);
+						//Config CTP_IRQ_NO as input
+						gpio_set_one_pin_io_status(gpio_int_hdle,0, "ctp_int_port");
+					}
+
+
 				}
 
 				ctp_enable_irq();
@@ -1201,13 +1207,6 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	printk("======goodix_gt818 probe======\n");
 	//config gpio:
 	//pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
-	gpio_wakeup_hdle = gpio_request_ex("ctp_para", "ctp_wakeup");
-	if(!gpio_wakeup_hdle) {
-		pr_warning("touch panel tp_wakeup request gpio fail!\n");
-		goto exit_gpio_wakeup_request_failed;
-	}
-	
-	//printk("======gt818_addr=0x%x=======\n",client->addr);
 	    
 	//Check I2C function
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) 
@@ -1240,66 +1239,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	//s3c_gpio_setpull(INT_PORT, S3C_GPIO_PULL_NONE);	
 	gpio_set_one_pin_pull(gpio_int_hdle, 0, "ctp_int_port");	
 #endif
-	
-#if defined(NO_DEFAULT_ID) && defined(INT_PORT)
-	for(retry=0;retry < 3; retry++)
-	{
-		//gpio_direction_output(SHUTDOWN_PORT,0);
-		gpio_set_one_pin_io_status(gpio_wakeup_hdle, 1, "ctp_wakeup")
-		gpio_write_one_pin_value(gpio_wakeup_hdle, 0, "ctp_wakeup");
-		msleep(1);
-		//gpio_direction_input(SHUTDOWN_PORT);
-		gpio_set_one_pin_io_status(gpio_wakeup_hdle, 0, "ctp_wakeup")
-		msleep(20);
-	
-		ret =i2c_write_bytes(client, &test_data, 1);	//Test I2C connection.
-		if (ret > 0)
-			break;
-	}
-	if(ret <= 0)
-	{
-		//gpio_direction_output(INT_PORT,0);
-		gpio_set_one_pin_io_status(gpio_int_hdle, 1, "ctp_int_port");
-		gpio_write_one_pin_value(gpio_int_hdle, 0, "ctp_int_port");	
 
-		
-		msleep(1);
-		//gpio_direction_output(SHUTDOWN_PORT,0);
-		gpio_set_one_pin_io_status(gpio_wakeup_hdle, 1, "ctp_wakeup");
-		gpio_write_one_pin_value(gpio_wakeup_hdle, 0, "ctp_wakeup");
-		msleep(20);
-		//gpio_direction_input(SHUTDOWN_PORT);
-		gpio_set_one_pin_io_status(gpio_wakeup_hdle, 0, "ctp_wakeup");
-		for(retry=0;retry < 80; retry++)
-		{
-			ret =i2c_write_bytes(client, &test_data, 1);	//Test I2C connection.
-			if (ret > 0)
-			{
-				msleep(10);
-				ret =i2c_read_bytes(client, goodix_id, 3);	//Test I2C connection.
-				if (ret > 0)
-				{
-					if(goodix_id[2] == 0x55)
-						{
-						//gpio_direction_output(INT_PORT,1);
-						 gpio_set_one_pin_io_status(gpio_int_hdle, 1, "ctp_int_port");
-						 gpio_write_one_pin_value(gpio_int_hdle, 1, "ctp_int_port");	
-					
-							
-						msleep(1);
-						//gpio_free(INT_PORT);
-						//s3c_gpio_setpull(INT_PORT, S3C_GPIO_PULL_NONE);	
-						gpio_set_one_pin_pull(gpio_int_hdle, 0, "ctp_int_port");
-
-						msleep(10);
-						break;						
-						}
-				}			
-			}	
-		
-		}
-	}
-#endif
 
 	for(retry=0;retry < 3; retry++)
 	{
@@ -1313,20 +1253,11 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 		//output
 		//gpio_set_one_pin_io_status(gpio_wakeup_hdle, 1, "ctp_wakeup");
 		//gpio_write_one_pin_value(gpio_wakeup_hdle, 1, "ctp_wakeup");
-		//pr_info("%s: %s, %d. \n", _, __func__, __LINE__);
+		//pr_info("%s: %s, %d. \n", __FILE__, __func__, __LINE__);
 		ret =i2c_write_bytes(client, &test_data, 1);	//Test I2C connection.
 		if (ret > 0)
 			break;
 	}
-
-
-	/******
-	    pr_info("========write_msg=%d=======\n", i2c_write_bytes(client,test_data2,4));
-	    test_data2[2]=0;
-	    test_data2[3]=0;
-	    printk("=====test_data2[2]=%d,test_data2[3]=%d====\n",test_data2[2],test_data2[3]);
-	    printk("=====read_msg=%d,test_data2[2]=%d,test_data2[3]=%d====\n",i2c_read_bytes(client,test_data2,4),test_data2[2],test_data2[3]);
-	***/  
 
 	if(ret <= 0)
 	{
@@ -1344,7 +1275,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	//gpio_set_one_pin_io_status(gpio_wakeup_hdle, 1, "ctp_wakeup");
         //gpio_write_one_pin_value(gpio_wakeup_hdle, 0, "ctp_wakeup");
 #ifdef AUTO_UPDATE_GT818
-  	  pr_info("%s: %s, %d. \n", __FILE__, __func__, __LINE__);
+  	  		//pr_info("%s: %s, %d. \n", __FILE__, __func__, __LINE__);
             i2c_pre_cmd(ts);
             goodix_read_version(ts);
             i2c_end_cmd(ts);
@@ -1519,7 +1450,6 @@ err_input_register_device_failed:
 
 err_input_dev_alloc_failed:
 	i2c_set_clientdata(client, NULL);
-exit_gpio_wakeup_request_failed:
 exit_ioremap_failed:
 	if(gpio_addr){
 		iounmap(gpio_addr);

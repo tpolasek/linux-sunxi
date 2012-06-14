@@ -90,7 +90,7 @@ void __save_processor_state(struct saved_context *ctxt)
 	asm volatile ("mrc p15, 0, %0, c1, c0, 2" : "=r"(ctxt->cacr));
 #elif defined(CORTEX_A9)
 	asm volatile ("mrc p15, 0, %0, c1, c0, 0" : "=r"(ctxt->cr));
-	busy_waiting();
+	//busy_waiting();
 	asm volatile ("mrc p15, 0, %0, c1, c0, 1" : "=r"(ctxt->actlr));
 	asm volatile ("mrc p15, 0, %0, c1, c0, 2" : "=r"(ctxt->cacr));
 	asm volatile ("mrc p15, 0, %0, c1, c1, 1" : "=r"(ctxt->sder));

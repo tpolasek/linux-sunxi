@@ -139,7 +139,7 @@ __s32  mem_set_voltage(enum power_vol_type_e type, __s32 voltage)
 *
 *********************************************************************************************************
 */
-__u32 mem_get_voltage(enum power_vol_type_e type)
+__s32 mem_get_voltage(enum power_vol_type_e type)
 {
 	struct axp_info *info = 0;
 	__u8 val, mask;
@@ -149,7 +149,9 @@ __u32 mem_get_voltage(enum power_vol_type_e type)
 		return -1;
 	}
 
-	twi_byte_rw(TWI_OP_RD,AXP_ADDR,info->vol_reg, &val);
+	if(twi_byte_rw(TWI_OP_RD,AXP_ADDR,info->vol_reg, &val)){
+			return -1;
+	}
 
 	mask = ((1 << info->vol_nbits) - 1)  << info->vol_shift;
 	val = (val & mask) >> info->vol_shift;
@@ -168,40 +170,44 @@ __u32 mem_get_voltage(enum power_vol_type_e type)
 *
 * Arguments  : none;
 *
-* Returns    : result;
+* Returns    : 0: succeed;
+*			 -1: failed;
 *********************************************************************************************************
 */
-void mem_power_init(void)
+__s32 mem_power_init(void)
 {
-	__u8 val, mask, reg_val;
-	__s32   i;
+	__u8 reg_val;
 	
 	save_mem_status(TWI_TRANSFER_STATUS );
 	#if(AXP_WAKEUP & AXP_WAKEUP_KEY)
 	/* enable power key long/short */
 	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN3, &reg_val)){
-		save_mem_status(TWI_TRANSFER_STATUS | 0x01);
-		busy_waiting();
+		return -1;
 	}
 	reg_val |= 0x03;
 	
 	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN3, &reg_val) ){
-		save_mem_status(TWI_TRANSFER_STATUS | 0x02);
-		busy_waiting();
+		return -1;
 	}
 	#endif
 	
 	#if(AXP_WAKEUP & AXP_WAKEUP_LOWBATT)
 	/* enable low voltage warning */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN4, &reg_val);
+	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN4, &reg_val)){
+		return -1;
+	}
 	reg_val |= 0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN4, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN4, &reg_val)){
+		return -1;
+	}
 	/* clear pending */
 	reg_val = 0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQ4, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQ4, &reg_val)){
+		return -1;
+	}
 	#endif
 	
-	return;
+	return 0;
 }
 
 /*
@@ -212,10 +218,11 @@ void mem_power_init(void)
 *
 * Arguments  : none;
 *
-* Returns    : result;
+* Returns    : 0: succeed;
+*			 -1: failed;
 *********************************************************************************************************
 */
-void mem_power_exit(void)
+__s32 mem_power_exit(void)
 {
 	__u8    reg_val;
 
@@ -223,30 +230,36 @@ void mem_power_exit(void)
 
 	/*°Ñ44H¼Ä´æÆ÷µÄbit5, bit6(°´¼üÉÏÉýÑØ´¥·¢¡¢ÏÂ½µÑØ´¥·¢)ÖÃ0*/
 	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x44, &reg_val)){
-		save_mem_status(TWI_TRANSFER_STATUS |0x04);
-		busy_waiting();
+		return -1;
 	}
 	reg_val &= ~0x60;
 	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x44, &reg_val)){
-		save_mem_status(TWI_TRANSFER_STATUS |0x05);
-		busy_waiting();
+		return -1;
 	}
 	
 	#if(AXP_WAKEUP & AXP_WAKEUP_KEY)
 	/* disable pek long/short */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN3, &reg_val);
+	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN3, &reg_val)){
+		return -1;
+	}
 	reg_val &= ~0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN3, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN3, &reg_val)){
+		return -1;
+	}
 	#endif
 	
 	#if(AXP_WAKEUP & AXP_WAKEUP_LOWBATT)
 	/* disable low voltage warning */
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN4, &reg_val);
+	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,AXP20_IRQEN4, &reg_val)){
+		return -1;
+	}
 	reg_val &= ~0x03;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN4, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,AXP20_IRQEN4, &reg_val)){
+		return -1;
+	}
 	#endif
 
-	return;
+	return 0;
 }
 
 /*
@@ -258,47 +271,65 @@ void mem_power_exit(void)
  *
  * Arguments  : none;
  *
- * Returns    : result;
+ * Returns	  : 0: succeed;
+ *			   -1: failed;
  */
-void mem_power_off(void)
+__s32 mem_power_off(void)
 {
 	__u8 reg_val = 0;
 	/*config wakeup signal*/
 	/*°Ñ31H¼Ä´æÆ÷µÄbit3(°´¼ü¡¢gpio»½ÐÑÎ»)ÖÃ1*/
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x31, &reg_val);
+	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x31, &reg_val)){
+		return -1;
+	}
 	reg_val |= 0x08;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x31, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x31, &reg_val)){
+		return -1;
+	}
 
 	/*°Ñ44H¼Ä´æÆ÷µÄbit5, bit6(°´¼üÉÏÉýÑØ´¥·¢¡¢ÏÂ½µÑØ´¥·¢)ÖÃ1*/
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x44, &reg_val);
+	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x44, &reg_val)){
+		return -1;
+	}
 	reg_val |= 0x60;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x44, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x44, &reg_val)){
+		return -1;
+	}
 #if 1
 	/*power off*/
 	/*°Ñ12H¼Ä´æÆ÷µÄbit0¡¢1¡¢3¡¢4¡¢6ÖÃ0*/
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x12, &reg_val);
+	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x12, &reg_val)){
+		return -1;
+	}
 	reg_val &= ~0x5b;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x12, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x12, &reg_val)){
+		return -1;
+	}
 #endif
 
 #if 0
 	/*power off*/
 	/*°Ñ12H¼Ä´æÆ÷µÄbit1¡¢3¡¢4¡¢6ÖÃ0*/
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x12, &reg_val);
+	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x12, &reg_val)){
+		return -1;
+	}
 	reg_val &= ~0x5a;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x12, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x12, &reg_val)){
+		return -1;
+	}
 #endif
 
 	/* cpu enter sleep, wait wakeup by interrupt */
+	busy_waiting();
 	asm("WFI");
 
 	/*never get here.
 	 *when reach here, mean twi transfer err, and cpu are not shut down.
 	 * wfi have been  changed.
 	 */
-	while(1);
+	//while(1);
 	
-	return;
+	return -1;
 }
 
 /*
@@ -310,35 +341,52 @@ void mem_power_off(void)
  *
  * Arguments  : none;
  *
- * Returns    : result;
+ * Returns	  : 0: succeed;
+ *			  -1: failed;
  */
-void mem_power_off_nommu(void)
+__s32 mem_power_off_nommu(void)
 {
 	__u8 reg_val = 0;
 	/*config wakeup signal*/
 	/*°Ñ31H¼Ä´æÆ÷µÄbit3(°´¼ü¡¢gpio»½ÐÑÎ»)ÖÃ1*/
-	twi_byte_rw_nommu(TWI_OP_RD, AXP_ADDR,0x31, &reg_val);
+	if(0 != twi_byte_rw_nommu(TWI_OP_RD, AXP_ADDR,0x31, &reg_val)){
+		return -1;
+	}
 	reg_val |= 0x08;
-	twi_byte_rw_nommu(TWI_OP_WR, AXP_ADDR,0x31, &reg_val);
+	if(twi_byte_rw_nommu(TWI_OP_WR, AXP_ADDR,0x31, &reg_val)){
+		return -1;
+	}
 
 	/*°Ñ44H¼Ä´æÆ÷µÄbit5, bit6(°´¼üÉÏÉýÑØ´¥·¢¡¢ÏÂ½µÑØ´¥·¢)ÖÃ1*/
-	twi_byte_rw_nommu(TWI_OP_RD, AXP_ADDR,0x44, &reg_val);
+	if(twi_byte_rw_nommu(TWI_OP_RD, AXP_ADDR,0x44, &reg_val)){
+		return -1;
+	}
 	reg_val |= 0x60;
-	twi_byte_rw_nommu(TWI_OP_WR, AXP_ADDR,0x44, &reg_val);
+	if(twi_byte_rw_nommu(TWI_OP_WR, AXP_ADDR,0x44, &reg_val)){
+		return -1;	
+	}
 #if 1
 	/*power off*/
 	/*°Ñ12H¼Ä´æÆ÷µÄbit0¡¢1¡¢3¡¢4¡¢6ÖÃ0*/
-	twi_byte_rw_nommu(TWI_OP_RD, AXP_ADDR,0x12, &reg_val);
+	if(twi_byte_rw_nommu(TWI_OP_RD, AXP_ADDR,0x12, &reg_val)){
+		return -1;
+	}
 	reg_val &= ~0x5b;
-	twi_byte_rw_nommu(TWI_OP_WR, AXP_ADDR,0x12, &reg_val);
+	if(twi_byte_rw_nommu(TWI_OP_WR, AXP_ADDR,0x12, &reg_val)){
+		return -1;
+	}
 #endif
 
 #if 0
 	/*power off*/
 	/*°Ñ12H¼Ä´æÆ÷µÄbit1¡¢3¡¢4¡¢6ÖÃ0*/
-	twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x12, &reg_val);
+	if(twi_byte_rw(TWI_OP_RD, AXP_ADDR,0x12, &reg_val)){
+		return -1;
+	}
 	reg_val &= ~0x5a;
-	twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x12, &reg_val);
+	if(twi_byte_rw(TWI_OP_WR, AXP_ADDR,0x12, &reg_val)){
+		return -1;
+	}
 #endif
 
 	/* cpu enter sleep, wait wakeup by interrupt */
@@ -348,9 +396,9 @@ void mem_power_off_nommu(void)
 	 *when reach here, mean twi transfer err, and cpu are not shut down.
 	 * wfi have been  changed.
 	 */
-	while(1);
+	//while(1);
 	
-	return;
+	return -1;
 }
 
 

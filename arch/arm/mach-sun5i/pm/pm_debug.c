@@ -8,6 +8,12 @@ static __u32 backup_perf_counter_enable_reg = 0;
 #define CCU_REG_VA (0xF1c20000)
 #define CCU_REG_PA (0x01c20000)
 
+//for io-measure time
+#define PORT_E_CONFIG (0xf1c20890)
+#define PORT_E_DATA (0xf1c208a0)
+#define PORT_CONFIG PORT_E_CONFIG
+#define PORT_DATA PORT_E_DATA
+
 
 void busy_waiting(void)
 {
@@ -253,5 +259,47 @@ void delay_ms(__u32 ms)
 	
 	return;
 }
+
+/*
+ * notice: dependant with perf counter to delay.
+ */
+void io_init(void)
+{
+	__u32 data;
+	//int loop = 1000;
+	//config port output
+	*(volatile unsigned int *)(PORT_CONFIG)  = 0x111111;
+	
+	//set port to high
+	data = *(volatile unsigned int *)(PORT_DATA);
+	data |= 0x3f;
+	*(volatile unsigned int *)(PORT_DATA) = data;
+	//delay 10 ms
+	delay_us(10000);
+	//set port to low
+	data &= 0xffffffc0;
+	*(volatile unsigned int *)(PORT_DATA) = data;
+
+	return;
+}
+
+/*
+ * set pa port to high, num range is 0-7;	
+ */
+void io_high(int num)
+{
+	__u32 data;
+	data = *(volatile unsigned int *)(PORT_DATA);
+	//pull low 10ms
+	data &= (~(1<<num));
+	*(volatile unsigned int *)(PORT_DATA) = data;
+	delay_us(10000);
+	//pull high
+	data |= (1<<num);
+	*(volatile unsigned int *)(PORT_DATA) = data;
+
+	return;
+}
+
 
 

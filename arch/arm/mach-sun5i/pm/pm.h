@@ -54,9 +54,9 @@ struct mmu_state {
 struct aw_mem_para{
 	void **resume_pointer;
 	__u32 mem_flag;
-	//__u32 suspend_vdd;
-	__u32 suspend_dcdc2;
-	__u32 suspend_dcdc3;
+	//__s32 suspend_vdd;
+	__s32 suspend_dcdc2;
+	__s32 suspend_dcdc3;
 	__u32 suspend_freq;
 	struct clk_div_t clk_div;
 	struct pll_factor_t pll_factor;

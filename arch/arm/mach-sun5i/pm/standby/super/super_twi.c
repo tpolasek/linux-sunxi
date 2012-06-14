@@ -28,7 +28,66 @@ static __twic_reg_t*   TWI_REG_BASE[3] = {
 static __u32 TwiClkRegBak = 0;
 static __u32 TwiCtlRegBak = 0;
 static __twic_reg_t *twi_reg  = 0;
+static __ccmu_reg_list_t	*CmuReg;
 
+static __s32 _mem_twi_soft_reset(void);
+static __s32 _mem_twi_soft_reset_nommu(void);
+
+/*
+*********************************************************************************************************
+*                                   mem_twi_soft_reset
+*
+*Description: reset twi transfer.
+*
+*Arguments  :
+*
+*Return     :
+*
+*********************************************************************************************************
+*/
+static __s32 _mem_twi_soft_reset(void)
+{
+	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
+	//clk gating off
+	*(volatile __u32 *)&CmuReg->Apb1Gate &= (~0x1);
+	//clk gating on
+	*(volatile __u32 *)&CmuReg->Apb1Gate |= 0x01;
+
+	twi_reg->reg_clkr = (5<<3)|0; //400k, M = 5, N=0;
+
+	twi_reg->reg_reset |= 0x1;
+	while(twi_reg->reg_reset&0x1);
+	
+	return 0;
+}
+
+/*
+*********************************************************************************************************
+*                                   _mem_twi_soft_reset_nommu
+*
+*Description: reset twi transfer.
+*
+*Arguments  :
+*
+*Return     :
+*
+*********************************************************************************************************
+*/
+static __s32 _mem_twi_soft_reset_nommu(void)
+{
+	CmuReg = (__ccmu_reg_list_t *)SW_PA_CCM_IO_BASE;
+	//clk gating off
+	*(volatile __u32 *)&CmuReg->Apb1Gate &= (~0x1);
+	//clk gating on
+	*(volatile __u32 *)&CmuReg->Apb1Gate |= 0x01;
+
+    twi_reg->reg_clkr = (5<<3)|0; //400k, M = 5, N=0;
+
+	twi_reg->reg_reset |= 0x1;
+	while(twi_reg->reg_reset&0x1);
+
+	return 0;
+}
 
 
 /*
@@ -50,13 +109,13 @@ __s32 mem_twi_init(int group)
     TwiCtlRegBak = 0x80&twi_reg->reg_ctl;/* backup INT_EN;no need for BUS_EN(0xc0)  */
     //twi_reg->reg_clkr = (2<<3)|3; //100k
     twi_reg->reg_clkr = (5<<3)|0; //400k, M = 5, N=0;
-    
-    twi_reg->reg_reset |= 0x1;
-	
+
+	twi_reg->reg_reset |= 0x1;
 	while(twi_reg->reg_reset&0x1);
 	
     return 0;
 }
+
 
 
 /*
@@ -146,7 +205,7 @@ static int _mem_twi_stop(void)
 */
 void setup_twi_env(void)
 {
-	__ccmu_reg_list_t   *CmuReg;
+
 	CmuReg = (__ccmu_reg_list_t *)SW_VA_CCM_IO_BASE;
 	
 	/*clk module : setting clk ratio, enable gating*/
@@ -176,8 +235,8 @@ void setup_twi_env(void)
 *             data      pointer to the data to be read or write;
 *
 *Return     : result;
-*               = EPDK_OK,      byte read or write successed;
-*               = EPDK_FAIL,    btye read or write failed!
+*               = 0,      byte read or write successed;
+*               = -1,     btye read or write failed!
 *********************************************************************************************************
 */
 __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
@@ -205,7 +264,7 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
     while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
     if(timeout == 0)
     {
-    	busy_waiting();
+    	//busy_waiting();
         goto stop_out;
     }
     state_tmp = twi_reg->reg_status;
@@ -313,9 +372,17 @@ __s32 twi_byte_rw(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
 stop_out:
     //WRITE: step 5; READ: step 7
     //Send Stop
-    _mem_twi_stop();
+    if(0 != ret){
+		_mem_twi_soft_reset();
+	}else{
+		if( 0!= _mem_twi_stop()){
+			_mem_twi_soft_reset();
+		}
+	}
+	
+	_mem_twi_stop();
 
-    return ret;
+	return ret;
 }
 
 /*
@@ -330,8 +397,8 @@ stop_out:
 *             data      pointer to the data to be read or write;
 *
 *Return     : result;
-*               = EPDK_OK,      byte read or write successed;
-*               = EPDK_FAIL,    btye read or write failed!
+*               = 0,      byte read or write successed;
+*               = -1,    btye read or write failed!
 *********************************************************************************************************
 */
 __s32 twi_byte_rw_nommu(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *data)
@@ -360,7 +427,7 @@ __s32 twi_byte_rw_nommu(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *dat
     while((!(twi_reg->reg_ctl & 0x08))&&(--timeout));
     if(timeout == 0)
     {
-    	busy_waiting();
+    	//busy_waiting();
         goto stop_out;
     }
     state_tmp = twi_reg->reg_status;
@@ -468,7 +535,13 @@ __s32 twi_byte_rw_nommu(enum twi_op_type_e op, __u8 saddr, __u8 baddr, __u8 *dat
 stop_out:
     //WRITE: step 5; READ: step 7
     //Send Stop
-    _mem_twi_stop();
+    if(0 != ret){
+		_mem_twi_soft_reset_nommu();
+	}else{
+		if( 0!= _mem_twi_stop()){
+			_mem_twi_soft_reset_nommu();
+		}
+	}
 
     return ret;
 }
