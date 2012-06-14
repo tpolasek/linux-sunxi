@@ -56,4 +56,3 @@ struct nand_blk_ops{
 struct nand_state{
 	u32 nand_reg_back[NAND_REG_LENGTH];
 };
-
