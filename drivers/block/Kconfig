@@ -527,4 +527,19 @@ config BLK_DEV_RBD
 
 	  If unsure, say N.
 
+
+#config SUN4I_NANDFLASH
+#        depends on BLOCK && ARCH_SUN4I
+#        tristate "SUN4I Nandflash Driver"
+#        ---help---
+#          Nand flash driver for SUN4I
+          
+#config SUN4I_NANDFLASH_TEST
+#        depends on BLOCK && ARCH_SUN4I
+#        tristate "SUN4I Nandflash_test Driver"
+#        ---help---
+#          Nand flash driver for SUN4I
+#source "drivers/block/sun4i_nand/nandtest/Kconfig"
+source "drivers/block/sun4i_nand/Kconfig"
+
 endif # BLK_DEV
