@@ -61,6 +61,7 @@ MODULE_ALIAS("mmc:block");
 
 static DEFINE_MUTEX(block_mutex);
 
+extern int mmc_test_probe(struct mmc_card *card);
 /*
  * The defaults come from config options but can be overriden by module
  * or bootarg options.
@@ -1441,6 +1442,9 @@ static int mmc_blk_probe(struct mmc_card *card)
 		if (mmc_add_disk(part_md))
 			goto out;
 	}
+#ifdef CONFIG_MMC_TEST
+	mmc_test_probe(card);
+#endif
 	return 0;
 
  out:

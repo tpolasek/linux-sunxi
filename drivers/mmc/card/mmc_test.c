@@ -37,6 +37,7 @@
  */
 #define TEST_AREA_MAX_SIZE (128 * 1024 * 1024)
 
+int mmc_test_probe(struct mmc_card *card);
 /**
  * struct mmc_test_pages - pages allocated by 'alloc_pages()'.
  * @page: first page in the allocation
@@ -2501,10 +2502,11 @@ err:
 	return ret;
 }
 
-static int mmc_test_probe(struct mmc_card *card)
+int mmc_test_probe(struct mmc_card *card)
 {
 	int ret;
 
+	printk("line=%d.%s\n", __LINE__, __func__);
 	if (!mmc_card_mmc(card) && !mmc_card_sd(card))
 		return -ENODEV;
 

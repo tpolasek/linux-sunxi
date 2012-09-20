@@ -634,11 +634,33 @@ extern int mmc_pm_io_shd_suspend_host(void);
 static inline int mmc_pm_io_shd_suspend_host(void) {return 1;}
 #endif
 
+static int sunximmc_suspend(struct device *dev);
+static int sunximmc_resume(struct device *dev);
+
+static ssize_t suspend_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	sunximmc_suspend(dev);
+	return sprintf(buf, "%s\n", "suspend finished!");
+}
+
+static ssize_t resume_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	sunximmc_resume(dev);
+	return sprintf(buf, "%s\n", "resume finished!");
+}
+
+static struct device_attribute test_attrs[] = {
+	__ATTR(suspend, 0400, suspend_show, NULL),
+	__ATTR(resume, 0400, resume_show, NULL),
+};
 static int __devinit sunximmc_probe(struct platform_device *pdev)
 {
 	struct sunxi_mmc_host *smc_host = NULL;
 	struct mmc_host	*mmc = NULL;
 	int ret = 0;
+	int i = 0;
 	char mmc_para[16] = {0};
 	int card_detmode = 0;
 
@@ -745,6 +767,13 @@ static int __devinit sunximmc_probe(struct platform_device *pdev)
 
 	sw_host[pdev->id] = smc_host;
 
+#ifdef CONFIG_MMC_TEST
+	for (i = 0; i < ARRAY_SIZE(test_attrs); i++) {
+		ret = device_create_file(&pdev->dev, &test_attrs[i]);
+		if (ret)
+			goto probe_out;
+	}
+#endif
 	SMC_MSG("mmc%d Probe: base:0x%p irq:%u dma:%u pdes:0x%p, ret %d.\n",
 			pdev->id, smc_host->smc_base, smc_host->irq,
 			smc_host->dma_no, smc_host->sg_cpu, ret);
