@@ -160,7 +160,10 @@ static __inline __s32 Hal_Set_Frame(__u32 sel, __u32 tcon_index, __u32 id)
     	        (scaler->in_fb.format == DISP_FORMAT_YUV420 && scaler->in_fb.mode == DISP_MOD_MB_UV_COMBINED))
     	    {
     		    g_video[sel][id].dit_enable = TRUE;
-    		}
+    		}else
+            {
+                g_video[sel][id].dit_enable = FALSE;
+            }
 
             g_video[sel][id].fetch_field = FALSE;
         	if(g_video[sel][id].display_cnt == 0)

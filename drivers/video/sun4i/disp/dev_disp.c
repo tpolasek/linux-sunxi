@@ -1,6 +1,6 @@
 #include "dev_disp.h"
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
+
 #include <linux/earlysuspend.h>
 #endif
 
@@ -160,7 +160,7 @@ __s32 DRV_lcd_open(__u32 sel)
     __u32 i = 0;
     __lcd_flow_t *flow;
 
-	if(g_disp_drv.b_lcd_open[sel] == 0)
+	if(BSP_disp_lcd_used(sel) && (g_disp_drv.b_lcd_open[sel] == 0))
 	{
 	    BSP_disp_lcd_open_before(sel);
 
@@ -189,7 +189,7 @@ __s32 DRV_lcd_close(__u32 sel)
     __u32 i = 0;
     __lcd_flow_t *flow;
 
-	if(g_disp_drv.b_lcd_open[sel] == 1)
+	if(BSP_disp_lcd_used(sel) && (g_disp_drv.b_lcd_open[sel] == 1))
 	{
 	    BSP_disp_lcd_close_befor(sel);
 

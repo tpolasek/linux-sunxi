@@ -196,7 +196,7 @@ __s32 BSP_disp_tv_open(__u32 sel)
 
         disp_clk_cfg(sel,DISP_OUTPUT_TYPE_TV, tv_mod);
         tve_clk_on(sel);
-        lcdc_clk_on(sel);
+        lcdc_clk_on(sel, 1);
 
         BSP_disp_set_output_csc(sel, DISP_OUTPUT_TYPE_TV);
         DE_BE_set_display_size(sel, tv_mode_to_width(tv_mod), tv_mode_to_height(tv_mod));
@@ -260,7 +260,7 @@ __s32 BSP_disp_tv_close(__u32 sel)
 
         tve_clk_off(sel);
         image_clk_off(sel);
-        lcdc_clk_off(sel);
+        lcdc_clk_off(sel, 1);
         
 #ifdef __LINUX_OSAL__
         {
@@ -324,7 +324,9 @@ __s32 BSP_disp_tv_get_interface(__u32 sel)
     __u8 dac[4] = {0};
     __s32 i = 0;
 	__u32  ret = DISP_TV_NONE;
-
+//for test; tyle, 8-24
+    return ret;
+    
     for(i=0; i<4; i++)
     {
         dac[i] = TVE_get_dac_status(i);

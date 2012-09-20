@@ -33,7 +33,7 @@ __s32 BSP_disp_hdmi_open(__u32 sel)
     	tv_mod = gdisp.screen[sel].hdmi_mode;
 
         hdmi_clk_on();
-    	lcdc_clk_on(sel);
+    	lcdc_clk_on(sel, 1);
     	image_clk_on(sel);
 		Image_open(sel);//set image normal channel start bit , because every de_clk_off( )will reset this bit
     	disp_clk_cfg(sel,DISP_OUTPUT_TYPE_HDMI, tv_mod);
@@ -87,7 +87,7 @@ __s32 BSP_disp_hdmi_close(__u32 sel)
     	TCON1_close(sel);
 
     	image_clk_off(sel);
-    	lcdc_clk_off(sel);
+    	lcdc_clk_off(sel, 1);
     	hdmi_clk_off();
 
         gdisp.screen[sel].b_out_interlace = 0;
@@ -152,6 +152,9 @@ __s32 BSP_disp_hdmi_get_hpd_status(__u32 sel)
 {
 	__s32          ret = 0;
 
+   //for test,tyle, 8-24
+  return 0;
+  
 	if(gdisp.init_para.hdmi_get_HPD_status)
 	{
 	    ret = gdisp.init_para.hdmi_get_HPD_status();
