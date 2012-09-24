@@ -1727,6 +1727,9 @@ gadgetfs_bind (struct usb_gadget *gadget)
 	dev->state = STATE_DEV_UNCONNECTED;
 	spin_unlock_irq(&dev->lock);
 	get_dev (dev);
+
+	usb_gadget_connect(gadget);
+
 	return 0;
 
 enomem:

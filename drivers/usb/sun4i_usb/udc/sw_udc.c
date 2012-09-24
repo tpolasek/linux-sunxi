@@ -1047,7 +1047,9 @@ static void sw_udc_handle_ep0_idle(struct sw_udc *dev,
 		}
 
 		if(ret == -EOPNOTSUPP){
+#ifndef CONFIG_SW_USB_TEST
 			DMSG_PANIC("ERR: Operation not supported\n");
+#endif
 		}else{
 			DMSG_PANIC("ERR: dev->driver->setup failed. (%d)\n", ret);
         }
@@ -2055,7 +2057,13 @@ static inline struct sw_udc_request *to_sw_udc_req(struct usb_request *req)
 *    void
 *
 * note:
-*    void
+*       ep            packsize   double   fifo_addr   fifo_size
+*    ep0                512        N        0           0.5k
+*    ep1-bulk           512        Y        0.5k(512)   1k
+*    ep2-bulk           512        Y        1.5k(1536)  1k
+*    ep3-bulk/iso       512        Y        2.5k(2560)  0.5k
+*    ep4-bulk/iso       512        Y        3k(3072)    0.5k
+*    ep5-int            512        Y        3.5(3584)   0.5k
 *
 *******************************************************************************
 */
@@ -2066,8 +2074,12 @@ static int sw_udc_ep_enable(struct usb_ep *_ep,
 	struct sw_udc_ep	*ep				= NULL;
 	u32			 	max     		= 0;
 	unsigned long	flags   		= 0;
-    u32     		old_ep_index	= 0;
-	__u32 			fifo_addr 		= 0;
+    u32 old_ep_index    = 0;
+	u32 ep_type         = 0;
+	u32 ts_type         = 0;
+	u32 fifo_size       = 0;
+	u32 fifo_addr       = 0;
+	u32 double_fifo     = 0;
 
 	if(_ep == NULL || desc == NULL){
 		DMSG_PANIC("ERR: invalid argment\n");
@@ -2091,9 +2103,11 @@ static int sw_udc_ep_enable(struct usb_ep *_ep,
 		return -EINVAL;
 	}
 
+#ifndef CONFIG_SW_USB_TEST
 	DMSG_INFO_UDC("ep enable: ep%d(0x%p, %s, %d, %d)\n",
 		          ep->num, _ep, _ep->name,
 		          (desc->bEndpointAddress & USB_DIR_IN), _ep->maxpacket);
+#endif
 
 	dev = ep->dev;
 	if (!dev->driver || dev->gadget.speed == USB_SPEED_UNKNOWN){
@@ -2114,7 +2128,7 @@ static int sw_udc_ep_enable(struct usb_ep *_ep,
 	/* select fifo address, 预先固定分配
 	 * 从1K的位置开始，每个ep分配1K的空间
 	 */
-	fifo_addr = ep->num * 1024;
+	fifo_addr = ep->num * 512;
 
 	if(!is_peripheral_active()){
 		DMSG_PANIC("ERR: usb device is not active\n");
@@ -2124,16 +2138,89 @@ static int sw_udc_ep_enable(struct usb_ep *_ep,
     old_ep_index = USBC_GetActiveEp(g_sw_udc_io.usb_bsp_hdle);
     USBC_SelectActiveEp(g_sw_udc_io.usb_bsp_hdle, ep->num);
 
+    switch(desc->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK){
+        case 0:  //ep0(0 ~ 511)
+            fifo_addr = 0;
+            fifo_size = 512;
+            double_fifo = 0;
+        break;
+
+        case 1:  //ep1(512 ~ 1535)
+            fifo_addr = 512;
+            fifo_size = 1024;
+            double_fifo = 1;
+        break;
+
+        case 2:  //ep2(1536 ~ 2559)
+            fifo_addr = 1536;
+            fifo_size = 1024;
+            double_fifo = 1;
+        break;
+
+        case 3:  //ep3(2560 ~ 3071)
+            fifo_addr = 2560;
+            fifo_size = 512;
+            double_fifo = 0;
+        break;
+
+        case 4:  //ep4(3072 ~ 3583)
+            fifo_addr = 3072;
+            fifo_size = 512;
+            double_fifo = 0;
+        break;
+
+        case 5:  //ep5(3584 ~ 4095)
+            fifo_addr = 3584;
+            fifo_size = 512;
+            double_fifo = 0;
+        break;
+
+        default:
+            DMSG_PANIC("err: unkown ep(%d)\n", (desc->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK));
+            goto end;
+    }
+
+    switch(desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK){
+        case USB_ENDPOINT_XFER_CONTROL:
+            ts_type   = USBC_TS_TYPE_CTRL;
+        break;
+
+        case USB_ENDPOINT_XFER_BULK:
+            ts_type   = USBC_TS_TYPE_BULK;
+        break;
+
+        case USB_ENDPOINT_XFER_ISOC:
+            ts_type   = USBC_TS_TYPE_ISO;
+       break;
+
+        case USB_ENDPOINT_XFER_INT:
+            ts_type = USBC_TS_TYPE_INT;
+        break;
+
+        default:
+            DMSG_PANIC("err: unkown ep type(%d)\n", (desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK));
+            goto end;
+    }
+
+    if((ep->bEndpointAddress) & USB_DIR_IN){ /* tx */
+        ep_type = USBC_EP_TYPE_TX;
+    }else{   /* rx */
+        ep_type = USBC_EP_TYPE_RX;
+    }
+
+    DMSG_INFO_UDC("usbd_ep_enable: ts_type(%d), ep_type(%d), fifo_size(%d), fifo_addr(%d), double_fifo(%d)\n",
+                    ts_type, ep_type, fifo_size, fifo_addr, double_fifo);
+
   	//set max packet ,type, direction, address; reset fifo counters, enable irq
 	if ((ep->bEndpointAddress) & USB_DIR_IN){ /* tx */
-	    USBC_Dev_ConfigEp(g_sw_udc_io.usb_bsp_hdle, USBC_TS_TYPE_BULK, USBC_EP_TYPE_TX, SW_UDC_FIFO_NUM, _ep->maxpacket & 0x7ff);
-    	USBC_ConfigFifo(g_sw_udc_io.usb_bsp_hdle, USBC_EP_TYPE_TX, SW_UDC_FIFO_NUM, 512, fifo_addr);
+	    USBC_Dev_ConfigEp(g_sw_udc_io.usb_bsp_hdle, ts_type, ep_type, double_fifo, _ep->maxpacket & 0x7ff);
+    	USBC_ConfigFifo(g_sw_udc_io.usb_bsp_hdle, ep_type, double_fifo, fifo_size, fifo_addr);
 
 		//开启该ep的tx_irq en
 		USBC_INT_EnableEp(g_sw_udc_io.usb_bsp_hdle, USBC_EP_TYPE_TX, ep->num);
 	}else{	 /* rx */
-	    USBC_Dev_ConfigEp(g_sw_udc_io.usb_bsp_hdle, USBC_TS_TYPE_BULK, USBC_EP_TYPE_RX, SW_UDC_FIFO_NUM, _ep->maxpacket & 0x7ff);
-   		USBC_ConfigFifo(g_sw_udc_io.usb_bsp_hdle, USBC_EP_TYPE_RX, SW_UDC_FIFO_NUM, 512, fifo_addr);
+	    USBC_Dev_ConfigEp(g_sw_udc_io.usb_bsp_hdle, ts_type, ep_type, double_fifo, _ep->maxpacket & 0x7ff);
+   		USBC_ConfigFifo(g_sw_udc_io.usb_bsp_hdle, ep_type, double_fifo, fifo_size, fifo_addr);
 
 		//开启该ep的rx_irq
 		USBC_INT_EnableEp(g_sw_udc_io.usb_bsp_hdle, USBC_EP_TYPE_RX, ep->num);
@@ -2189,9 +2276,11 @@ static int sw_udc_ep_disable(struct usb_ep *_ep)
 		return -EINVAL;
 	}
 
+#ifndef CONFIG_SW_USB_TEST
 	DMSG_INFO_UDC("ep disable: ep%d(0x%p, %s, %d, %x)\n",
 		          ep->num, _ep, _ep->name,
 		          (ep->bEndpointAddress & USB_DIR_IN), _ep->maxpacket);
+#endif
 
 	local_irq_save(flags);
 
@@ -2265,9 +2354,10 @@ static struct usb_request * sw_udc_alloc_request(struct usb_ep *_ep, gfp_t mem_f
 
 	INIT_LIST_HEAD (&req->queue);
 
+#ifndef CONFIG_SW_USB_TEST
 	DMSG_INFO_UDC("alloc request: ep(0x%p, %s, %d), req(0x%p)\n",
 		          _ep, _ep->name, _ep->maxpacket, req);
-
+#endif
 	return &req->req;
 }
 
@@ -2304,9 +2394,10 @@ static void sw_udc_free_request(struct usb_ep *_ep, struct usb_request *_req)
 		return;
 	}
 
+#ifndef CONFIG_SW_USB_TEST
 	DMSG_INFO_UDC("free request: ep(0x%p, %s, %d), req(0x%p)\n",
 		      _ep, _ep->name, _ep->maxpacket, req);
-
+#endif
 	kfree(req);
 
 	return;
@@ -3115,7 +3206,8 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
     }
 
 	if(!driver || driver != udc->driver || !driver->unbind){
-	    DMSG_PANIC("ERR: driver is null\n");
+	    DMSG_PANIC("ERR: driver is null, (0x%p, 0x%p, 0x%p)\n",
+	               driver, udc->driver, driver->unbind);
 		return -EINVAL;
     }
 
@@ -3137,6 +3229,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	return 0;
 }
 
+#ifndef CONFIG_SW_USB_TEST
 static struct sw_udc sw_udc = {
 	.gadget = {
 		.ops		= &sw_udc_ops,
@@ -3224,6 +3317,96 @@ static struct sw_udc sw_udc = {
 		.bmAttributes	    = USB_ENDPOINT_XFER_INT,
 	},
 };
+#else
+static struct sw_udc sw_udc = {
+	.gadget = {
+		.ops		= &sw_udc_ops,
+		.ep0		= &sw_udc.ep[0].ep,
+		.name		= gadget_name,
+		.dev = {
+			.init_name	= "gadget",
+		},
+	},
+
+	/* control endpoint */
+	.ep[0] = {
+		.num			= 0,
+		.ep = {
+			.name		= ep0name,
+			.ops		= &sw_udc_ep_ops,
+			.maxpacket	= EP0_FIFO_SIZE,
+		},
+		.dev			= &sw_udc,
+	},
+
+	/* first group of endpoints */
+	.ep[1] = {
+		.num			= 1,
+		.ep = {
+			.name		= "ep1-bulk",
+			.ops		= &sw_udc_ep_ops,
+			.maxpacket	= SW_UDC_EP_FIFO_SIZE,
+		},
+		.dev		        = &sw_udc,
+		.fifo_size	        = (SW_UDC_EP_FIFO_SIZE * (SW_UDC_FIFO_NUM + 1)),
+		.bEndpointAddress   = 1,
+		.bmAttributes	    = USB_ENDPOINT_XFER_BULK,
+	},
+
+	.ep[2] = {
+		.num			= 2,
+		.ep = {
+			.name		= "ep2-bulk",
+			.ops		= &sw_udc_ep_ops,
+			.maxpacket	= SW_UDC_EP_FIFO_SIZE,
+		},
+		.dev		        = &sw_udc,
+		.fifo_size	        = (SW_UDC_EP_FIFO_SIZE * (SW_UDC_FIFO_NUM + 1)),
+		.bEndpointAddress   = 2,
+		.bmAttributes	    = USB_ENDPOINT_XFER_BULK,
+	},
+
+	.ep[3] = {
+		.num			= 3,
+		.ep = {
+			.name		= "ep3-iso",
+			.ops		= &sw_udc_ep_ops,
+			.maxpacket	= SW_UDC_EP_FIFO_SIZE,
+		},
+		.dev		        = &sw_udc,
+		.fifo_size	        = (SW_UDC_EP_FIFO_SIZE * (SW_UDC_FIFO_NUM + 1)),
+		.bEndpointAddress   = 3,
+		.bmAttributes	    = USB_ENDPOINT_XFER_ISOC,
+	},
+
+	.ep[4] = {
+		.num			= 4,
+		.ep = {
+			.name		= "ep4-iso",
+			.ops		= &sw_udc_ep_ops,
+			.maxpacket	= SW_UDC_EP_FIFO_SIZE,
+		},
+		.dev		        = &sw_udc,
+		.fifo_size	        = (SW_UDC_EP_FIFO_SIZE * (SW_UDC_FIFO_NUM + 1)),
+		.bEndpointAddress   = 4,
+		.bmAttributes	    = USB_ENDPOINT_XFER_ISOC,
+	},
+
+	.ep[5] = {
+		.num			= 5,
+		.ep = {
+			.name		= "ep5-int",
+			.ops		= &sw_udc_ep_ops,
+			.maxpacket	= SW_UDC_EP_FIFO_SIZE,
+		},
+		.dev		        = &sw_udc,
+		.fifo_size	        = (SW_UDC_EP_FIFO_SIZE * (SW_UDC_FIFO_NUM + 1)),
+		.bEndpointAddress   = 5,
+		.bmAttributes	    = USB_ENDPOINT_XFER_INT,
+	},
+};
+
+#endif
 
 int sw_usb_device_enable(void)
 {

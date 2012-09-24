@@ -8,6 +8,9 @@
 #include <linux/scatterlist.h>
 #include <linux/mutex.h>
 
+#include <linux/fs.h>
+#include <asm/uaccess.h>
+
 #include <linux/usb.h>
 
 
@@ -57,6 +60,8 @@ struct usbtest_info {
  * and data generated deterministically.
  */
 struct usbtest_dev {
+    struct usb_device *udev;
+
 	struct usb_interface	*intf;
 	struct usbtest_info	*info;
 	int			in_pipe;
@@ -64,7 +69,8 @@ struct usbtest_dev {
 	int			in_iso_pipe;
 	int			out_iso_pipe;
 	struct usb_endpoint_descriptor	*iso_in, *iso_out;
-	struct mutex		lock;
+	struct mutex	lock;
+	int open_count;		/* count the number of openers */
 
 #define TBUF_SIZE	256
 	u8			*buf;
@@ -1796,22 +1802,22 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
 	 * altsetting to have any active endpoints.  some tests change
 	 * altsettings; force a default so most tests don't need to check.
 	 */
-	if (dev->info->alt >= 0) {
-		int	res;
+	// if (dev->info->alt >= 0) {
+		// int	res;
 
-		if (intf->altsetting->desc.bInterfaceNumber) {
-			mutex_unlock(&dev->lock);
-			return -ENODEV;
-		}
-		res = set_altsetting(dev, dev->info->alt);
-		if (res) {
-			dev_err(&intf->dev,
-					"set altsetting to %d failed, %d\n",
-					dev->info->alt, res);
-			mutex_unlock(&dev->lock);
-			return res;
-		}
-	}
+		// if (intf->altsetting->desc.bInterfaceNumber) {
+			// mutex_unlock(&dev->lock);
+			// return -ENODEV;
+		// }
+		// res = set_altsetting(dev, dev->info->alt);
+		// if (res) {
+			// dev_err(&intf->dev,
+					// "set altsetting to %d failed, %d\n",
+					// dev->info->alt, res);
+			// mutex_unlock(&dev->lock);
+			// return res;
+		// }
+	// }
 
 	/*
 	 * Just a bunch of test cases that every HCD is expected to handle.
@@ -2181,7 +2187,10 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
 			}
 		}
 		break;
-
+	/* test hcd driver init */
+	case 25:
+		printk("case 25!\n");
+		break;
 	}
 	do_gettimeofday(&param->duration);
 	param->duration.tv_sec -= start.tv_sec;
@@ -2190,7 +2199,9 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
 		param->duration.tv_usec += 1000 * 1000;
 		param->duration.tv_sec -= 1;
 	}
+
 	mutex_unlock(&dev->lock);
+
 	return retval;
 }
 
@@ -2210,14 +2221,148 @@ module_param(product, ushort, 0);
 MODULE_PARM_DESC(product, "product code (from vendor)");
 #endif
 
+static struct usb_driver usbtest_driver;
+
+static int usbtest_fopen(struct inode *inode, struct file *file)
+{
+	struct usbtest_dev	*dev;
+	struct usb_interface *intf;
+	int subminor;
+	int retval = 0;
+
+	//printk("%s:%d\n", __func__, __LINE__);
+
+
+    subminor = iminor(inode);
+
+    intf = usb_find_interface(&usbtest_driver, subminor);
+    if (!intf) {
+        printk("%s - error, can't find device for minor %d",
+             __func__, subminor);
+        retval = -ENODEV;
+        goto exit;
+    }
+
+    dev = usb_get_intfdata(intf);
+	if (!dev) {
+		retval = -ENODEV;
+		goto exit;
+	}
+
+    /* lock the device to allow correctly handling errors
+     * in resumption */
+    mutex_lock(&dev->lock);
+    if (!dev->open_count++) {
+        retval = usb_autopm_get_interface(intf);
+        if (retval) {
+            dev->open_count--;
+            mutex_unlock(&dev->lock);
+            goto exit;
+        }
+    }
+    /* save our object in the file's private structure */
+    file->private_data = dev;
+    mutex_unlock(&dev->lock);
+
+exit:
+    return retval;
+}
+
+static int usbtest_frelease(struct inode *inode, struct file *file)
+{
+	struct usbtest_dev *dev;
+
+	dev = file->private_data;
+	if (dev == NULL) {
+	    printk("err: usbtest_release, dev == NULL\n");
+		return -ENODEV;
+	}
+
+	/* allow the device to be autosuspended */
+	mutex_lock(&dev->lock);
+	if (!--dev->open_count && dev->intf)
+		usb_autopm_put_interface(dev->intf);
+	mutex_unlock(&dev->lock);
+
+	return 0;
+}
+
+static ssize_t usbtest_read(struct file *file, char *buffer, size_t count, loff_t *ppos)
+{
+	struct usbtest_dev *dev;
+
+    dev = file->private_data;
+	if (dev == NULL) {
+	    printk("err: usbtest_release, dev == NULL\n");
+		return -ENODEV;
+	}
+
+    if(copy_to_user(buffer, &dev->intf->cur_altsetting->desc, count)){
+        printk("err: usbtest_fioctl, copy_from_user failed\n");
+        return -EFAULT;
+    }
+
+    return count;
+}
+
+static long usbtest_fioctl(struct file *fp, unsigned code, unsigned long value)
+{
+	struct usbtest_dev *dev = NULL;
+    struct usbtest_param param_tmp;
+
+	if(fp == NULL){
+	    printk("err: usbtest_fioctl, invalid argment\n");
+	    return -EINVAL;
+	}
+
+	dev = fp->private_data;
+	if(dev == NULL){
+	    printk("err: usbtest_fioctl, dev == NULL\n");
+	    return -EINVAL;
+	}
+
+    memset(&param_tmp, 0, sizeof(struct usbtest_param));
+	if (copy_from_user(&param_tmp, (void __user *)value, sizeof(param_tmp))) {
+	    printk("err: usbtest_fioctl, copy_from_user failed\n");
+		return -EFAULT;
+    }
+/*
+    printk("code        = %d\n", code);
+    printk("test_num    = %d\n", param_tmp.test_num);
+    printk("iterations  = %d\n", param_tmp.iterations);
+    printk("length      = %d\n", param_tmp.length);
+    printk("vary        = %d\n", param_tmp.vary);
+    printk("sglen       = %d\n", param_tmp.sglen);
+*/
+    return usbtest_ioctl(dev->intf, code, &param_tmp);
+}
+
+static const struct file_operations usbtest_fops = {
+	.owner          = THIS_MODULE,
+	.open           = usbtest_fopen,
+	.release        = usbtest_frelease,
+	.read           = usbtest_read,
+	.unlocked_ioctl = usbtest_fioctl,
+};
+
+/* Get a minor range for your devices from the usb maintainer */
+#define USB_USBTEST_MINOR_BASE	192
+
+static struct usb_class_driver usbtest_class = {
+	.name =		"usbtest%d",
+	.fops =		&usbtest_fops,
+	.minor_base = USB_USBTEST_MINOR_BASE,
+};
+
 static int
 usbtest_probe(struct usb_interface *intf, const struct usb_device_id *id)
 {
 	struct usb_device	*udev;
 	struct usbtest_dev	*dev;
 	struct usbtest_info	*info;
-	char			*rtest, *wtest;
-	char			*irtest, *iwtest;
+	char *rtest, *wtest;
+	char *irtest, *iwtest;
+	int ret = 0;
 
 	udev = interface_to_usbdev(intf);
 
@@ -2243,6 +2388,7 @@ usbtest_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	dev->info = info;
 	mutex_init(&dev->lock);
 
+	dev->udev = udev;
 	dev->intf = intf;
 
 	/* cacheline-aligned scratch for i/o */
@@ -2297,6 +2443,16 @@ usbtest_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	}
 
 	usb_set_intfdata(intf, dev);
+
+    /* we can register the device now, as it is ready */
+    ret = usb_register_dev(intf, &usbtest_class);
+    if (ret != 0) {
+        /* something prevented us from registering this driver */
+        printk("[usb_test]:Not able to get a minor for this device.");
+        usb_set_intfdata(intf, NULL);
+        goto error;
+    }
+
 	dev_info(&intf->dev, "%s\n", info->name);
 	dev_info(&intf->dev, "%s speed {control%s%s%s%s%s} tests%s\n",
 			({ char *tmp;
@@ -2322,6 +2478,18 @@ usbtest_probe(struct usb_interface *intf, const struct usb_device_id *id)
 			irtest, iwtest,
 			info->alt >= 0 ? " (+alt)" : "");
 	return 0;
+
+error:
+    if(dev){
+        if(dev->buf){
+            kfree(dev->buf);
+            dev->buf = NULL;
+        }
+        kfree(dev);
+        dev = NULL;
+    }
+
+    return -1;
 }
 
 static int usbtest_suspend(struct usb_interface *intf, pm_message_t message)
@@ -2340,6 +2508,9 @@ static void usbtest_disconnect(struct usb_interface *intf)
 	struct usbtest_dev	*dev = usb_get_intfdata(intf);
 
 	usb_set_intfdata(intf, NULL);
+
+	usb_deregister_dev(intf, &usbtest_class);
+
 	dev_dbg(&intf->dev, "disconnect\n");
 	kfree(dev);
 }
@@ -2437,7 +2608,7 @@ static const struct usb_device_id id_table[] = {
 	 */
 
 	/* generic EZ-USB FX controller */
-	{ USB_DEVICE(0x0547, 0x2235),
+	{ USB_DEVICE(0x054C, 0x0243),
 		.driver_info = (unsigned long) &ez1_info,
 	},
 

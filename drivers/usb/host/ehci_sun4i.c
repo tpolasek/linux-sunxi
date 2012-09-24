@@ -98,7 +98,6 @@ void print_ehci_info(struct sw_hci_hcd *sw_ehci)
 static void sw_hcd_board_set_vbus(struct sw_hci_hcd *sw_ehci, int is_on)
 {
 	sw_ehci->set_power(sw_ehci, is_on);
-
 	return;
 }
 
@@ -351,6 +350,78 @@ static const struct hc_driver sw_ehci_hc_driver = {
 	.clear_tt_buffer_complete	= ehci_clear_tt_buffer_complete,
 };
 
+#ifdef CONFIG_USB_TEST
+static int sw_ehci_hcd_suspend(struct device *dev);
+static int sw_ehci_hcd_resume(struct device *dev);
+
+static ssize_t suspend_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	int ret = 0;
+
+	ret = ehci_bus_suspend(dev_get_drvdata(dev));
+	if (ret)
+		return sprintf(buf, "%s\n", "ehci_bus_suspend failed!");
+
+	ret = sw_ehci_hcd_suspend(dev);
+	if (ret)
+		return sprintf(buf, "%s\n", "sw_ehci_hcd_suspend failed!");
+
+	return sprintf(buf, "[%s]suspend finished!\n", ((struct sw_hci_hcd *)dev->platform_data)->hci_name);
+}
+
+static ssize_t resume_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	int ret = 0;
+
+	ret = sw_ehci_hcd_resume(dev);
+	if (ret)
+		sprintf(buf, "%s\n", "sw_ehci_hcd_resume failed!");
+
+	ret = ehci_bus_resume(dev_get_drvdata(dev));
+	if (ret)
+		sprintf(buf, "%s\n", "ehci_bus_resume failed!");
+
+	return sprintf(buf, "[%s]resume finished!\n", ((struct sw_hci_hcd *)dev->platform_data)->hci_name);
+}
+
+// static ssize_t connect_cnt_enable_show(struct device *dev, struct device_attribute *attr,
+			     // char *buf)
+// {
+	// return sprintf(buf, "%d\n", connect_cnt_en);
+// }
+
+// static ssize_t connect_cnt_enable_store(struct device *dev, struct device_attribute *attr,
+				// const char *buf, size_t count)
+// {
+	// char value;
+    // if(strlen(buf) != 2)
+        // return -EINVAL;
+    // if(buf[0] < '0' || buf[0] > '1')
+		// return -EINVAL;
+    // value = buf[0];
+    // switch(value)
+    // {
+        // case '1':
+            // connect_cnt_en = 1;
+            // break;
+        // case '0':
+            // connect_cnt_en = 0;
+            // break;
+        // default:
+            // return -EINVAL;
+    // }
+	// return count;
+// }
+
+static struct device_attribute test_attrs[] = {
+	__ATTR(suspend, 0400, suspend_show, NULL),
+	__ATTR(resume, 0400, resume_show, NULL),
+	// __ATTR(connect_cnt_enable, 0600, connect_cnt_enable_show, connect_cnt_enable_store),
+};
+#endif
+
 /*
 *******************************************************************************
 *                     sw_ehci_hcd_probe
@@ -375,6 +446,9 @@ static int sw_ehci_hcd_probe(struct platform_device *pdev)
 	struct ehci_hcd *ehci	= NULL;
 	struct sw_hci_hcd *sw_ehci = NULL;
 	int ret = 0;
+#ifdef CONFIG_USB_TEST
+	int i;
+#endif
 
 	if(pdev == NULL){
 		DMSG_PANIC("ERR: Argment is invaild\n");
@@ -456,6 +530,14 @@ static int sw_ehci_hcd_probe(struct platform_device *pdev)
             ehci_first_probe[sw_ehci->usbc_no]--;
         }
     }
+
+#ifdef CONFIG_USB_TEST
+	for (i = 0; i < ARRAY_SIZE(test_attrs); i++) {
+		ret = device_create_file(&pdev->dev, &test_attrs[i]);
+		if (ret)
+			goto ERR3;
+	}
+#endif
 
 	return 0;
 
@@ -612,30 +694,30 @@ static int sw_ehci_hcd_suspend(struct device *dev)
 
 	if(dev == NULL){
 		DMSG_PANIC("ERR: Argment is invalid\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	hcd = dev_get_drvdata(dev);
 	if(hcd == NULL){
 		DMSG_PANIC("ERR: hcd is null\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	sw_ehci = dev->platform_data;
 	if(sw_ehci == NULL){
 		DMSG_PANIC("ERR: sw_ehci is null\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	if(sw_ehci->probe == 0){
 		DMSG_PANIC("ERR: sw_ehci is disable, can not suspend\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	ehci = hcd_to_ehci(hcd);
 	if(ehci == NULL){
 		DMSG_PANIC("ERR: ehci is null\n");
-		return 0;
+		return -EINVAL;
 	}
 
  	DMSG_INFO("[%s]: sw_ehci_hcd_suspend\n", sw_ehci->hci_name);
@@ -680,30 +762,30 @@ static int sw_ehci_hcd_resume(struct device *dev)
 
 	if(dev == NULL){
 		DMSG_PANIC("ERR: Argment is invalid\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	hcd = dev_get_drvdata(dev);
 	if(hcd == NULL){
 		DMSG_PANIC("ERR: hcd is null\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	sw_ehci = dev->platform_data;
 	if(sw_ehci == NULL){
 		DMSG_PANIC("ERR: sw_ehci is null\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	if(sw_ehci->probe == 0){
 		DMSG_PANIC("ERR: sw_ehci is disable, can not resume\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	ehci = hcd_to_ehci(hcd);
 	if(ehci == NULL){
 		DMSG_PANIC("ERR: ehci is null\n");
-		return 0;
+		return -EINVAL;
 	}
 
  	DMSG_INFO("[%s]: sw_ehci_hcd_resume\n", sw_ehci->hci_name);
@@ -751,7 +833,6 @@ static int sw_ehci_hcd_resume(struct device *dev)
 
 	/* here we "know" root ports should always stay powered */
 	ehci_port_power(ehci, 1);
-
 	hcd->state = HC_STATE_SUSPENDED;
 
 	return 0;

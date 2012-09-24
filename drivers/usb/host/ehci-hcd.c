@@ -48,6 +48,8 @@
 #include <asm/system.h>
 #include <asm/unaligned.h>
 
+// #include "sw_hci_sun4i.h"
+
 /*-------------------------------------------------------------------------*/
 
 /*
@@ -848,7 +850,19 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 				continue;
 			pstatus = ehci_readl(ehci,
 					 &ehci->regs->port_status[i]);
-
+#ifdef CONFIG_USB_TEST
+			printk("pstatus: 0x%x\n", pstatus);
+			// if (connect_cnt_en)
+			// {
+				// if (pstatus & PORT_CONNECT)
+				// {
+					// printk("add 1 in con_count\n");
+				// }else
+				// {
+					// printk("add 1 in discon_count\n");
+				// }
+			// }
+#endif
 			if (pstatus & PORT_OWNER)
 				continue;
 			if (!(test_bit(i, &ehci->suspended_ports) &&

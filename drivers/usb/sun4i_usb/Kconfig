@@ -61,3 +61,9 @@ config USB_SW_SUN4I_USB_DEBUG
     depends on USB_SW_SUN4I_USB
     help
         SUN4I USB driver debug message.
+
+config SW_USB_TEST
+    tristate "SUN4I USB driver test"
+    depends on USB_SW_SUN4I_USB
+    help
+        SUN4I USB driver test.
