@@ -2335,6 +2335,356 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 	return 0;
 }
 
+#define  SW_USB_PIONEER
+
+#ifdef  SW_USB_PIONEER
+
+#include  "sw_usb_pioneer.c"
+
+#define  SW_USB_PIONEER_CMD             0xFA
+#define  SW_USB_PIONEER_CMD_MAGIC       0x58585741
+
+struct sw_usb_pioneer_cmd{
+    u8  code;           /* 操作码       */
+    u32 magic;          /* magic        */
+    u32 length;         /* 本次数据传输长度 */
+    u8  sub_cmd;		/* 操作子码 		*/
+    u8  reserved[6];
+}__attribute__ ((packed));
+
+
+#define  SW_USB_PIONEER_CMD_INQUIRY     0x01
+#define  SW_USB_PIONEER_CMD_READ        0x02
+#define  SW_USB_PIONEER_CMD_WRITE       0x03
+
+#define  SW_USB_PIONEER_VENDOR_INFO         "WIFI"
+#define  SW_USB_PIONEER_PRODUCT_INFO        "TV-Box WIFI"
+#define  SW_USB_PIONEER_PRODUCT_REVISION     "100"
+char Test_buf[65 * 1024];
+
+
+struct query_dev_info_data{
+    u32 magic;
+    u32 version;
+
+	u8 Vendor_Info[8];			/* 设备制造商 					*/
+	u8 Product_Info[16];	    /* 产品信息 					*/
+	u8 Product_Revision[4];		/* 产品修订版 					*/
+}__attribute__ ((packed));
+
+static s32 print_pioneer_cmd(struct sw_usb_pioneer_cmd *pioneer_cmd)
+{
+    printk("\n");
+	printk("------------------------------------------------------\n");
+	printk("cmd->code        = 0x%x\n", pioneer_cmd->code);
+	printk("cmd->magic       = 0x%x\n", pioneer_cmd->magic);
+	printk("cmd->length      = 0x%x\n", pioneer_cmd->length);
+	printk("cmd->sub_cmd     = 0x%x\n", pioneer_cmd->sub_cmd);
+	printk("------------------------------------------------------\n");
+    printk("\n");
+
+    return 0;
+}
+
+static int do_pioneer_cmd_inquiry(struct fsg_dev *fsg, struct fsg_buffhd *bh)
+{
+    struct sw_usb_pioneer_cmd *pioneer_cmd = NULL;
+	struct query_dev_info_data *query_data = (struct query_dev_info_data *) bh->buf;
+
+	static char Vendor_Info[]       = SW_USB_PIONEER_VENDOR_INFO;
+	static char Product_Info[]      = SW_USB_PIONEER_PRODUCT_INFO;
+	static char Product_Revision[]  = SW_USB_PIONEER_PRODUCT_REVISION;
+
+	pioneer_cmd = (struct sw_usb_pioneer_cmd *)fsg->cmnd;
+
+    memset(query_data, 0, sizeof(struct query_dev_info_data));
+    query_data->magic        = pioneer_cmd->magic;
+    query_data->version      = 0x100;
+    strcpy(query_data->Vendor_Info, Vendor_Info);
+    strcpy(query_data->Product_Info, Product_Info);
+    strcpy(query_data->Product_Revision, Product_Revision);
+
+	return pioneer_cmd->length;
+}
+
+
+static int do_pioneer_read(struct fsg_dev *fsg)
+{
+    struct fsg_buffhd  *bh = NULL;
+    u32  left_len   = 0;     //剩余长度
+    u32  this_len   = 0;     //本次待传输的长度
+    u32  actual_len = 0;   //本次实际传输的长度
+    u32  offset_len = 0;   //本次数据操作在update_req_buff中的偏移长度
+    u32  rc         = 0;
+    struct sw_usb_pioneer_cmd *pioneer_cmd = (struct sw_usb_pioneer_cmd *)fsg->cmnd;
+
+	left_len   = pioneer_cmd->length;
+	offset_len = 0;
+
+	//printk("line: %d,%s\n", __LINE__, __func__);
+
+	while(1){
+		this_len = min(left_len, mod_data.buflen);
+
+		/* Wait for the next buffer to become available */
+		bh = fsg->next_buffhd_to_fill;
+		while (bh->state != BUF_STATE_EMPTY) {
+			rc = sleep_thread(fsg);
+			if (rc)
+				return rc;
+		}
+
+		//printk("line: %d,%s\n", __LINE__, __func__);
+
+		/* If we were asked to read past the end of file,
+		 * end with an empty buffer. */
+		if (this_len == 0) {
+			bh->inreq->length = 0;
+			bh->state = BUF_STATE_FULL;
+		    fsg->phase_error = 1;
+			break;
+		}
+
+		memcpy(bh->buf, Test_buf, this_len);
+#if 0
+		{
+			char* _buf = (char*)bh->buf;
+			int i = 0;
+
+			for(i = 0; i < 8; i++){
+				printk(" R:Test_buf = 0x%x,bh->buf = 0x%x", Test_buf[i], _buf[i]);
+			}
+			printk("\n 1 \n");
+
+			for(i = 512; i < 520; i++){
+				printk(" R:Test_buf = 0x%x,bh->buf = 0x%x", Test_buf[i], _buf[i]);
+			}
+			printk("\n 512 \n");
+
+			for(i = 1024; i < 1032; i++){
+				printk(" R:Test_buf = 0x%x,bh->buf = 0x%x", Test_buf[i], _buf[i]);
+			}
+			printk("\n 1024 \n");
+
+		}
+#endif
+		memset(Test_buf, 0, (65 * 1024));
+		actual_len = this_len;
+
+		//memcpy((u32 *)&pioneer_cmd->length, bh->buf, this_len);
+		actual_len = this_len;
+	    // actual_len = usb_pread(bh->buf, offset_len, this_len, (u32 *)&pioneer_cmd->length);
+		//if(actual_len == 0){
+		//	printk("ERR: do_update_read: update_read failed\n");
+		//}else if(actual_len < this_len){
+		//	printk("ERR: do_update_read: want_read=%d, real_read=%d\n", this_len, actual_len);
+		//}
+
+		left_len 				-= actual_len;
+		offset_len 				+= actual_len;
+		fsg->residue 			-= actual_len;
+		fsg->usb_amount_left	-= actual_len;
+		bh->inreq->length 		= actual_len;
+
+		bh->state = BUF_STATE_FULL;
+
+        if (actual_len < this_len) {
+			printk("ERR: do_pioneer_read: want_read=%d, real_read=%d\n", this_len, actual_len);
+			break;
+		}
+
+		if(left_len == 0){
+			break;
+		}
+
+		//printk("line: %d,%s\n", __LINE__, __func__);
+
+		/* Send this buffer and go read some more */
+		bh->inreq->zero = 0;
+		start_transfer(fsg, fsg->bulk_in, bh->inreq,
+				&bh->inreq_busy, &bh->state);
+		fsg->next_buffhd_to_fill = bh->next;
+    }
+
+	//printk("line: %d,%s %d\n", __LINE__, __func__, EIO);
+
+    return -EIO;		// No default reply
+}
+
+static int do_pioneer_write(struct fsg_dev *fsg)
+{
+    struct fsg_buffhd  *bh = NULL;
+    u32  this_len               = 0;    //本次待传输的长度
+    u32  actual_len             = 0;    //本次实际传输的长度
+    int	 get_some_more          = 0;    //是否还有数据要接收
+	u32  amount_left_to_req     = 0;    //req 剩余的长度
+	u32  amount_left_to_write   = 0;    //write 剩余的长度
+    u32  offset_len             = 0;    //本次数据操作在update_req_buff中的偏移长度
+    u32  rc = 0;
+
+    struct sw_usb_pioneer_cmd *pioneer_cmd = (struct sw_usb_pioneer_cmd *)fsg->cmnd;
+	//printk("line: %d,%s\n", __LINE__, __func__);
+
+	get_some_more = 1;
+	amount_left_to_req = pioneer_cmd->length;
+	amount_left_to_write = pioneer_cmd->length;
+
+	while(amount_left_to_write > 0){
+		bh = fsg->next_buffhd_to_fill;
+		if (bh->state == BUF_STATE_EMPTY && get_some_more){
+			this_len = min(amount_left_to_req, mod_data.buflen);
+			if (this_len == 0) {
+				get_some_more = 0;
+
+				continue;
+			}
+
+			fsg->usb_amount_left -= this_len;
+			amount_left_to_req -= this_len;
+			if (amount_left_to_req == 0){
+				get_some_more = 0;
+			}
+
+			/* amount is always divisible by 512, hence by
+			 * the bulk-out maxpacket size */
+			bh->bulk_out_intended_length = this_len;
+			bh->outreq->length = this_len;
+
+			bh->outreq->short_not_ok = 1;
+			start_transfer(fsg, fsg->bulk_out, bh->outreq,
+					&bh->outreq_busy, &bh->state);
+			fsg->next_buffhd_to_fill = bh->next;
+			continue;
+		}
+
+		bh = fsg->next_buffhd_to_drain;
+		if (bh->state == BUF_STATE_EMPTY && !get_some_more){
+			break;
+		}
+
+		if (bh->state == BUF_STATE_FULL) {
+			fsg->next_buffhd_to_drain = bh->next;
+			bh->state = BUF_STATE_EMPTY;
+
+			//--<2-1>--执行结果异常，就退出，不向update写数据
+            if (bh->outreq->status != 0) {
+				break;
+			}
+
+
+            //--<2-2>--获得本次写的数据长度,并且向update写数据
+			this_len = bh->outreq->actual;
+
+			memcpy(Test_buf, bh->buf, this_len);
+#if 0
+			{
+				char* _buf = (char*)bh->buf;
+				int i = 0;
+
+				for(i = 0; i < 8; i++){
+					printk(" W:Test_buf = 0x%x,bh->buf = 0x%x", Test_buf[i], _buf[i]);
+				}
+				printk("\n 1 \n");
+
+				for(i = 512; i < 520; i++){
+					printk(" W:Test_buf = 0x%x,bh->buf = 0x%x", Test_buf[i], _buf[i]);
+				}
+				printk("\n 512 \n");
+
+				for(i = 1024; i < 1032; i++){
+					printk(" W:Test_buf = 0x%x,bh->buf = 0x%x", Test_buf[i], _buf[i]);
+				}
+				printk("\n 1024 \n");
+
+			}
+#endif
+			actual_len = this_len;
+
+			//actual_len = usb_pwrite(bh->buf, offset_len, this_len, (u32 *)&pioneer_cmd->length);
+			//if(actual_len == 0){
+			//	printk("ERR: domain_write actual_len is zero\n");
+			//}else if(actual_len < this_len){
+			//    printk("ERR: do_update_write: want %d, but real write %d\n", this_len, actual_len);
+			//}
+
+			//--<2-3>--计算剩余写的长度
+			amount_left_to_write -= actual_len;
+			offset_len += actual_len;
+			fsg->residue -= actual_len;
+
+			//--<2-4>--写数据错误就退出
+			if(actual_len < this_len){
+			    printk("ERR: do_pioneer_write: want %d, but real write %d\n", this_len, actual_len);
+			    break;
+			}
+
+            //--<2-5>--实际从USB处接收的数据小于期望长度，就认为接收到了短包
+			if (bh->outreq->actual != bh->outreq->length) {
+				fsg->short_packet_received = 1;
+				break;
+			}
+
+			continue;
+		}
+
+		/* Wait for something to happen */
+		rc = sleep_thread(fsg);
+		if (rc)
+			return rc;
+    }
+
+	return -EIO;		// No default reply
+}
+
+static s32 check_pioneer_cmd(struct fsg_dev *fsg)
+{
+    struct sw_usb_pioneer_cmd *pioneer_cmd = (struct sw_usb_pioneer_cmd *)fsg->cmnd;
+
+    //print_pioneer_cmd(pioneer_cmd);
+
+    /* magic */
+    if(pioneer_cmd->magic != SW_USB_PIONEER_CMD_MAGIC){
+        printk("ERR: magic(0x%x) is unkown\n", pioneer_cmd->magic);
+        return -1;
+    }
+
+	/* format fsg */
+	fsg->data_size_from_cmnd = pioneer_cmd->length;
+	fsg->data_size           = pioneer_cmd->length;
+	fsg->residue             = pioneer_cmd->length;
+	fsg->usb_amount_left     = pioneer_cmd->length;
+
+    return 0;
+}
+
+static int do_pioneer_cmd(struct fsg_dev *fsg, struct fsg_buffhd *bh)
+{
+    struct sw_usb_pioneer_cmd *pioneer_cmd = NULL;
+	s32 ret = 0;
+
+	pioneer_cmd = (struct sw_usb_pioneer_cmd *)fsg->cmnd;
+	switch(pioneer_cmd->sub_cmd){
+        case SW_USB_PIONEER_CMD_INQUIRY:
+            ret = do_pioneer_cmd_inquiry(fsg, bh);
+        break;
+
+        case SW_USB_PIONEER_CMD_READ:
+			ret = do_pioneer_read(fsg);
+		break;
+
+		case SW_USB_PIONEER_CMD_WRITE:
+			ret = do_pioneer_write(fsg);
+		break;
+
+        default:
+			printk("ERR: do_pioneer_cmd: unkown cmd(0x%x)\n", pioneer_cmd->sub_cmd);
+			ret = -1;
+	}
+
+    return ret;
+}
+
+#endif
 
 static int do_scsi_command(struct fsg_dev *fsg)
 {
@@ -2538,6 +2888,14 @@ static int do_scsi_command(struct fsg_dev *fsg)
 			reply = do_write(fsg);
 		break;
 
+#ifdef  SW_USB_PIONEER
+    case SW_USB_PIONEER_CMD:
+        fsg->data_size_from_cmnd = 0;
+        if((reply = check_pioneer_cmd(fsg)) == 0){
+            reply = do_pioneer_cmd(fsg, bh);
+        }
+    break;
+#endif
 	/* Some mandatory commands that we recognize but don't implement.
 	 * They don't mean much in this setting.  It's left as an exercise
 	 * for anyone interested to implement RESERVE and RELEASE in terms
@@ -3608,6 +3966,10 @@ static int __init fsg_init(void)
 	fsg = the_fsg;
 	if ((rc = usb_gadget_probe_driver(&fsg_driver, fsg_bind)) != 0)
 		kref_put(&fsg->ref, fsg_release);
+#ifdef  SW_USB_PIONEER
+    usb_pioneer_init(fsg);
+#endif
+
 	return rc;
 }
 module_init(fsg_init);
@@ -3616,6 +3978,10 @@ module_init(fsg_init);
 static void __exit fsg_cleanup(void)
 {
 	struct fsg_dev	*fsg = the_fsg;
+
+#ifdef  SW_USB_PIONEER
+    usb_pioneer_exit(fsg);
+#endif
 
 	/* Unregister the driver iff the thread hasn't already done so */
 	if (test_and_clear_bit(REGISTERED, &fsg->atomic_bitflags))

@@ -48,8 +48,6 @@
 #include <asm/system.h>
 #include <asm/unaligned.h>
 
-// #include "sw_hci_sun4i.h"
-
 /*-------------------------------------------------------------------------*/
 
 /*
@@ -126,7 +124,6 @@ MODULE_PARM_DESC(hird, "host initiated resume duration, +1 for each 75us\n");
 #include "ehci.h"
 #include "ehci-dbg.c"
 #include "pci-quirks.h"
-
 /*-------------------------------------------------------------------------*/
 
 static void
@@ -764,6 +761,11 @@ static int ehci_run (struct usb_hcd *hcd)
 }
 
 /*-------------------------------------------------------------------------*/
+#ifdef CONFIG_USB_TEST
+extern int connect_count_en;
+extern int connect_count;
+extern int disconnect_count;
+#endif
 
 static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 {
@@ -851,17 +853,13 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 			pstatus = ehci_readl(ehci,
 					 &ehci->regs->port_status[i]);
 #ifdef CONFIG_USB_TEST
-			printk("pstatus: 0x%x\n", pstatus);
-			// if (connect_cnt_en)
-			// {
-				// if (pstatus & PORT_CONNECT)
-				// {
-					// printk("add 1 in con_count\n");
-				// }else
-				// {
-					// printk("add 1 in discon_count\n");
-				// }
-			// }
+			if (connect_count_en)
+			{
+				if (pstatus & PORT_CONNECT)
+					connect_count++;
+				else
+					disconnect_count++;
+			}
 #endif
 			if (pstatus & PORT_OWNER)
 				continue;

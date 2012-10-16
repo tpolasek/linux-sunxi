@@ -32,6 +32,9 @@
 
 #include  <mach/clock.h>
 #include "sw_hci_sun4i.h"
+#ifdef CONFIG_USB_TEST
+#include "../storage/usb.h"
+#endif
 
 /*.......................................................................................*/
 //                               全局信息定义
@@ -351,6 +354,9 @@ static const struct hc_driver sw_ehci_hc_driver = {
 };
 
 #ifdef CONFIG_USB_TEST
+int connect_count_en = 0;
+int connect_count = 0;
+int disconnect_count = 0;
 static int sw_ehci_hcd_suspend(struct device *dev);
 static int sw_ehci_hcd_resume(struct device *dev);
 
@@ -386,39 +392,71 @@ static ssize_t resume_show(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "[%s]resume finished!\n", ((struct sw_hci_hcd *)dev->platform_data)->hci_name);
 }
 
-// static ssize_t connect_cnt_enable_show(struct device *dev, struct device_attribute *attr,
-			     // char *buf)
-// {
-	// return sprintf(buf, "%d\n", connect_cnt_en);
-// }
+static ssize_t connect_cnt_enable_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "%d\n", connect_count_en);
+}
 
-// static ssize_t connect_cnt_enable_store(struct device *dev, struct device_attribute *attr,
-				// const char *buf, size_t count)
-// {
-	// char value;
-    // if(strlen(buf) != 2)
-        // return -EINVAL;
-    // if(buf[0] < '0' || buf[0] > '1')
-		// return -EINVAL;
-    // value = buf[0];
-    // switch(value)
-    // {
-        // case '1':
-            // connect_cnt_en = 1;
-            // break;
-        // case '0':
-            // connect_cnt_en = 0;
-            // break;
-        // default:
-            // return -EINVAL;
-    // }
-	// return count;
-// }
+static ssize_t connect_cnt_enable_store(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	char value;
+    if(strlen(buf) != 2)
+        return -EINVAL;
+    if(buf[0] < '0' || buf[0] > '1')
+		return -EINVAL;
+    value = buf[0];
+    switch(value)
+    {
+        case '1':
+            connect_count_en = 1;
+            break;
+        case '0':
+            connect_count_en = 0;
+			connect_count = 0;
+			disconnect_count = 0;
+			probe_count = 0;
+			remove_count = 0;
+            break;
+        default:
+            return -EINVAL;
+    }
+	return count;
+}
+
+static ssize_t connect_cnt_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "%d\n", connect_count);
+}
+
+static ssize_t disconnect_cnt_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "%d\n", disconnect_count);
+}
+
+static ssize_t probe_cnt_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "%d\n", probe_count);
+}
+
+static ssize_t remove_cnt_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "%d\n", remove_count);
+}
 
 static struct device_attribute test_attrs[] = {
 	__ATTR(suspend, 0400, suspend_show, NULL),
 	__ATTR(resume, 0400, resume_show, NULL),
-	// __ATTR(connect_cnt_enable, 0600, connect_cnt_enable_show, connect_cnt_enable_store),
+	__ATTR(connect_cnt_enable, 0600, connect_cnt_enable_show, connect_cnt_enable_store),
+	__ATTR(connect_cnt, 0400, connect_cnt_show, NULL),
+	__ATTR(disconnect_cnt, 0400, disconnect_cnt_show, NULL),
+	__ATTR(probe_cnt, 0400, probe_cnt_show, NULL),
+	__ATTR(remove_cnt, 0400, remove_cnt_show, NULL),
 };
 #endif
 
