@@ -27,7 +27,6 @@
 #include <mach/sys_config.h>
 #include "cpu-freq.h"
 
-
 static struct sun4i_cpu_freq_t  cpu_cur;    /* current cpu frequency configuration  */
 static unsigned int last_target = ~0;       /* backup last target frequency         */
 
@@ -36,7 +35,11 @@ static struct clk *clk_cpu; /* cpu clock handler */
 static struct clk *clk_axi; /* axi clock handler */
 static struct clk *clk_ahb; /* ahb clock handler */
 static struct clk *clk_apb; /* apb clock handler */
-
+#ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
+int setgetfreq_debug = 0;
+unsigned long long setfreq_time_usecs = 0;
+unsigned long long getfreq_time_usecs = 0;
+#endif
 
 #ifdef CONFIG_CPU_FREQ_DVFS
 #define TABLE_LENGTH (16)
@@ -580,26 +583,34 @@ static int sun4i_cpufreq_settarget(struct cpufreq_policy *policy, struct sun4i_c
 */
 static int sun4i_cpufreq_target(struct cpufreq_policy *policy, __u32 freq, __u32 relation)
 {
-    int                     ret;
-    unsigned int            index;
+    int ret = 0;
+    unsigned int index;
     struct sun4i_cpu_freq_t freq_cfg;
+#ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
+	ktime_t calltime = ktime_set(0, 0), delta, rettime;
+
+	if (unlikely(setgetfreq_debug)) {
+		calltime = ktime_get();
+	}
+#endif
 
 	/* avoid repeated calls which cause a needless amout of duplicated
 	 * logging output (and CPU time as the calculation process is
 	 * done) */
 	if (freq == last_target) {
-		return 0;
+		goto out;
 	}
 
     /* try to look for a valid frequency value from cpu frequency table */
     if (cpufreq_frequency_table_target(policy, sun4i_freq_tbl, freq, relation, &index)) {
         CPUFREQ_ERR("%s: try to look for a valid frequency for %u failed!\n", __func__, freq);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (sun4i_freq_tbl[index].frequency == last_target) {
         /* frequency is same as the value last set, need not adjust */
-		return 0;
+		goto out;
 	}
 	freq = sun4i_freq_tbl[index].frequency;
 
@@ -613,6 +624,16 @@ static int sun4i_cpufreq_target(struct cpufreq_policy *policy, __u32 freq, __u32
     if(!ret) {
         last_target = freq;
     }
+
+out:
+#ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
+	if (unlikely(setgetfreq_debug)) {
+		rettime = ktime_get();
+		delta = ktime_sub(rettime, calltime);
+		setfreq_time_usecs = ktime_to_ns(delta) >> 10;
+		printk("[setfreq]: %Ld usecs\n", setfreq_time_usecs);
+	}
+#endif
 
     return ret;
 }
@@ -634,7 +655,27 @@ static int sun4i_cpufreq_target(struct cpufreq_policy *policy, __u32 freq, __u32
 */
 static unsigned int sun4i_cpufreq_get(unsigned int cpu)
 {
-	return clk_get_rate(clk_cpu) / 1000;
+	unsigned int current_freq = 0;
+#ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
+	ktime_t calltime = ktime_set(0, 0), delta, rettime;
+
+	if (unlikely(setgetfreq_debug)) {
+		calltime = ktime_get();
+	}
+#endif
+
+	current_freq = clk_get_rate(clk_cpu) / 1000;
+
+#ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
+	if (unlikely(setgetfreq_debug)) {
+		rettime = ktime_get();
+		delta = ktime_sub(rettime, calltime);
+		getfreq_time_usecs = ktime_to_ns(delta) >> 10;
+		printk("[getfreq]: %Ld usecs\n", getfreq_time_usecs);
+	}
+#endif
+
+	return current_freq;
 }
 
 

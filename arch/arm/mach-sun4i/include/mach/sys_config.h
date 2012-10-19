@@ -147,4 +147,12 @@ extern int gpio_set_one_pin_driver_level(unsigned p_handler, unsigned set_driver
 extern int gpio_read_one_pin_value(unsigned p_handler, const char *gpio_name);
 extern int gpio_write_one_pin_value(unsigned p_handler, unsigned value_to_gpio, const char *gpio_name);
 
+#define CONFIG_CPU_FREQ_SETFREQ_DEBUG
+
+#ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
+extern int setgetfreq_debug;
+extern unsigned long long setfreq_time_usecs;
+extern unsigned long long getfreq_time_usecs;
+#endif
+
 #endif
