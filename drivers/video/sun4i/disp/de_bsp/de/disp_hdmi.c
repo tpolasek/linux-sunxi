@@ -152,9 +152,6 @@ __s32 BSP_disp_hdmi_get_hpd_status(__u32 sel)
 {
 	__s32          ret = 0;
 
-   //for test,tyle, 8-24
-  return 0;
-  
 	if(gdisp.init_para.hdmi_get_HPD_status)
 	{
 	    ret = gdisp.init_para.hdmi_get_HPD_status();
