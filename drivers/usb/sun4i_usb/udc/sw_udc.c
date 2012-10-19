@@ -2094,7 +2094,11 @@ static int sw_udc_ep_enable(struct usb_ep *_ep,
 	struct sw_udc_ep	*ep				= NULL;
 	u32			 	max     		= 0;
     u32     		old_ep_index	= 0;
-	__u32 			fifo_addr 		= 0;
+	u32 ep_type         = 0;
+	u32 ts_type         = 0;
+	u32 fifo_size       = 0;
+	u32 fifo_addr       = 0;
+	u32 double_fifo     = 0;
 	unsigned long flags = 0;
 
 	if(_ep == NULL || desc == NULL){
