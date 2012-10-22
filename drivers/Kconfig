@@ -133,4 +133,6 @@ source "drivers/sunxi_gpio/Kconfig"
 
 source "drivers/gator/Kconfig"
 
+source "drivers/test/Kconfig"
+
 endmenu
