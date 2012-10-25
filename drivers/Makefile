@@ -127,3 +127,5 @@ obj-y				+= ieee802154/
 
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
 obj-$(CONFIG_GATOR_PERF)	+= gator/
+
+obj-y				+= test/

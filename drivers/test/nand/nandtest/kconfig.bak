@@ -1,0 +1,5 @@
+config SUN4I_NANDFLASH_TEST
+        depends on BLOCK && ARCH_SUN4I
+        tristate "SUN4I Nandflash_test Driver"
+        ---help---
+          Nand flash driver for SUN4I
