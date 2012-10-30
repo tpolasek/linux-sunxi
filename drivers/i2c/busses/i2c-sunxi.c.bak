@@ -39,10 +39,7 @@
 
 
 #define SUNXI_I2C_DEBUG
-
-#if  CONFIG_I2C_FREQ_DEBUG
 #define SUNXI_I2C_FREQ_DEBUG
-#endif
 
 #ifdef SUNXI_I2C_DEBUG
 #define i2c_dbg(x...)   printk(x)
