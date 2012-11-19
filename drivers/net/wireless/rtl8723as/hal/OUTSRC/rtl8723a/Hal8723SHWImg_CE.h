@@ -1,13 +1,19 @@
 #ifndef __INC_HAL8723S_FW_IMG_H
 #define __INC_HAL8723S_FW_IMG_H
 
-/*Created on  2012/ 5/15, 14:54*/
+/*Created on  2012/06/06, 10:53*/
+;
+#ifdef CONFIG_MP_INCLUDED
+#define Rtl8723SUMCBCutImgArrayLength 18396
+#else
+#define Rtl8723SUMCBCutImgArrayLength 23722
+#endif
 
 #define Rtl8723SImgArrayLength 20606
 extern const u8 Rtl8723SFwImgArray[Rtl8723SImgArrayLength];
 #define Rtl8723SBTImgArrayLength 1
 extern const u8 Rtl8723SFwBTImgArray[Rtl8723SBTImgArrayLength];
-#define Rtl8723SUMCBCutImgArrayLength 24308
+
 extern const u8 Rtl8723SFwUMCBCutImgArray[Rtl8723SUMCBCutImgArrayLength];
 
 #ifndef CONFIG_PHY_SETTING_WITH_ODM

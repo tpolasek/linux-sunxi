@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -746,7 +746,7 @@ static void SetFwRsvdPagePkt(PADAPTER padapter, BOOLEAN bDLFinished)
 	pattrib->pktlen = pattrib->last_txcmdsz = TotalPacketLen - TXDESC_OFFSET;
 	_rtw_memcpy(pmgntframe->buf_addr, ReservedPagePacket, TotalPacketLen);
 
-	padapter->HalFunc.mgnt_xmit(padapter, pmgntframe);
+	rtw_hal_mgnt_xmit(padapter, pmgntframe);
 
 	DBG_871X("%s: Set RSVD page location to Fw\n", __FUNCTION__);
 	FillH2CCmd(padapter, RSVD_PAGE_EID, sizeof(RsvdPageLoc), (u8*)&RsvdPageLoc);
@@ -974,7 +974,7 @@ static void SetFwRsvdPagePkt_BTCoex(PADAPTER padapter)
 	pattrib->pktlen = pattrib->last_txcmdsz = TotalPacketLen - TXDESC_OFFSET;
 	_rtw_memcpy(pmgntframe->buf_addr, ReservedPagePacket, TotalPacketLen);
 
-	padapter->HalFunc.mgnt_xmit(padapter, pmgntframe);
+	rtw_hal_mgnt_xmit(padapter, pmgntframe);
 
 	DBG_8192C("%s: Set RSVD page location to Fw\n", __FUNCTION__);
 	FillH2CCmd(padapter, RSVD_PAGE_EID, sizeof(RsvdPageLoc), (u8*)&RsvdPageLoc);
@@ -1148,7 +1148,7 @@ int rtl8192c_IOL_exec_cmds_sync(ADAPTER *adapter, struct xmit_frame *xmit_frame,
 	if (rtw_IOL_append_END_cmd(xmit_frame) != _SUCCESS)
 		goto exit;
 	
-	//adapter->HalFunc.mgnt_xmit(adapter, xmit_frame);
+	//rtw_hal_mgnt_xmit(adapter, xmit_frame);
 	rtw_dump_xframe_sync(adapter, xmit_frame);
 
 	IoOffloadLoc.LocCmd = 0;

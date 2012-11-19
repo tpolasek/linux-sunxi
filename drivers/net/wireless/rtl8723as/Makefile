@@ -128,6 +128,8 @@ ifeq ($(CONFIG_RTL8723A), y)
 
 RTL871X = rtl8723a
 
+HAL_COMM_FILES := hal/$(RTL871X)/$(RTL871X)_sreset.o
+
 ifeq ($(CONFIG_SDIO_HCI), y)
 MODULE_NAME = 8723as
 OUTSRC_FILES += hal/OUTSRC/$(RTL871X)/Hal8723SHWImg_CE.o
@@ -147,13 +149,16 @@ endif
 OUTSRC_FILES += hal/OUTSRC/$(RTL871X)/HalHWImg8723A_BB.o\
 								hal/OUTSRC/$(RTL871X)/HalHWImg8723A_MAC.o\
 								hal/OUTSRC/$(RTL871X)/HalHWImg8723A_RF.o\
-								hal/OUTSRC/$(RTL871X)/odm_RegConfig8723A.o\
-								hal/OUTSRC/rtl8192c/HalDMOutSrc8192C_CE.o	
+								hal/OUTSRC/$(RTL871X)/odm_RegConfig8723A.o
+
+OUTSRC_FILES += hal/OUTSRC/rtl8192c/HalDMOutSrc8192C_CE.o
+clean_more ?=
+clean_more += clean_odm-8192c
 
 PWRSEQ_FILES := hal/HalPwrSeqCmd.o \
 				hal/$(RTL871X)/Hal8723PwrSeq.o
 
-CHIP_FILES += $(OUTSRC_FILES) $(PWRSEQ_FILES)
+CHIP_FILES += $(HAL_COMM_FILES) $(OUTSRC_FILES) $(PWRSEQ_FILES)
 
 ifeq ($(CONFIG_BT_COEXIST), y)
 CHIP_FILES += hal/$(RTL871X)/rtl8723a_bt-coexist.o
@@ -224,7 +229,7 @@ ifeq ($(CONFIG_SDIO_HCI), y)
 _OS_INTFS_FILES += os_dep/linux/$(HCI_NAME)_ops_linux.o
 endif
 
-_HAL_INTFS_FILES :=	hal/hal_init.o \
+_HAL_INTFS_FILES :=	hal/hal_intf.o \
 			hal/hal_com.o \
 			hal/$(RTL871X)/$(RTL871X)_hal_init.o \
 			hal/$(RTL871X)/$(RTL871X)_phycfg.o \
@@ -269,7 +274,6 @@ endif
 ifeq ($(CONFIG_MP_INCLUDED), y)
 MODULE_NAME := $(MODULE_NAME)_mp
 EXTRA_CFLAGS += -DCONFIG_MP_INCLUDED
-CONFIG_POWER_SAVING = y
 endif
 
 ifeq ($(CONFIG_POWER_SAVING), y)
@@ -518,14 +522,14 @@ KSRC := /home/winuser/work/Plat_sLD2T_V3010/usr/src/linux-2.6.32.2
 INSTALL_PREFIX :=
 endif
 
+
 ifeq ($(CONFIG_PLATFORM_ARM_SUN4I), y)
-EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
+EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN -DCONFIG_PLATFORM_ARM_SUN4I
 ARCH := arm
 CROSS_COMPILE := arm-none-linux-gnueabi-
 KVER  := 3.0.8
-KSRC ?= $(src) 
+#KSRC:= ../lichee/linux-3.0/
 endif
-
 
 ifneq ($(KERNELRELEASE),)
 
@@ -545,8 +549,10 @@ rtk_core :=	core/rtw_cmd.o \
 		core/rtw_sta_mgt.o \
 		core/rtw_xmit.o	\
 		core/rtw_p2p.o \
+		core/rtw_tdls.o \
 		core/rtw_br_ext.o \
-		core/rtw_iol.o
+		core/rtw_iol.o \
+		core/rtw_led.o
 
 $(MODULE_NAME)-y += $(rtk_core)
 
@@ -560,6 +566,10 @@ $(MODULE_NAME)-y += $(_OS_INTFS_FILES)
 
 $(MODULE_NAME)-$(CONFIG_MP_INCLUDED) += core/rtw_mp.o \
 					core/rtw_mp_ioctl.o
+ifeq ($(CONFIG_RTL8723A), y)
+
+$(MODULE_NAME)-$(CONFIG_MP_INCLUDED)+= core/rtw_bt_mp.o
+endif
 
 obj-$(CONFIG_RTL8723AS) := $(MODULE_NAME).o
 
@@ -587,9 +597,12 @@ config_r:
 	@echo "make config"
 	/bin/bash script/Configure script/config.in
 
-.PHONY: modules clean
+.PHONY: modules clean clean_odm-8192c
 
-clean:
+clean_odm-8192c:
+	cd hal/OUTSRC/rtl8192c ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
+
+clean: $(clean_more)
 	rm -fr *.mod.c *.mod *.o .*.cmd *.ko *~
 	rm -fr .tmp_versions
 	rm -fr Module.symvers ; rm -fr Module.markers ; rm -fr modules.order

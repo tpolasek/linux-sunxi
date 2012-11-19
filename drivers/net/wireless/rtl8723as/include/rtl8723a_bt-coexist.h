@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -36,12 +36,23 @@
 #define __HALBT_C__ 1
 
 #ifdef __BT_C__ // COMMON/BT.h
+
+// HEADER/PlatformDef.h
+typedef enum _RT_MEDIA_STATUS {
+	RT_MEDIA_DISCONNECT = 0,
+	RT_MEDIA_CONNECT       = 1
+} RT_MEDIA_STATUS;
+
 // ===== Below this line is sync from SD7 driver COMMON/BT.h =====
 
 #define	BT_TMP_BUF_SIZE		100
 
 void BT_WifiScanNotify(PADAPTER padapter, u8 scanType);
 void BT_WifiAssociateNotify(PADAPTER padapter, u8 action);
+void BT_WifiMediaStatusNotify(PADAPTER padapter, RT_MEDIA_STATUS mstatus);
+void BT_SpecialPacketNotify(PADAPTER padapter);
+void BT_HaltProcess(PADAPTER padapter);
+void BT_LpsLeave(PADAPTER padapter);
 
 // ===== End of sync from SD7 driver COMMON/BT.h =====
 #endif // __BT_C__
@@ -1286,6 +1297,12 @@ typedef struct _BTDM_8723A_1ANT
 	u32		psTdmaMonitorCnt;
 	u32		psTdmaGlobalCnt;
 
+	//DurationAdjust For SCO
+	u32		psTdmaMonitorCntForSCO;
+	u8		psTdmaDuAdjTypeForSCO;
+	u8		RSSI_WiFi_Last;
+	u8		RSSI_BT_Last;
+
 	u8		bWiFiHalt;
 } BTDM_8723A_1ANT, *PBTDM_8723A_1ANT;
 
@@ -1341,13 +1358,6 @@ void BTDM_2AntBtCoexist8723A(PADAPTER padapter);
 #endif // __HALBTC87232ANT_C__
 
 #ifdef __HALBTC8723_C__ // HAL/BTCoexist/HalBtc8723.h
-
-// HEADER/PlatformDef.h
-typedef enum _RT_MEDIA_STATUS {
-	RT_MEDIA_DISCONNECT = 0,
-	RT_MEDIA_CONNECT       = 1
-} RT_MEDIA_STATUS;
-
 // ===== Below this line is sync from SD7 driver HAL/BTCoexist/HalBtc8723.h =====
 
 #define	BT_Q_PKT_OFF		0
@@ -1423,6 +1433,7 @@ void BTDM_SetSwRfRxLpfCorner(PADAPTER padapter, u8 type);
 void BTDM_SetSwPenaltyTxRateAdaptive(PADAPTER padapter, u8 raType);
 void BTDM_SetFwDecBtPwr(PADAPTER padapter, u8 bDecBtPwr);
 u8 BTDM_BtProfileSupport(PADAPTER padapter);
+void BTDM_LpsLeave(PADAPTER padapter);
 u8 BTDM_1Ant8723A(PADAPTER padapter);
 #define BT_1Ant BTDM_1Ant8723A
 
@@ -1695,13 +1706,10 @@ u8 BTDM_IsBTUplink(PADAPTER padapter);
 u8 BTDM_IsBTDownlink(PADAPTER padapter);
 void BTDM_AdjustForBtOperation(PADAPTER padapter);
 void BTDM_ForHalt(PADAPTER padapter);
-#define BT_HaltProcess BTDM_ForHalt
 void BTDM_WifiScanNotify(PADAPTER padapter, u8 scanType);
 void BTDM_WifiAssociateNotify(PADAPTER padapter, u8 action);
 void BTDM_MediaStatusNotify(PADAPTER padapter, RT_MEDIA_STATUS mstatus);
-#define BT_WifiMediaStatusNotify BTDM_MediaStatusNotify
 void BTDM_ForDhcp(PADAPTER padapter);
-#define BT_SpecialPacket BTDM_ForDhcp
 void BTDM_ResetActionProfileState(PADAPTER padapter);
 void BTDM_SetBtCoexCurrAntNum(PADAPTER padapter, u8 antNum);
 #define BT_SetBtCoexCurrAntNum BTDM_SetBtCoexCurrAntNum

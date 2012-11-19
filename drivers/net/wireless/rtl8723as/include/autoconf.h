@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -17,9 +17,9 @@
  *
  *
  ******************************************************************************/
-
+#define CONFIG_ODM_REFRESH_RAMASK
 #define CONFIG_PHY_SETTING_WITH_ODM
-#define CONFIG_CHIP_VER_INTEGRATION
+
 
 /*
  * Automatically generated C config: don't edit
@@ -74,14 +74,22 @@
 	//#define CONFIG_DBG_P2P
 #endif
 
-// Added by Kurt 20110511
+//	Added by Kurt 20110511
 //#define CONFIG_TDLS	1
+#ifdef CONFIG_TDLS
+//	#ifndef CONFIG_WFD
+//		#define CONFIG_WFD	1
+//	#endif
+//	#define CONFIG_TDLS_AUTOSETUP			1
+//	#define CONFIG_TDLS_AUTOCHECKALIVE		1
+#endif
 
 #define CONFIG_LAYER2_ROAMING
 #define CONFIG_LAYER2_ROAMING_RESUME
 
 //#define CONFIG_80211D 1
-#define CONFIG_LPS_RPWM_TIMER
+
+
 
 /*
  * Hardware Related Config
@@ -146,7 +154,12 @@
 	#define CONFIG_LPS		1
 
 	#if defined(CONFIG_LPS) && defined(CONFIG_SDIO_HCI)
-	#define CONFIG_LPS_LCLK	1
+//	#define CONFIG_LPS_LCLK	1
+	#endif
+
+//	#define CONFIG_LPS_RPWM_TIMER
+	#ifdef CONFIG_LPS_RPWM_TIMER
+	#define LPS_RPWM_WAIT_MS 30
 	#endif
 #endif // #ifdef CONFIG_POWER_SAVING
 
@@ -184,6 +197,8 @@
 #define CONFIG_DEBUG_RTL819X
 //#define CONFIG_PROC_DEBUG
 #endif
+
+#define DBG_CONFIG_ERROR_DETECT
 
 /*
  * Outsource  Related Config

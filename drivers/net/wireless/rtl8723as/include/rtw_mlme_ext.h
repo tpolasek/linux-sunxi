@@ -313,33 +313,6 @@ struct	ss_res
 #define	WIFI_FW_LINKING_STATE		(WIFI_FW_AUTH_NULL | WIFI_FW_AUTH_STATE | WIFI_FW_AUTH_SUCCESS |WIFI_FW_ASSOC_STATE)
 
 #ifdef CONFIG_TDLS
-/* TDLS STA state */
-#define	UN_TDLS_STATE					0x00000000	//default state
-#define	TDLS_INITIATOR_STATE			0x10000000
-#define	TDLS_RESPONDER_STATE			0x20000000
-#define	TDLS_LINKED_STATE				0x40000000
-#define	TDLS_CH_SWITCH_ON_STATE		0x01000000
-#define	TDLS_PEER_AT_OFF_STATE		0x02000000	//could send pkt on target ch
-#define	TDLS_AT_OFF_CH_STATE			0x04000000
-#define	TDLS_CH_SW_INITIATOR_STATE	0x08000000	//avoiding duplicated or unconditional ch. switch rsp.
-#define	TDLS_APSD_CHSW_STATE		0x00100000	//in APSD and want to setup channel switch
-#define	TDLS_PEER_SLEEP_STATE		0x00200000	//peer sta is sleeping
-#define	TDLS_SW_OFF_STATE			0x00400000	//terminate channel swithcing
-#define	TDLS_ALIVE_STATE				0x00010000	//Check if peer sta is alived.
-
-#define	TPK_RESEND_COUNT				301
-#define 	CH_SWITCH_TIME				10
-#define 	CH_SWITCH_TIMEOUT			30
-#define	TDLS_STAY_TIME				500
-#define	TDLS_SIGNAL_THRESH			0x20
-#define	TDLS_WATCHDOG_PERIOD		10	//Periodically sending tdls discovery request in TDLS_WATCHDOG_PERIOD * 2 sec
-#define	TDLS_ALIVE_TIMER_PH1			5000
-#define	TDLS_ALIVE_TIMER_PH2			2000
-#define	TDLS_STAY_TIME				500
-#define	TDLS_HANDSHAKE_TIME			5000
-#define	TDLS_ALIVE_COUNT				3
-#define	TDLS_INI_CAM_ENTRY			6
-
 // 1: Write RCR DATA BIT
 // 2: Issue peer traffic indication
 // 3: Go back to the channel linked with AP, terminating channel switch procedure
@@ -351,6 +324,8 @@ struct	ss_res
 // 9: Set channel back to off channel
 // 10: Restore RCR DATA BIT
 // 11: Check alive
+// 12: Check alive
+// 13: Free TDLS sta
 enum TDLS_option
 {
 	TDLS_WRCR			= 	1,
@@ -416,6 +391,7 @@ struct mlme_ext_info
 	// Accept ADDBA Request
 	BOOLEAN bAcceptAddbaReq;
 	u8	bwmode_updated;
+	u8	hidden_ssid_mode;
 
 	struct ADDBA_request		ADDBA_req;
 	struct WMM_para_element	WMM_param;
@@ -488,18 +464,12 @@ int init_hw_mlme_ext(_adapter *padapter);
 void free_mlme_ext_priv (struct mlme_ext_priv *pmlmeext);
 extern void init_mlme_ext_timer(_adapter *padapter);
 extern void init_addba_retry_timer(_adapter *padapter, struct sta_info *psta);
-
-#ifdef CONFIG_TDLS
-int rtw_init_tdls_info(_adapter* padapter);
-void rtw_free_tdls_info(struct tdls_info *ptdlsinfo);
-#endif //CONFIG_TDLS
-
 extern struct xmit_frame *alloc_mgtxmitframe(struct xmit_priv *pxmitpriv);
 
 //void fill_fwpriv(_adapter * padapter, struct fw_priv *pfwpriv);
 
 unsigned char networktype_to_raid(unsigned char network_type);
-int judge_network_type(_adapter *padapter, unsigned char *rate, int ratelen);
+u8 judge_network_type(_adapter *padapter, unsigned char *rate, int ratelen);
 void get_rate_set(_adapter *padapter, unsigned char *pbssrate, int *bssrate_len);
 
 void Save_DM_Func_Flag(_adapter *padapter);
@@ -593,32 +563,12 @@ void dump_mgntframe(_adapter *padapter, struct xmit_frame *pmgntframe);
 
 #ifdef CONFIG_P2P
 void issue_probersp_p2p(_adapter *padapter, unsigned char *da);
-void issue_p2p_provision_request( _adapter *padapter, u8* pinterface_raddr, u8* pssid, u8 ussidlen, u8* pdev_raddr);
+void issue_p2p_provision_request( _adapter *padapter, u8* pssid, u8 ussidlen, u8* pdev_raddr);
 void issue_p2p_GO_request(_adapter *padapter, u8* raddr);
 void issue_probereq_p2p(_adapter *padapter);
 void issue_p2p_invitation_response(_adapter *padapter, u8* raddr, u8 dialogToken, u8 success);
 void issue_p2p_invitation_request(_adapter *padapter, u8* raddr );
 #endif //CONFIG_P2P
-#ifdef CONFIG_TDLS
-void issue_nulldata_to_TDLS_peer_STA(_adapter *padapter, struct sta_info *ptdls_sta, unsigned int power_mode);
-void init_TPK_timer(_adapter *padapter, struct sta_info *psta);
-void init_ch_switch_timer(_adapter *padapter, struct sta_info *psta);
-void init_base_ch_timer(_adapter *padapter, struct sta_info *psta);
-void init_off_ch_timer(_adapter *padapter, struct sta_info *psta);
-void init_tdls_alive_timer(_adapter *padapter, struct sta_info *psta);
-void init_handshake_timer(_adapter *padapter, struct sta_info *psta);
-void free_tdls_sta(_adapter *padapter, struct sta_info *ptdls_sta);
-void issue_tdls_dis_req(_adapter *padapter, u8 *mac_addr);
-void issue_tdls_setup_req(_adapter *padapter, u8 *mac_addr);
-void issue_tdls_setup_rsp(_adapter *padapter, union recv_frame *precv_frame);
-void issue_tdls_setup_cfm(_adapter *padapter, union recv_frame *precv_frame);
-void issue_tdls_dis_rsp(_adapter * padapter, union recv_frame * precv_frame, u8 dialog);
-void issue_tdls_teardown(_adapter *padapter, u8 *mac_addr);
-void issue_tdls_peer_traffic_indication(_adapter *padapter, struct sta_info *psta);
-void issue_tdls_ch_switch_req(_adapter *padapter, u8 *mac_addr);
-void issue_tdls_ch_switch_rsp(_adapter *padapter, u8 *mac_addr);
-sint On_TDLS_Dis_Rsp(_adapter *adapter, union recv_frame *precv_frame);
-#endif //CONFIG_TDLS
 void issue_beacon(_adapter *padapter);
 void issue_probersp(_adapter *padapter, unsigned char *da, u8 is_valid_p2p_probereq);
 void issue_assocreq(_adapter *padapter);

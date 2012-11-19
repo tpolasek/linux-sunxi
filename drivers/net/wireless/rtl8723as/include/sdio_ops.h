@@ -68,6 +68,7 @@ extern u8 HalQueryTxBufferStatus8723ASdio(PADAPTER padapter);
 extern void InitInterrupt8188ESdio(PADAPTER padapter);
 extern void EnableInterrupt8188ESdio(PADAPTER padapter);
 extern void DisableInterrupt8188ESdio(PADAPTER padapter);
+extern void UpdateInterruptMask8188ESdio(PADAPTER padapter, u32 AddMSR, u32 RemoveMSR);
 
 
 #endif

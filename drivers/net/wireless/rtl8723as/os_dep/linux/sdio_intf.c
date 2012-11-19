@@ -41,10 +41,11 @@
 #include <rtl8188e_hal.h>
 #endif
 
-#include <hal_init.h>
+#include <hal_intf.h>
 #include <sdio_hal.h>
 #include <sdio_ops.h>
 
+#ifdef CONFIG_PLATFORM_ARM_SUN4I
 #if defined(CONFIG_MMC_SUNXI_POWER_CONTROL)
 #define SDIOID (CONFIG_CHIP_ID==1123 ? 3 : 1)
 #define SUNXI_SDIO_WIFI_NUM_RTL8723AS  9
@@ -68,8 +69,9 @@ int rtl8723as_sdio_poweroff(void)
     mmc_pm_gpio_ctrl("rtk_rtl8723as_wl_dis", 0);
     return 0;
 }
-
 #endif //defined(CONFIG_MMC_SUNXI_POWER_CONTROL)
+#endif //CONFIG_PLATFORM_ARM_SUN4I
+
 
 #ifndef dev_to_sdio_func
 #define dev_to_sdio_func(d)     container_of(d, struct sdio_func, dev)
@@ -88,6 +90,18 @@ static const struct sdio_device_id sdio_ids[] = {
 //	{ /* end: all zeroes */				},
 };
 
+static int rtw_drv_init(struct sdio_func *func, const struct sdio_device_id *id);
+static void rtw_dev_remove(struct sdio_func *func);
+static int rtw_sdio_resume(struct device *dev);
+static int rtw_sdio_suspend(struct device *dev);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)) 
+static const struct dev_pm_ops rtw_sdio_pm_ops = {
+	.suspend	= rtw_sdio_suspend,
+	.resume	= rtw_sdio_resume,
+};
+#endif
+	
 typedef struct _driver_priv {
 	struct sdio_driver r871xs_drv;
 
@@ -101,6 +115,18 @@ typedef struct _driver_priv {
 	_mutex hw_init_mutex;
 #endif	
 } drv_priv, *pdrv_priv;
+
+static drv_priv drvpriv = {
+	.r871xs_drv.probe = rtw_drv_init,
+	.r871xs_drv.remove = rtw_dev_remove,
+	.r871xs_drv.name = (char*)DRV_NAME,
+	.r871xs_drv.id_table = sdio_ids,
+	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)) 
+	.r871xs_drv.drv = {
+		.pm = &rtw_sdio_pm_ops,
+	}
+	#endif
+};
 
 static void sd_sync_int_hdl(struct sdio_func *func)
 {
@@ -192,36 +218,20 @@ static void sdio_deinit(PADAPTER padapter)
 		sdio_release_host(func);
 	}
 }
-
-thread_return rtw_xmit_thread(thread_context context)
+static u32 sdio_dvobj_init(_adapter *padapter)
 {
-	s32 err;
-	PADAPTER padapter;
-
-
-	err = _SUCCESS;
-	padapter = (PADAPTER)context;
-
-#if 0
-	thread_enter(padapter->pnetdev);
-#else
-//	daemonize("%s", padapter->pnetdev->name);
-	daemonize("%s", "RTW_XMIT_THREAD");
-	allow_signal(SIGTERM);
-#endif
-
-	do {
-		err = hal_xmit_handler(padapter);
-		if (signal_pending(current)) {
-			flush_signals(current);
-		}
-	} while (_SUCCESS == err);
-
-	_rtw_up_sema(&padapter->xmitpriv.terminate_xmitthread_sema);
-
-	thread_exit();
+	_func_enter_;
+	_func_exit_;
+	return _SUCCESS;
 }
 
+
+void sdio_dvobj_deinit(_adapter *padapter)
+{
+	_func_enter_;
+	_func_exit_;
+	return ;
+}
 static void decide_chip_type_by_device_id(PADAPTER padapter, u32 id)
 {
 	padapter->chip_type = NULL_CHIP_TYPE;
@@ -247,11 +257,7 @@ static void sd_intf_start(PADAPTER padapter)
 	}
 
 	//hal dep
-	if (padapter->HalFunc.enable_interrupt)
-		padapter->HalFunc.enable_interrupt(padapter);
-	else {
-		DBG_871X("%s: HalFunc.enable_interrupt is NULL!\n", __FUNCTION__);
-	}
+	rtw_hal_enable_interrupt(padapter);
 }
 
 static void sd_intf_stop(PADAPTER padapter)
@@ -262,11 +268,7 @@ static void sd_intf_stop(PADAPTER padapter)
 	}
 
 	// hal dep
-	if (padapter->HalFunc.disable_interrupt)
-		padapter->HalFunc.disable_interrupt(padapter);
-	else {
-		DBG_871X("%s: HalFunc.disable_interrupt is NULL!\n", __FUNCTION__);
-	}
+	rtw_hal_disable_interrupt(padapter);	
 }
 
 extern char* ifname;
@@ -297,6 +299,7 @@ static int rtw_drv_init(
 	SET_NETDEV_DEV(pnetdev, &func->dev);
 
 	padapter = rtw_netdev_priv(pnetdev);
+	padapter->bDriverStopped=_TRUE;
 	pdvobjpriv = &padapter->dvobjpriv;
 	pdvobjpriv->padapter = padapter;
 	psdio = &pdvobjpriv->intf_data;
@@ -315,6 +318,7 @@ static int rtw_drv_init(
 	decide_chip_type_by_device_id(padapter, (u32)func->device);
 
 	//4 3.1 set hardware operation functions
+/*
 	padapter->HalData = rtw_zmalloc(sizeof(HAL_DATA_TYPE));
 	if (padapter->HalData == NULL) {
 		RT_TRACE(_module_hci_intfs_c_, _drv_err_,
@@ -322,7 +326,8 @@ static int rtw_drv_init(
 		goto error;
 	}
 	padapter->hal_data_sz = sizeof(HAL_DATA_TYPE);
-	set_hal_ops(padapter);
+*/	
+	hal_set_hal_ops(padapter);
 
 	//3 4. interface init
 	if (sdio_init(padapter) != _SUCCESS) {
@@ -331,6 +336,9 @@ static int rtw_drv_init(
 		goto error;
 	}
 
+	//step 3.	initialize the dvobj_priv 
+	padapter->dvobj_init=&sdio_dvobj_init;
+	padapter->dvobj_deinit=&sdio_dvobj_deinit;
 	padapter->intf_start = &sd_intf_start;
 	padapter->intf_stop = &sd_intf_stop;
 
@@ -343,13 +351,13 @@ static int rtw_drv_init(
 	}
 
 	//3 6.
-	intf_read_chip_version(padapter);
+	rtw_hal_read_chip_version(padapter);
 
 	//3 7.
-	intf_chip_configure(padapter);
+	rtw_hal_chip_configure(padapter);
 
 	//3 8. read efuse/eeprom data
-	intf_read_chip_info(padapter);
+	rtw_hal_read_chip_info(padapter);
 
 	//3 9. init driver common data
 	if (rtw_init_drv_sw(padapter) == _FAIL) {
@@ -461,7 +469,7 @@ static void rtw_dev_unload(PADAPTER padapter)
 	{
 		// stop TX
 //		val8 = 0xFF;
-//		padapter->HalFunc.SetHwRegHandler(padapter, HW_VAR_TXPAUSE,&val8);
+//		rtw_hal_set_hwreg(padapter, HW_VAR_TXPAUSE,&val8);
 
 #if 0
 		if (padapter->intf_stop)
@@ -539,7 +547,9 @@ _func_enter_;
 	hostapd_mode_unload(padapter);
 #endif
 	LeaveAllPowerSaveMode(padapter);
-
+#ifdef CONFIG_CONCURRENT_MODE
+		rtw_drv_if2_free(padapter);
+#endif
 	pnetdev = (struct net_device*)padapter->pnetdev;
 	if (pnetdev) {
 		unregister_netdev(pnetdev); //will call netdev_close()
@@ -650,7 +660,6 @@ static int rtw_sdio_reset(struct sdio_func *func)
 }
 #endif //CONFIG_SDIO_SUSPEND_RESET
 /************************ END ********************************/	
-
 static int rtw_sdio_suspend(struct device *dev)
 {
 	struct sdio_func *func =dev_to_sdio_func(dev);
@@ -682,7 +691,7 @@ static int rtw_sdio_suspend(struct device *dev)
 	if(pnetdev)
 	{
 		netif_carrier_off(pnetdev);
-		netif_stop_queue(pnetdev);
+		rtw_netif_stop_queue(pnetdev);
 	}
 #ifdef CONFIG_WOWLAN
 	padapter->pwrctrlpriv.bSupportWakeOnWlan=_TRUE;
@@ -799,12 +808,12 @@ int rtw_resume_process(_adapter *padapter)
 	}	
 
 	#ifdef CONFIG_LAYER2_ROAMING_RESUME
-	#if 1 // workaround for Reuuimlla resume issue
+	#if 1 // workaround for Allwinner resume issue
 	rtw_msleep_os(50);
 	#endif
 	rtw_roaming(padapter, NULL);
-	#endif	
-	
+	#endif
+
 	#ifdef CONFIG_RESUME_IN_WORKQUEUE
 	rtw_unlock_suspend();
 	#endif //CONFIG_RESUME_IN_WORKQUEUE
@@ -859,24 +868,8 @@ static int rtw_sdio_resume(struct device *dev)
 
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)) 
-static const struct dev_pm_ops rtw_sdio_pm_ops = {
-	.suspend	= rtw_sdio_suspend,
-	.resume	= rtw_sdio_resume,
-};
-#endif
 
-static drv_priv drvpriv = {
-	.r871xs_drv.probe = rtw_drv_init,
-	.r871xs_drv.remove = rtw_dev_remove,
-	.r871xs_drv.name = (char*)DRV_NAME,
-	.r871xs_drv.id_table = sdio_ids,
-	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)) 
-	.r871xs_drv.drv = {
-		.pm = &rtw_sdio_pm_ops,
-	}
-	#endif
-};
+
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24)) 
 extern int console_suspend_enabled;
@@ -884,10 +877,11 @@ extern int console_suspend_enabled;
 
 static int __init rtw_drv_entry(void)
 {
-	int ret = 0;
-
+	int ret=0;
+	
+#ifdef CONFIG_PLATFORM_ARM_SUN4I
 /*depends on sunxi power control */
-#if defined CONFIG_MMC_SUNXI_POWER_CONTROL
+#if defined CONFIG_MMC_SUNXI_POWER_CONTROL    
     unsigned int mod_sel = mmc_pm_get_mod_type();
 	if(mod_sel == SUNXI_SDIO_WIFI_NUM_RTL8723AS) {
 		rtl8723as_sdio_powerup();
@@ -897,9 +891,11 @@ static int __init rtw_drv_entry(void)
 		ret = -1;
 		printk("[rtl8723as] %s: mod_sel = %d is incorrect.\n", __FUNCTION__, mod_sel);
 	}
-#endif
-	if(ret != 0)
+#endif	// defined CONFIG_MMC_SUNXI_POWER_CONTROL
+	if(ret != 0)		
 		goto exit;
+	
+#endif //CONFIG_PLATFORM_ARM_SUN4I
 
 //	DBG_871X(KERN_INFO "+%s", __func__);
 	RT_TRACE(_module_hci_intfs_c_, _drv_notice_, ("+rtw_drv_entry\n"));
@@ -925,7 +921,7 @@ static int __init rtw_drv_entry(void)
 
 	ret = sdio_register_driver(&drvpriv.r871xs_drv);
 
-exit:
+exit:	
 //	DBG_871X(KERN_INFO "-%s: ret=%d", __func__, ret);
 	RT_TRACE(_module_hci_intfs_c_, _drv_notice_, ("-rtw_drv_entry: ret=%d\n", ret));
 
@@ -949,11 +945,13 @@ static void __exit rtw_drv_halt(void)
 	_rtw_mutex_free(&drvpriv.hw_init_mutex);
 #endif
 
-#if defined(CONFIG_MMC_SUNXI_POWER_CONTROL)
+#ifdef CONFIG_PLATFORM_ARM_SUN4I
+#if defined(CONFIG_MMC_SUNXI_POWER_CONTROL)	
 	sunximmc_rescan_card(SDIOID, 0);
 	rtl8723as_sdio_poweroff();
 	printk("[rtl8723as] %s: remove card, power off.\n", __FUNCTION__);
-#endif
+#endif //defined(CONFIG_MMC_SUNXI_POWER_CONTROL)
+#endif //CONFIG_PLATFORM_ARM_SUN4I
 
 //	DBG_871X(KERN_INFO "-%s", __func__);
 	RT_TRACE(_module_hci_intfs_c_, _drv_notice_, ("-rtw_drv_halt\n"));

@@ -233,7 +233,12 @@ void rtl8188es_free_xmit_priv(PADAPTER padapter);
 s32 rtl8188es_hal_xmit(PADAPTER padapter, struct xmit_frame *pxmitframe);
 void rtl8188es_mgnt_xmit(PADAPTER padapter, struct xmit_frame *pmgntframe);
 s32 rtl8188es_xmit_buf_handler(PADAPTER padapter);
+thread_return rtl8188es_xmit_thread(thread_context context);
+
 #define hal_xmit_handler rtl8188es_xmit_buf_handler
+#ifdef CONFIG_SDIO_TX_TASKLET
+void rtl8188es_xmit_tasklet(void *priv);
+#endif
 #endif
 
 #ifdef CONFIG_USB_HCI

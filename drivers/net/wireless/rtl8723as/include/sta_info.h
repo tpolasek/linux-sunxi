@@ -131,7 +131,6 @@ struct sta_info {
 	_timer	TPK_timer;
 	struct TDLS_PeerKey	tpk;
 	_adapter *padapter;
-	u8	cam_entry;
 	u16	stat_code;
 	u8	off_ch;
 	u16	ch_switch_time;
@@ -259,7 +258,7 @@ struct sta_info {
 	u8		bValid;				// record the sta status link or not?
 	//u8		WirelessMode;		// 
 	u8		IOTPeer;			// Enum value.	HT_IOT_PEER_E
-
+	u8		rssi_level;			//for Refresh RA mask
 	// ODM Write
 	//1 PHY_STATUS_INFO
 	u8		RSSI_Path[4];		// 

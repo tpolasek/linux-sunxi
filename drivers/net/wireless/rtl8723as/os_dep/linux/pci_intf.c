@@ -24,7 +24,7 @@
 #include <drv_types.h>
 #include <recv_osdep.h>
 #include <xmit_osdep.h>
-#include <hal_init.h>
+#include <hal_intf.h>
 #include <rtw_version.h>
 
 #ifndef CONFIG_PCI_HCI
@@ -998,7 +998,7 @@ static void rtw_pci_update_default_setting(_adapter *padapter)
 	pwrpriv->b_support_aspm = 0;
 
 	// Dynamic Mechanism, 
-	//pAdapter->HalFunc.SetHalDefVarHandler(pAdapter, HAL_DEF_INIT_GAIN, &(pDevice->InitGainState));
+	//rtw_hal_set_def_var(pAdapter, HAL_DEF_INIT_GAIN, &(pDevice->InitGainState));
 
 	// Update PCI ASPM setting
 	pwrpriv->const_amdpci_aspm = pdvobjpriv->const_amdpci_aspm;
@@ -1117,7 +1117,7 @@ static irqreturn_t rtw_pci_interrupt(int irq, void *priv, struct pt_regs *regs)
 		return IRQ_HANDLED;
 	}
 
-	if(padapter->HalFunc.interrupt_handler(padapter) == _FAIL)
+	if(rtw_hal_interrupt_handler(padapter) == _FAIL)
 		return IRQ_HANDLED;
 		//return IRQ_NONE;
 
@@ -1234,9 +1234,9 @@ _func_enter_;
 	}
 
 	//.3
-	intf_read_chip_version(padapter);
+	rtw_hal_read_chip_version(padapter);
 	//.4
-	intf_chip_configure(padapter);
+	rtw_hal_chip_configure(padapter);
 
 _func_exit_;
 
@@ -1375,7 +1375,7 @@ static void pci_intf_start(_adapter *padapter)
 	DBG_871X("+pci_intf_start\n");
 
 	//Enable hw interrupt
-	padapter->HalFunc.enable_interrupt(padapter);
+	rtw_hal_enable_interrupt(padapter);
 
 	RT_TRACE(_module_hci_intfs_c_,_drv_err_,("-pci_intf_start\n"));
 	DBG_871X("-pci_intf_start\n");
@@ -1390,7 +1390,7 @@ static void pci_intf_stop(_adapter *padapter)
 	if(padapter->bSurpriseRemoved == _FALSE)
 	{
 		//device still exists, so driver can do i/o operation
-		padapter->HalFunc.disable_interrupt(padapter);
+		rtw_hal_disable_interrupt(padapter);
 		tasklet_disable(&(padapter->recvpriv.recv_tasklet));
 		tasklet_disable(&(padapter->recvpriv.irq_prepare_beacon_tasklet));
 		tasklet_disable(&(padapter->xmitpriv.xmit_tasklet));
@@ -1431,7 +1431,7 @@ static void rtw_dev_unload(_adapter *padapter)
 /*		if(pnetdev)
 		{
 			netif_carrier_off(pnetdev);
-			netif_stop_queue(pnetdev);
+			rtw_netif_stop_queue(pnetdev);
 		}
 
 		//s2.
@@ -1680,7 +1680,7 @@ static int rtw_drv_init(struct pci_dev *pdev, const struct pci_device_id *pdid)
 	pnetdev->irq = pdev->irq;
 
 	//step 4. read efuse/eeprom data and get mac_addr
-	intf_read_chip_info(padapter);	
+	rtw_hal_read_chip_info(padapter);	
 
 	//step 5. 
 	status = rtw_init_drv_sw(padapter);
@@ -1689,7 +1689,7 @@ static int rtw_drv_init(struct pci_dev *pdev, const struct pci_device_id *pdid)
 		goto error;
 	}
 
-	status = padapter->HalFunc.inirp_init(padapter);
+	status = rtw_hal_inirp_init(padapter);
 	if(status ==_FAIL){
 		RT_TRACE(_module_hci_intfs_c_,_drv_err_,("Initialize PCI desc ring Failed!\n"));
 		goto error;
@@ -1701,7 +1701,7 @@ static int rtw_drv_init(struct pci_dev *pdev, const struct pci_device_id *pdid)
 	DBG_871X("MAC Address from pnetdev->dev_addr= "MAC_FMT"\n", MAC_ARG(pnetdev->dev_addr));	
 
 
-	padapter->HalFunc.disable_interrupt(padapter);
+	rtw_hal_disable_interrupt(padapter);
 
 #if defined(IRQF_SHARED)
 	err = request_irq(pdev->irq, &rtw_pci_interrupt, IRQF_SHARED, DRV_NAME, padapter);
@@ -1876,7 +1876,7 @@ _func_exit_;
 	pci_disable_device(pdev);
 	pci_set_drvdata(pdev, NULL);
 
-	padapter->HalFunc.inirp_deinit(padapter);
+	rtw_hal_inirp_deinit(padapter);
 	//s6.
 	if(padapter->dvobj_deinit)
 	{

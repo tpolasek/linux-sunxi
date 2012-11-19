@@ -27,111 +27,6 @@
 
 #define SDIO_TX_AGG_MAX	5
 
-static void enqueue_pending_xmitbuf(
-	struct xmit_priv *pxmitpriv,
-	struct xmit_buf *pxmitbuf)
-{
-	_irqL irql;
-	_queue *pqueue;
-
-
-	pqueue = &pxmitpriv->pending_xmitbuf_queue;
-
-	_enter_critical_bh(&pqueue->lock, &irql);
-	rtw_list_delete(&pxmitbuf->list);
-	rtw_list_insert_tail(&pxmitbuf->list, get_list_head(pqueue));
-	_exit_critical_bh(&pqueue->lock, &irql);
-
-	_rtw_up_sema(&pxmitpriv->xmit_sema);
-}
-
-static struct xmit_buf* dequeue_pending_xmitbuf(
-	struct xmit_priv *pxmitpriv)
-{
-	_irqL irql;
-	struct xmit_buf *pxmitbuf;
-	_queue *pqueue;
-
-
-	pxmitbuf = NULL;
-	pqueue = &pxmitpriv->pending_xmitbuf_queue;
-
-	_enter_critical_bh(&pqueue->lock, &irql);
-
-	if (_rtw_queue_empty(pqueue) == _FALSE)
-	{
-		_list *plist, *phead;
-
-		phead = get_list_head(pqueue);
-		plist = get_next(phead);
-		pxmitbuf = LIST_CONTAINOR(plist, struct xmit_buf, list);
-		rtw_list_delete(&pxmitbuf->list);
-	}
-
-	_exit_critical_bh(&pqueue->lock, &irql);
-
-	return pxmitbuf;
-}
-
-static struct xmit_buf* dequeue_pending_xmitbuf_under_survey(
-	struct xmit_priv *pxmitpriv)
-{
-	_irqL irql;
-	struct xmit_buf *pxmitbuf;
-	struct xmit_frame *pxmitframe;
-	_queue *pqueue;
-
-
-	pxmitbuf = NULL;
-	pqueue = &pxmitpriv->pending_xmitbuf_queue;
-
-	_enter_critical_bh(&pqueue->lock, &irql);
-
-	if (_rtw_queue_empty(pqueue) == _FALSE)
-	{
-		_list *plist, *phead;
-		u8 type;
-
-		phead = get_list_head(pqueue);
-		plist = phead;
-		do {
-			plist = get_next(plist);
-			if (plist == phead) break;
-			pxmitbuf = LIST_CONTAINOR(plist, struct xmit_buf, list);
-			pxmitframe = (struct xmit_frame*)pxmitbuf->priv_data;
-			type = GetFrameSubType(pxmitframe->buf_addr + TXDESC_OFFSET);
-			if ((type == WIFI_PROBEREQ) ||
-				(type == WIFI_DATA_NULL) ||
-				(type == WIFI_QOS_DATA_NULL))
-			{
-				rtw_list_delete(&pxmitbuf->list);
-				break;
-			}
-			pxmitbuf = NULL;
-		} while (1);
-	}
-
-	_exit_critical_bh(&pqueue->lock, &irql);
-
-	return pxmitbuf;
-}
-
-static void freequeue_pending_xmitbuf(struct xmit_priv *pxmitpriv)
-{
-	struct xmit_buf *pxmitbuf;
-	struct xmit_frame *pframe;
-
-
-	do {
-		pxmitbuf = dequeue_pending_xmitbuf(pxmitpriv);
-		if (pxmitbuf == NULL) break;
-		pframe = (struct xmit_frame*)pxmitbuf->priv_data;
-		rtw_free_xmitframe(pxmitpriv, pframe);
-		pxmitbuf->priv_data = NULL;
-		rtw_free_xmitbuf(pxmitpriv, pxmitbuf);
-	} while (1);
-}
-
 /*
  * Description
  *	Transmit xmitbuf to hardware tx fifo
@@ -164,7 +59,6 @@ s32 rtl8723as_xmit_buf_handler(PADAPTER padapter)
 	if (_FAIL == ret) {
 		RT_TRACE(_module_hal_xmit_c_, _drv_emerg_,
 				 ("%s: down SdioXmitBufSema fail!\n", __FUNCTION__));
-		freequeue_pending_xmitbuf(pxmitpriv);
 		return _FAIL;
 	}
 
@@ -173,7 +67,6 @@ s32 rtl8723as_xmit_buf_handler(PADAPTER padapter)
 		RT_TRACE(_module_hal_xmit_c_, _drv_notice_,
 				 ("%s: bDriverStopped(%d) bSurpriseRemoved(%d)!\n",
 				  __FUNCTION__, padapter->bDriverStopped, padapter->bSurpriseRemoved));
-		freequeue_pending_xmitbuf(pxmitpriv);
 		return _FAIL;
 	}
 
@@ -281,66 +174,6 @@ free_xmitbuf:
 	return _SUCCESS;
 }
 
-static void freequeue_pending_xmitframe(struct xmit_priv *pxmitpriv)
-{
-	struct hw_xmit *hwxmits;
-	u8 idx, hwentry;
-	_irqL irql;
-//	_irqL irqL0, irqL1;
-	struct tx_servq *ptxservq;
-	_list *sta_plist, *sta_phead, *frame_plist, *frame_phead;
-	struct xmit_frame *pxmitframe;
-	_queue *pframe_queue;
-
-
-	_enter_critical_bh(&pxmitpriv->lock, &irql);
-
-	hwxmits = pxmitpriv->hwxmits;
-	hwentry = pxmitpriv->hwxmit_entry;
-	ptxservq = NULL;
-	pxmitframe = NULL;
-	pframe_queue = NULL;
-
-	// 0(VO), 1(VI), 2(BE), 3(BK)
-	for (idx = 0; idx < hwentry; idx++, hwxmits++)
-	{
-//		_enter_critical(&hwxmits->sta_queue->lock, &irqL0);
-
-		sta_phead = get_list_head(hwxmits->sta_queue);
-		sta_plist = get_next(sta_phead);
-
-		while (rtw_end_of_queue_search(sta_phead, sta_plist) == _FALSE)
-		{
-			ptxservq = LIST_CONTAINOR(sta_plist, struct tx_servq, tx_pending);
-			sta_plist = get_next(sta_plist);
-
-			pframe_queue = &ptxservq->sta_pending;
-
-//			_enter_critical(&pframe_queue->lock, &irqL1);
-
-			frame_phead = get_list_head(pframe_queue);
-
-			while (rtw_is_list_empty(frame_phead) == _FALSE)
-			{
-				frame_plist = get_next(frame_phead);
-				pxmitframe = LIST_CONTAINOR(frame_plist, struct xmit_frame, list);
-				rtw_list_delete(&pxmitframe->list);
-				ptxservq->qcnt--;
-				hwxmits->accnt--;
-				rtw_free_xmitframe(pxmitpriv, pxmitframe);
-			}
-
-			if (_rtw_queue_empty(pframe_queue) == _TRUE)
-				rtw_list_delete(&ptxservq->tx_pending);
-
-//			_exit_critical(&pframe_queue->lock, &irqL1);
-		}
-//		_exit_critical(&hwxmits->sta_queue->lock, &irqL0);
-	}
-
-	_exit_critical_bh(&pxmitpriv->lock, &irql);
-}
-
 /*
  *	Description:
  *		Translate QSEL to hardware tx FIFO address
@@ -422,6 +255,7 @@ static s32 xmit_xmitframes(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 	pxmitframe = NULL;
 	pframe_queue = NULL;
 	pxmitbuf = NULL;
+
 
 	// 0(VO), 1(VI), 2(BE), 3(BK)
 	for (idx = 0; idx < hwentry; idx++, hwxmits++)
@@ -575,46 +409,53 @@ s32 rtl8723as_xmit_handler(PADAPTER padapter)
 {
 	struct xmit_priv *pxmitpriv;
 	PHAL_DATA_TYPE phal;
+	s32 ret;
 	_irqL irql;
-	s32 ret, err;
 
 
 	pxmitpriv = &padapter->xmitpriv;
 	phal = GET_HAL_DATA(padapter);
 
+wait:
 	ret = _rtw_down_sema(&phal->SdioXmitSema);
 	if (_FAIL == ret) {
 		RT_TRACE(_module_hal_xmit_c_, _drv_emerg_, ("%s: down sema fail!\n", __FUNCTION__));
 		return _FAIL;
 	}
 
-	do {
-		if ((padapter->bDriverStopped == _TRUE) ||
-			(padapter->bSurpriseRemoved == _TRUE))
-		{
-			RT_TRACE(_module_hal_xmit_c_, _drv_notice_,
-					 ("%s: bDriverStopped(%d) bSurpriseRemoved(%d)\n",
-					  __FUNCTION__, padapter->bDriverStopped, padapter->bSurpriseRemoved));
-			ret = _FAIL;
-			break;
-		}
+next:
+	if ((padapter->bDriverStopped == _TRUE) ||
+		(padapter->bSurpriseRemoved == _TRUE)) {
+		RT_TRACE(_module_hal_xmit_c_, _drv_notice_,
+				 ("%s: bDriverStopped(%d) bSurpriseRemoved(%d)\n",
+				  __FUNCTION__, padapter->bDriverStopped, padapter->bSurpriseRemoved));
+		return _FAIL;
+	}
 
-		_enter_critical_bh(&pxmitpriv->lock, &irql);
-		ret = rtw_txframes_pending(padapter);
-		_exit_critical_bh(&pxmitpriv->lock, &irql);
-		if (ret == 0) {
-			ret = _SUCCESS;
-			break;
-		}
+	_enter_critical_bh(&pxmitpriv->lock, &irql);
+	ret = rtw_txframes_pending(padapter);
+	_exit_critical_bh(&pxmitpriv->lock, &irql);
+	if (ret == 0) {
+		return _SUCCESS;
+	}
 
-		// dequeue frame and write to hardware
-		err = xmit_xmitframes(padapter, pxmitpriv);
-		if (err == -2) {
-			rtw_msleep_os(1);
-		}
-	} while (1);
+	// dequeue frame and write to hardware
 
-	return ret;
+	ret = xmit_xmitframes(padapter, pxmitpriv);
+	if (ret == -2) {
+		rtw_msleep_os(1);
+		goto next;
+	}
+
+	_enter_critical_bh(&pxmitpriv->lock, &irql);
+	ret = rtw_txframes_pending(padapter);
+	_exit_critical_bh(&pxmitpriv->lock, &irql);
+	if (ret == 1) {
+		rtw_msleep_os(1);
+		goto next;
+	}
+
+	return _SUCCESS;
 }
 
 thread_return rtl8723as_xmit_thread(thread_context context)
@@ -630,13 +471,7 @@ thread_return rtl8723as_xmit_thread(thread_context context)
 	phal = GET_HAL_DATA(padapter);
 	ret = _SUCCESS;
 
-#if 0
-	thread_enter(padapter->pnetdev);
-#else
-//	daemonize("%s", padapter->pnetdev->name);
-	daemonize("%s", "RTWHALXT");
-	allow_signal(SIGTERM);
-#endif
+	thread_enter("RTWHALXT");
 
 	do {
 		ret = rtl8723as_xmit_handler(padapter);
@@ -645,8 +480,6 @@ thread_return rtl8723as_xmit_thread(thread_context context)
 		}
 	} while (_SUCCESS == ret);
 
-	freequeue_pending_xmitframe(pxmitpriv);
-	
 	_rtw_up_sema(&phal->SdioXmitTerminateSema);
 
 	RT_TRACE(_module_hal_xmit_c_, _drv_notice_, ("-%s\n", __FUNCTION__));
@@ -742,15 +575,6 @@ s32 rtl8723as_init_xmit_priv(PADAPTER padapter)
 	_rtw_spinlock_init(&phal->SdioTxFIFOFreePageLock);
 	_rtw_init_sema(&phal->SdioXmitSema, 0);
 	_rtw_init_sema(&phal->SdioXmitTerminateSema, 0);
-#ifdef PLATFORM_LINUX
-	phal->SdioXmitThread = kernel_thread(rtl8723as_xmit_thread, padapter, CLONE_FS|CLONE_FILES);
-	if (phal->SdioXmitThread < 0) {
-		RT_TRACE(_module_hal_xmit_c_, _drv_err_, ("%s: start rtl8723as_xmit_buf_thread FAIL!!\n", __FUNCTION__));
-		return _FAIL;
-	}
-#else
-#error "can not create SdioXmitThread!\n"
-#endif
 
 	return _SUCCESS;
 }
@@ -792,13 +616,6 @@ void rtl8723as_free_xmit_priv(PADAPTER padapter)
 		rtw_free_xmitframe(pxmitpriv, (struct xmit_frame*)pxmitbuf->priv_data);
 		pxmitbuf->priv_data = NULL;
 		rtw_free_xmitbuf(pxmitpriv, pxmitbuf);
-	}
-
-	// stop xmit_buf_thread
-	if (phal->SdioXmitThread >= 0) {
-		_rtw_up_sema(&phal->SdioXmitSema);
-		_rtw_down_sema(&phal->SdioXmitTerminateSema);
-		phal->SdioXmitThread = -1;
 	}
 
 	_rtw_spinlock_free(&phal->SdioTxFIFOFreePageLock);

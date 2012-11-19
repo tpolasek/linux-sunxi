@@ -265,12 +265,9 @@ typedef enum _USB_RX_AGG_MODE{
 #define CHIP_BONDING_92C_1T2R	0x1
 #define CHIP_BONDING_88C_USB_MCARD	0x2
 #define CHIP_BONDING_88C_USB_HP	0x1
-#ifdef CONFIG_CHIP_VER_INTEGRATION
 #include "HalVerDef.h"
 #include "hal_com.h"
-#else
-//do nothing
-#endif //CONFIG_CHIP_VER_INTEGRATION
+
 //-------------------------------------------------------------------------
 //	Channel Plan
 //-------------------------------------------------------------------------
@@ -382,11 +379,7 @@ typedef enum _RT_REGULATOR_MODE {
 
 typedef struct hal_data_8188e
 {
-#ifdef CONFIG_CHIP_VER_INTEGRATION
 	HAL_VERSION			VersionID;
-#else
-	VERSION_8192C		VersionID;
-#endif
 	RT_MULTI_FUNC		MultiFunc; // For multi-function consideration.
 	RT_POLARITY_CTL		PolarityCtl; // For Wifi PDn Polarity control.
 	RT_REGULATOR_MODE	RegulatorMode; // switching regulator or LDO
@@ -572,9 +565,11 @@ typedef struct hal_data_8188e
 	// HIQ, MID, LOW, PUB free pages; padapter->xmitpriv.free_txpg
 	u8			SdioTxFIFOFreePage[SDIO_TX_FREE_PG_QUEUE];
 	_lock		SdioTxFIFOFreePageLock;
+#ifndef CONFIG_SDIO_TX_TASKLET
 	_thread_hdl_	SdioXmitThread;
 	_sema		SdioXmitSema;
 	_sema		SdioXmitTerminateSema;
+#endif
 
 	//
 	// SDIO Rx FIFO related.
@@ -590,8 +585,8 @@ typedef struct hal_data_8188e
 	int	RtBulkInPipe;
 	int	RtIntInPipe;
 	// Interrupt relatd register information.
-	u32	IntArray[2];
-	u32	IntrMask[2];
+	u32	IntArray[3];//HISR0,HISR1,HSISR
+	u32	IntrMask[3];
 	u8	C2hArray[16];
 #ifdef CONFIG_USB_TX_AGGREGATION
 	u8	UsbTxAggMode;
@@ -647,7 +642,7 @@ typedef struct hal_data_8188e HAL_DATA_TYPE, *PHAL_DATA_TYPE;
 #define GET_HAL_DATA(__pAdapter)	((HAL_DATA_TYPE *)((__pAdapter)->HalData))
 #define GET_RF_TYPE(priv)			(GET_HAL_DATA(priv)->rf_type)
 
-#define INCLUDE_MULTI_FUNC_BT(_Adapter)		(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_BT)
+#define INCLUDE_MULTI_FUNC_BT(_Adapter)	(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_BT)
 #define INCLUDE_MULTI_FUNC_GPS(_Adapter)	(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_GPS)
 
 //#define IS_MULTI_FUNC_CHIP(_Adapter)	(((((PHAL_DATA_TYPE)(_Adapter->HalData))->MultiFunc) & (RT_MULTI_FUNC_BT|RT_MULTI_FUNC_GPS)) ? _TRUE : _FALSE)
@@ -695,5 +690,8 @@ void rtl8188e_set_hal_ops(struct hal_ops *pHalFunc);
 // register
 void SetBcnCtrlReg(PADAPTER padapter, u8 SetBits, u8 ClearBits);
 
+void rtl8188e_clone_haldata(_adapter *dst_adapter, _adapter *src_adapter);
+void rtl8188e_start_thread(_adapter *padapter);
+void rtl8188e_stop_thread(_adapter *padapter);
 #endif //__RTL8188E_HAL_H__
 

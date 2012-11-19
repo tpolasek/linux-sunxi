@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
  *                                        
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -408,7 +408,7 @@ thread_return rtw_cmd_thread(thread_context context)
 	
 _func_enter_;
 
-	thread_enter(padapter);
+	thread_enter("RTW_CMD_THREAD");
 
 	pcmdbuf = pcmdpriv->cmd_buf;
 	prspbuf = pcmdpriv->rsp_buf;
@@ -1892,8 +1892,13 @@ static void traffic_status_watchdog(_adapter *padapter)
 		/*&& !MgntInitAdapterInProgress(pMgntInfo)*/)
 	{
 
+#ifdef CONFIG_BT_COEXIST
+		if( pmlmepriv->LinkDetectInfo.NumRxOkInPeriod > 50 ||
+			pmlmepriv->LinkDetectInfo.NumTxOkInPeriod > 50 )
+#else // !CONFIG_BT_COEXIST
 		if( pmlmepriv->LinkDetectInfo.NumRxOkInPeriod > 100 ||
 			pmlmepriv->LinkDetectInfo.NumTxOkInPeriod > 100 )
+#endif // !CONFIG_BT_COEXIST
 		{
 			bBusyTraffic = _TRUE;
 
@@ -1950,7 +1955,7 @@ static void traffic_status_watchdog(_adapter *padapter)
 			LPS_Leave(padapter);
 		}
 		}
-#endif
+#endif // CONFIG_LPS
 	}
 	else
 	{
@@ -1976,8 +1981,7 @@ void dynamic_chk_wk_hdl(_adapter *padapter, u8 *pbuf, int sz)
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	//struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
 	#ifdef DBG_CONFIG_ERROR_DETECT	
-	if(padapter->HalFunc.sreset_xmit_status_check)
-		padapter->HalFunc.sreset_xmit_status_check(padapter);		
+	rtw_hal_sreset_xmit_status_check(padapter);		
 	#endif	
 
 	//if(check_fwstate(pmlmepriv, _FW_UNDER_LINKING|_FW_UNDER_SURVEY)==_FALSE)
@@ -1986,7 +1990,7 @@ void dynamic_chk_wk_hdl(_adapter *padapter, u8 *pbuf, int sz)
 		traffic_status_watchdog(padapter);
 	}
 
-	padapter->HalFunc.hal_dm_watchdog(padapter);
+	rtw_hal_dm_watchdog(padapter);
 
 	//check_hw_pbc(padapter, pdrvextra_cmd->pbuf, pdrvextra_cmd->type_size);	
 
@@ -2039,7 +2043,7 @@ _func_enter_;
 			mstatus = 1;//connect
 			// Reset LPS Setting
 			padapter->pwrctrlpriv.LpsIdleCount = 0;
-			padapter->HalFunc.SetHwRegHandler(padapter, HW_VAR_H2C_FW_JOINBSSRPT, (u8 *)(&mstatus));
+			rtw_hal_set_hwreg(padapter, HW_VAR_H2C_FW_JOINBSSRPT, (u8 *)(&mstatus));
 #ifdef CONFIG_BT_COEXIST
 			BT_WifiMediaStatusNotify(padapter, mstatus);
 #endif
@@ -2054,13 +2058,13 @@ _func_enter_;
 			{
 				LPS_Leave(padapter);
 			}
-			padapter->HalFunc.SetHwRegHandler(padapter, HW_VAR_H2C_FW_JOINBSSRPT, (u8 *)(&mstatus));
+			rtw_hal_set_hwreg(padapter, HW_VAR_H2C_FW_JOINBSSRPT, (u8 *)(&mstatus));
 			break;
 		case LPS_CTRL_SPECIAL_PACKET:
 			//DBG_871X("LPS_CTRL_SPECIAL_PACKET \n");
 			pwrpriv->DelayLPSLastTimeStamp = rtw_get_current_time();
 #ifdef CONFIG_BT_COEXIST
-			BT_SpecialPacket(padapter);
+			BT_SpecialPacketNotify(padapter);
 			if (BT_1Ant(padapter) == _FALSE)
 #endif
 			{
@@ -2069,7 +2073,13 @@ _func_enter_;
 			break;
 		case LPS_CTRL_LEAVE:
 			//DBG_871X("LPS_CTRL_LEAVE \n");
-			LPS_Leave(padapter);
+#ifdef CONFIG_BT_COEXIST
+			BT_LpsLeave(padapter);
+			if (BT_1Ant(padapter) == _FALSE)
+#endif
+			{
+				LPS_Leave(padapter);
+			}
 			break;
 
 		default:
@@ -2133,7 +2143,7 @@ _func_exit_;
 #if (RATE_ADAPTIVE_SUPPORT==1)
 void rpt_timer_setting_wk_hdl(_adapter *padapter, u16 minRptTime)
 {
-	padapter->HalFunc.SetHwRegHandler(padapter, HW_VAR_RPT_TIMER_SETTING, (u8 *)(&minRptTime));
+	rtw_hal_set_hwreg(padapter, HW_VAR_RPT_TIMER_SETTING, (u8 *)(&minRptTime));
 }
 
 u8 rtw_rpt_timer_cfg_cmd(_adapter*padapter, u16 minRptTime)
@@ -2176,7 +2186,7 @@ _func_exit_;
 #ifdef CONFIG_ANTENNA_DIVERSITY
 void antenna_select_wk_hdl(_adapter *padapter, u8 antenna)
 {
-	padapter->HalFunc.SetHwRegHandler(padapter, HW_VAR_ANTENNA_DIVERSITY_SELECT, (u8 *)(&antenna));
+	rtw_hal_set_hwreg(padapter, HW_VAR_ANTENNA_DIVERSITY_SELECT, (u8 *)(&antenna));
 }
 
 u8 rtw_antenna_select_cmd(_adapter*padapter, u8 antenna,u8 enqueue)
@@ -2188,7 +2198,7 @@ u8 rtw_antenna_select_cmd(_adapter*padapter, u8 antenna,u8 enqueue)
 	u8	res = _SUCCESS;
 
 _func_enter_;
-	padapter->HalFunc.GetHalDefVarHandler(padapter, HAL_DEF_IS_SUPPORT_ANT_DIV, &(bSupportAntDiv));
+	rtw_hal_get_def_var(padapter, HAL_DEF_IS_SUPPORT_ANT_DIV, &(bSupportAntDiv));
 	if(_FALSE == bSupportAntDiv )	return res;
 
 	if(_TRUE == enqueue)
@@ -2326,17 +2336,25 @@ static void rtw_chk_hi_queue_hdl(_adapter *padapter)
 	if(!psta_bmc)
 		return;
 
-
 	if(psta_bmc->sleepq_len==0)
-	{
-		while((rtw_read32(padapter, 0x414)&0x00ffff00)!=0)
+	{		
+		u8 val = 0;
+
+		//while((rtw_read32(padapter, 0x414)&0x00ffff00)!=0)
+		//while((rtw_read32(padapter, 0x414)&0x0000ff00)!=0)
+		
+		rtw_hal_get_hwreg(padapter, HW_VAR_CHK_HI_QUEUE_EMPTY, &val);		
+		
+		while(_FALSE == val)
 		{
 			rtw_msleep_os(100);
 
 			cnt++;
 			
 			if(cnt>10)
-				break;	
+				break;
+
+			rtw_hal_get_hwreg(padapter, HW_VAR_CHK_HI_QUEUE_EMPTY, &val);
 		}
 
 		if(cnt<=10)
@@ -2345,7 +2363,12 @@ static void rtw_chk_hi_queue_hdl(_adapter *padapter)
 			pstapriv->sta_dz_bitmap &= ~BIT(0);
 			
 			update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
-		}	
+		}
+		else //re check again
+		{
+			rtw_chk_hi_queue_cmd(padapter);
+		}
+		
 	}	
 	
 }
@@ -2472,7 +2495,7 @@ u8 rtw_drvextra_cmd_hdl(_adapter *padapter, unsigned char *pbuf)
 #endif //CONFIG_INTEL_WIDI
 
 		case C2H_WK_CID:
-			rtw_hal_SetHwReg(padapter, HW_VAR_C2H_HANDLE, NULL);
+			rtw_hal_set_hwreg(padapter, HW_VAR_C2H_HANDLE, NULL);
 			break;
 
 		default:
