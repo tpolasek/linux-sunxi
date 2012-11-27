@@ -22,7 +22,7 @@ config BCMDHD_FW_PATH
 
 config BCMDHD_NVRAM_PATH
 	depends on BCMDHD
-	string "NVRAM path"	
+	string "NVRAM path"
 	default "/system/vendor/modules/bcm_nvram.txt"
 	---help---
 	   bcm40181 bcm40183 Path to the calibration file.
@@ -36,10 +36,3 @@ config BCMDHD_WEXT
 	select WEXT_PRIV
 	help
 	  Enables WEXT support
-
-config DHD_USE_SCHED_SCAN
-	bool "Use CFG80211 sched scan"
-	depends on BCMDHD && CFG80211
-	default y
-	---help---
-	  Use CFG80211 sched scan
