@@ -209,7 +209,8 @@ config USB_IOWARRIOR
 
 config USB_TEST
 	tristate "USB testing driver"
-	depends on USB
+	depends on USB && SUNXI_TEST_SELECT
+	default m
 	help
 	  This driver is for testing host controller software.  It is used
 	  with specialized device firmware for regression and stress testing,

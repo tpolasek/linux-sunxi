@@ -489,7 +489,7 @@ s32 usb_msg_center_exit(struct usb_cfg *cfg)
 	return 0;
 }
 
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 int auto_scan_otg_flag = 1;
 
 static ssize_t host_store(struct device *dev,

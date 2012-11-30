@@ -88,11 +88,11 @@ static int usb_hardware_scan_thread(void * pArg)
 	while(thread_run_flag){
 		DMSG_DBG_MANAGER("\n\n");
 
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 		if(auto_scan_otg_flag){
 #endif
 			usb_hw_scan(cfg);
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 		}
 #endif
 		usb_msg_center(cfg);

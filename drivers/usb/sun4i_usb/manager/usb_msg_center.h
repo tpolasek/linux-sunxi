@@ -65,7 +65,7 @@ void usb_msg_center(struct usb_cfg *cfg);
 s32 usb_msg_center_init(struct usb_cfg *cfg);
 s32 usb_msg_center_exit(struct usb_cfg *cfg);
 
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 extern int auto_scan_otg_flag;
 #endif
 

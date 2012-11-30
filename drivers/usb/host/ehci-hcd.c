@@ -761,7 +761,7 @@ static int ehci_run (struct usb_hcd *hcd)
 }
 
 /*-------------------------------------------------------------------------*/
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 extern int connect_count_en;
 extern int connect_count;
 extern int disconnect_count;
@@ -852,7 +852,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 				continue;
 			pstatus = ehci_readl(ehci,
 					 &ehci->regs->port_status[i]);
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 			if (connect_count_en)
 			{
 				if (pstatus & PORT_CONNECT)

@@ -1001,7 +1001,7 @@ BadDevice:
 }
 EXPORT_SYMBOL_GPL(usb_stor_probe2);
 
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 int probe_count = 0;
 int remove_count = 0;
 #endif
@@ -1010,7 +1010,7 @@ int remove_count = 0;
 void usb_stor_disconnect(struct usb_interface *intf)
 {
 	struct us_data *us = usb_get_intfdata(intf);
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 	remove_count++;
 #endif
 	US_DEBUGP("storage_disconnect() called\n");
@@ -1025,7 +1025,7 @@ static int storage_probe(struct usb_interface *intf,
 {
 	struct us_data *us;
 	int result;
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 	probe_count++;
 #endif
 	/*

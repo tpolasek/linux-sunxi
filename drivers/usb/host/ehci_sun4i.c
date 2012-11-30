@@ -32,7 +32,7 @@
 
 #include  <mach/clock.h>
 #include "sw_hci_sun4i.h"
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 #include "../storage/usb.h"
 #endif
 
@@ -353,7 +353,7 @@ static const struct hc_driver sw_ehci_hc_driver = {
 	.clear_tt_buffer_complete	= ehci_clear_tt_buffer_complete,
 };
 
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 int connect_count_en = 0;
 int connect_count = 0;
 int disconnect_count = 0;
@@ -484,7 +484,7 @@ static int sw_ehci_hcd_probe(struct platform_device *pdev)
 	struct ehci_hcd *ehci	= NULL;
 	struct sw_hci_hcd *sw_ehci = NULL;
 	int ret = 0;
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 	int i;
 #endif
 
@@ -569,7 +569,7 @@ static int sw_ehci_hcd_probe(struct platform_device *pdev)
         }
     }
 
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 	for (i = 0; i < ARRAY_SIZE(test_attrs); i++) {
 		ret = device_create_file(&pdev->dev, &test_attrs[i]);
 		if (ret)

@@ -289,7 +289,7 @@ static const struct hc_driver sw_ohci_hc_driver ={
 	.start_port_reset   = ohci_start_port_reset,
 };
 
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 static int sw_ohci_hcd_suspend(struct device *dev);
 static int sw_ohci_hcd_resume(struct device *dev);
 
@@ -355,7 +355,7 @@ static int sw_ohci_hcd_probe(struct platform_device *pdev)
 	int ret;
 	struct usb_hcd *hcd = NULL;
 	struct sw_hci_hcd *sw_ohci = NULL;
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 	int i;
 #endif
 
@@ -449,7 +449,7 @@ static int sw_ohci_hcd_probe(struct platform_device *pdev)
     }
 #endif
 
-#ifdef CONFIG_USB_TEST
+#ifdef CONFIG_SUNXI_TEST_SELECT
 	for (i = 0; i < ARRAY_SIZE(test_attrs); i++) {
 		ret = device_create_file(&pdev->dev, &test_attrs[i]);
 		if (ret)
