@@ -13317,7 +13317,12 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 				pmlmepriv->qospriv.qos_option = 1;	
 
 				*(p+8) |= BIT(7);//QoS Info, support U-APSD
-				
+                /* disable all ACM bits since the WMM admission control is not supported */
+                *(p + 10) &= ~BIT(4); /* BE */
+                *(p + 14) &= ~BIT(4); /* BK */
+                *(p + 18) &= ~BIT(4); /* VI */
+                *(p + 22) &= ~BIT(4); /* VO */
+
 				break;				
 			}
 			
