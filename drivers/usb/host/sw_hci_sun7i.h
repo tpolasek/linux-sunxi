@@ -238,7 +238,11 @@ struct sw_hci_hcd{
 	void (* usb_passby)(struct sw_hci_hcd *sw_hci, u32 enable);
 };
 
-
+#ifdef CONFIG_SUNXI_TEST_SELECT
+extern int connect_count_en;
+extern int connect_count;
+extern int disconnect_count;
+#endif
 
 #endif   //__SW_HCI_SUN4I_H__
 

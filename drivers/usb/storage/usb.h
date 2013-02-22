@@ -201,4 +201,9 @@ extern int usb_stor_probe1(struct us_data **pus,
 extern int usb_stor_probe2(struct us_data *us);
 extern void usb_stor_disconnect(struct usb_interface *intf);
 
+#ifdef CONFIG_SUNXI_TEST_SELECT
+extern int probe_count;
+extern int remove_count;
+#endif
+
 #endif

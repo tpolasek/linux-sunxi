@@ -843,6 +843,11 @@ static int __maybe_unused ehci_setup (struct usb_hcd *hcd)
 }
 
 /*-------------------------------------------------------------------------*/
+#ifdef CONFIG_SUNXI_TEST_SELECT
+extern int connect_count_en;
+extern int connect_count;
+extern int disconnect_count;
+#endif
 
 static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 {
@@ -928,7 +933,15 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 				continue;
 			pstatus = ehci_readl(ehci,
 					 &ehci->regs->port_status[i]);
-
+#ifdef CONFIG_SUNXI_TEST_SELECT
+			if (connect_count_en)
+			{
+				if (pstatus & PORT_CONNECT)
+					connect_count++;
+				else
+					disconnect_count++;
+			}
+#endif
 			if (pstatus & PORT_OWNER)
 				continue;
 			if (!(test_bit(i, &ehci->suspended_ports) &&
