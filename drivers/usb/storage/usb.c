@@ -984,11 +984,18 @@ BadDevice:
 }
 EXPORT_SYMBOL_GPL(usb_stor_probe2);
 
+#ifdef CONFIG_SUNXI_TEST_SELECT
+int probe_count = 0;
+int remove_count = 0;
+#endif
+
 /* Handle a USB mass-storage disconnect */
 void usb_stor_disconnect(struct usb_interface *intf)
 {
 	struct us_data *us = usb_get_intfdata(intf);
-
+#ifdef CONFIG_SUNXI_TEST_SELECT
+	remove_count++;
+#endif
 	US_DEBUGP("storage_disconnect() called\n");
 	quiesce_and_remove_host(us);
 	release_everything(us);
@@ -1001,7 +1008,9 @@ static int storage_probe(struct usb_interface *intf,
 {
 	struct us_data *us;
 	int result;
-
+#ifdef CONFIG_SUNXI_TEST_SELECT
+	probe_count++;
+#endif
 	/*
 	 * If libusual is configured, let it decide whether a standard
 	 * device should be handled by usb-storage or by ub.

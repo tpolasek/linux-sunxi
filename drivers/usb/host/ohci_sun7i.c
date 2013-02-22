@@ -287,6 +287,48 @@ static const struct hc_driver sw_ohci_hc_driver ={
 	.start_port_reset   = ohci_start_port_reset,
 };
 
+#ifdef CONFIG_SUNXI_TEST_SELECT
+static int sw_ohci_hcd_suspend(struct device *dev);
+static int sw_ohci_hcd_resume(struct device *dev);
+
+static ssize_t suspend_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	int ret = 0;
+
+	ret = ohci_bus_suspend(dev_get_drvdata(dev));
+	if (ret)
+		sprintf(buf, "%s\n", "ohci_bus_suspend failed!");
+
+	ret = sw_ohci_hcd_suspend(dev);
+	if (ret)
+		sprintf(buf, "%s\n", "sw_ohci_hcd_suspend failed!");
+
+	return sprintf(buf, "[%s]suspend finished!\n", ((struct sw_hci_hcd *)dev->platform_data)->hci_name);
+}
+
+static ssize_t resume_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	int ret = 0;
+
+	ret = sw_ohci_hcd_resume(dev);
+	if (ret)
+		sprintf(buf, "%s\n", "sw_ohci_hcd_resume failed!");
+
+	ret = ohci_bus_resume(dev_get_drvdata(dev));
+	if (ret)
+		sprintf(buf, "%s\n", "ohci_bus_resume failed!");
+
+	return sprintf(buf, "[%s]resume finished!\n", ((struct sw_hci_hcd *)dev->platform_data)->hci_name);
+}
+
+static struct device_attribute test_attrs[] = {
+	__ATTR(suspend, 0400, suspend_show, NULL),
+	__ATTR(resume, 0400, resume_show, NULL),
+};
+#endif
+
 /*
 *******************************************************************************
 *                     sw_ohci_hcd_probe
@@ -311,6 +353,9 @@ static int sw_ohci_hcd_probe(struct platform_device *pdev)
 	int ret;
 	struct usb_hcd *hcd = NULL;
 	struct sw_hci_hcd *sw_ohci = NULL;
+#ifdef CONFIG_SUNXI_TEST_SELECT
+	int i;
+#endif
 
 	if(pdev == NULL){
 	    DMSG_PANIC("ERR: Argment is invaild\n");
@@ -387,6 +432,14 @@ static int sw_ohci_hcd_probe(struct platform_device *pdev)
             ohci_first_probe[sw_ohci->usbc_no]--;
         }
     }
+
+#ifdef CONFIG_SUNXI_TEST_SELECT
+	for (i = 0; i < ARRAY_SIZE(test_attrs); i++) {
+		ret = device_create_file(&pdev->dev, &test_attrs[i]);
+		if (ret)
+			goto ERR3;
+	}
+#endif
 
     return 0;
 

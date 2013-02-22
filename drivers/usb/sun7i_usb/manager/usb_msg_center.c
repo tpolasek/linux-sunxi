@@ -489,3 +489,164 @@ s32 usb_msg_center_exit(struct usb_cfg *cfg)
 	return 0;
 }
 
+#ifdef CONFIG_SUNXI_TEST_SELECT
+int auto_scan_otg_flag = 1;
+
+static ssize_t host_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+    char value;
+    if(strlen(buf) != 2)
+        return -EINVAL;
+    if(buf[0] < '0' || buf[0] > '1')
+		return -EINVAL;
+    value = buf[0];
+    switch(value)
+    {
+        case '1':
+            hw_insmod_usb_host();
+            break;
+        case '0':
+            hw_rmmod_usb_host();
+            break;
+        default:
+            return -EINVAL;
+    }
+	return count;
+}
+
+static ssize_t device_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+    char value;
+    if(strlen(buf) != 2)
+        return -EINVAL;
+    if(buf[0] < '0' || buf[0] > '1')
+		return -EINVAL;
+    value = buf[0];
+    switch(value)
+    {
+        case '1':
+            hw_insmod_usb_device();
+            break;
+        case '0':
+            hw_rmmod_usb_device();
+            break;
+        default:
+            return -EINVAL;
+    }
+	return count;
+}
+
+static ssize_t auto_scan_otg_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+    char value;
+    if(strlen(buf) != 2)
+        return -EINVAL;
+    if(buf[0] < '0' || buf[0] > '1')
+		return -EINVAL;
+    value = buf[0];
+    switch(value)
+    {
+        case '1':
+            auto_scan_otg_flag = 1;
+            break;
+        case '0':
+            auto_scan_otg_flag = 0;
+            break;
+        default:
+            return -EINVAL;
+    }
+	return count;
+}
+
+static ssize_t auto_scan_otg_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "%d\n", auto_scan_otg_flag);
+}
+
+static ssize_t role_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	enum usb_role role = USB_ROLE_NULL;
+	char *current_role;
+	role = get_usb_role();
+
+	switch(role){
+		case USB_ROLE_NULL:
+			current_role = "null";
+			break;
+		case USB_ROLE_HOST:
+			current_role = "host";
+			break;
+		case USB_ROLE_DEVICE:
+			current_role = "device";
+			break;
+		default:
+			current_role = "unkown(error)";
+	}
+
+	return sprintf(buf, "%s\n", current_role);
+}
+
+static struct device_attribute otgtest_attrs[] = {
+	__ATTR(host, 0200, NULL, host_store),
+	__ATTR(device, 0200, NULL, device_store),
+	__ATTR(auto_scan_otg, 0600, auto_scan_otg_show, auto_scan_otg_store),
+	__ATTR(role, 0400, role_show, NULL),
+};
+
+static int otgtest_probe(struct platform_device *pdev)
+{
+	int ret,i;
+
+	for (i = 0; i < ARRAY_SIZE(otgtest_attrs); i++) {
+		ret = device_create_file(&pdev->dev, &otgtest_attrs[i]);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int __exit otgtest_remove(struct platform_device *pdev)
+{
+	device_unregister(&pdev->dev);
+
+	return 0;
+}
+
+static struct platform_device otgtest_device = {
+	.name		= "otgtest",
+};
+
+static struct platform_driver otgtest_driver = {
+	.probe		= otgtest_probe,
+	.remove		= __exit_p(otgtest_remove),
+	.driver		= {
+		.name	= "otgtest",
+		.owner	= THIS_MODULE,
+	},
+};
+
+static int __init otgtest_init(void)
+{
+	platform_device_register(&otgtest_device);
+	platform_driver_register(&otgtest_driver);
+
+	return 0;
+}
+module_init(otgtest_init);
+
+static void __exit otgtest_exit(void)
+{
+	platform_driver_unregister(&otgtest_driver);
+	platform_device_unregister(&otgtest_device);
+}
+module_exit(otgtest_exit);
+#endif

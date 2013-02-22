@@ -54,8 +54,8 @@ static struct cpumask sunxi_cpumask;
 static int cpus_initialized;
 #endif
 
-int setgetfreq_debug = 0;
 #ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
+int setgetfreq_debug = 0;
 unsigned long long setfreq_time_usecs = 0;
 unsigned long long getfreq_time_usecs = 0;
 #endif
@@ -873,28 +873,54 @@ static int sunxi_cpufreq_resume(struct cpufreq_policy *policy)
 
 #endif  /* #ifdef CONFIG_PM */
 
-static ssize_t show_debug_mask(struct cpufreq_policy *policy, char *buf)
+#ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
+static ssize_t show_freq_debug_enable(struct cpufreq_policy *policy, char *buf)
 {
-	return sprintf(buf, "%u\n", setgetfreq_debug);	
+	return sprintf(buf, "%u\n", setgetfreq_debug);
 }
-static ssize_t store_debug_mask	(struct cpufreq_policy *policy, const char *buf, size_t count)		
-{									
-	unsigned int ret = -EINVAL;	
-    int debug_mask = 0;
-									
-	ret = sscanf(buf, "%u", &debug_mask);
-	if (ret != 1)	
-		return -EINVAL;	
-	setgetfreq_debug = debug_mask;
-	return ret ? ret : count;
+static ssize_t store_freq_debug_enable(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+    char value;
+    if(strlen(buf) != 2)
+        return -EINVAL;
+    if(buf[0] < '0' || buf[0] > '1')
+		return -EINVAL;
+    value = buf[0];
+    switch(value)
+    {
+        case '1':
+            setgetfreq_debug = 1;
+            break;
+        case '0':
+            setgetfreq_debug = 0;
+			setfreq_time_usecs = 0;
+			getfreq_time_usecs = 0;
+            break;
+        default:
+            return -EINVAL;
+    }
+	return count;
 }
-cpufreq_freq_attr_rw(debug_mask);
-
+static ssize_t show_freq_set_time(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%llu\n", setfreq_time_usecs);
+}
+static ssize_t show_freq_get_time(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%llu\n", getfreq_time_usecs);
+}
+cpufreq_freq_attr_rw(freq_debug_enable);
+cpufreq_freq_attr_ro(freq_set_time);
+cpufreq_freq_attr_ro(freq_get_time);
 
 static struct freq_attr *platform_attrs[] = {
-	&debug_mask,
+    &freq_debug_enable,
+    &freq_set_time,
+    &freq_get_time,
     NULL
 };
+#endif
+
 static struct cpufreq_driver sunxi_cpufreq_driver = {
     .name       = "sunxi",
     .flags      = CPUFREQ_STICKY,
@@ -905,7 +931,9 @@ static struct cpufreq_driver sunxi_cpufreq_driver = {
     .getavg     = sunxi_cpufreq_getavg,
     .suspend    = sunxi_cpufreq_suspend,
     .resume     = sunxi_cpufreq_resume,
+#ifdef CONFIG_CPU_FREQ_SETFREQ_DEBUG
     .attr       = platform_attrs,
+#endif
 };
 
 
@@ -979,7 +1007,7 @@ static void __exit sunxi_cpufreq_exitcall(void)
     clk_put(clk_axi);
     clk_put(clk_ahb);
     clk_put(clk_apb);
-    
+
 #ifdef CONFIG_CPU_FREQ_DVFS
     if(corevdd == NULL) {
     regulator_put(corevdd);
