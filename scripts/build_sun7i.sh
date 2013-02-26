@@ -113,6 +113,13 @@ build_kernel()
     #cp drivers/net/wireless/bcm4330/firmware/nvram.txt ${LICHEE_MOD_DIR}/bcm4330_nvram.txt
 }
 
+# for modules test
+build_test_modules()
+{
+	make -C modules/test/nand LICHEE_MOD_DIR=${LICHEE_MOD_DIR} LICHEE_KDIR=${LICHEE_KDIR} \
+		CONFIG_CHIP_ID=${CONFIG_CHIP_ID} install
+}
+
 build_modules()
 {
     echo "Building modules"
@@ -132,6 +139,9 @@ build_modules()
     make -C modules/nand LICHEE_MOD_DIR=${LICHEE_MOD_DIR} LICHEE_KDIR=${LICHEE_KDIR} \
         install
     copy_nand_mod
+    
+# for modules test
+	build_test_modules
         
     (
     export LANG=en_US.UTF-8
