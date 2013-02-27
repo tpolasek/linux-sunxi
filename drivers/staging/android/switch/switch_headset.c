@@ -145,14 +145,6 @@ static void earphone_switch_timer_poll(unsigned long data)
 	
 	tmp = hmic_rdreg(SUN6I_HMIC_DATA);
 	SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, tmp);
-	if ( (tmp & (0x1<<20)) || (headphone_state ==1 && tmp == 0) )  { //plug out
-		SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, (tmp&0x1f));
-		/*if the irq is hmic earphone pull out, when the irq coming, clean the pending bit*/
-		hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_EARPHONE_OUT_IRQ_PEND, 0x1);
-		switch_data->state = 0;
-		headphone_state = 0;
-		schedule_work(&switch_data->work);
-	}
 	mod_timer(&switch_data->timer, jiffies +  HZ/4);
 }
 
@@ -279,6 +271,8 @@ static int gpio_switch_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	platform_set_drvdata(pdev, (void *)switch_data);
+
 	switch_data->sdev.state = 0;
 	switch_data->pre_state = -1;
 	switch_data->sdev.name = pdata->name;
@@ -287,10 +281,12 @@ static int gpio_switch_probe(struct platform_device *pdev)
 	switch_data->sdev.print_state = switch_gpio_print_state;
 	INIT_WORK(&switch_data->work, earphone_switch_work);
 
+#ifdef SWITCH_DBG
 	init_timer(&switch_data->timer);
 	switch_data->timer.function = earphone_switch_timer_poll;
 	switch_data->timer.data = (unsigned long)switch_data;
 	mod_timer(&switch_data->timer, jiffies +  HZ/4 );
+#endif
 
 	headphone_state = 0;
 	sema_init(&switch_data->sem, 1);
@@ -323,6 +319,9 @@ static int switch_suspend(struct platform_device *pdev,pm_message_t state)
 
 static int switch_resume(struct platform_device *pdev)
 {
+	struct gpio_switch_data *switch_data;
+	int tmp = 0;
+
 	if (!phone_actived) {
 		hmic_wr_control(SUN6I_MIC_CTRL, 0x1, HBIASEN, 0x1);
 		hmic_wr_control(SUN6I_MIC_CTRL, 0x1, HBIASADCEN, 0x1);
@@ -334,6 +333,20 @@ static int switch_resume(struct platform_device *pdev)
 		hmic_wr_control(SUN6I_HMIC_CTL, 0x1f, HMIC_TH2_KEY, 0x8);/*0xf should be get from hw_debug 8*/
 		hmic_wr_control(SUN6I_HMIC_CTL, 0x1f, HMIC_TH1_EARPHONE, 0x1);/*0x1 should be get from hw_debug 0*/
 	}
+	
+	switch_data = (struct gpio_switch_data *)platform_get_drvdata(pdev);
+	if (switch_data != NULL) {
+		tmp = hmic_rdreg(SUN6I_HMIC_DATA);
+		SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, tmp);
+		if ( (tmp & (0x1<<20)) || (headphone_state ==1 && tmp == 0) )  { //plug out
+			SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, (tmp&0x1f));
+			/*if the irq is hmic earphone pull out, when the irq coming, clean the pending bit*/
+			hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_EARPHONE_OUT_IRQ_PEND, 0x1);
+			switch_data->state = 0;
+			headphone_state = 0;
+			schedule_work(&switch_data->work);
+		}
+	}
 
 	return 0;
 }
@@ -342,8 +355,10 @@ static int __devexit gpio_switch_remove(struct platform_device *pdev)
 {
 	struct gpio_switch_data *switch_data = platform_get_drvdata(pdev);
 
-    	switch_dev_unregister(&switch_data->sdev);    
+    	switch_dev_unregister(&switch_data->sdev);   
+#ifdef SWITCH_DBG 
 	del_timer(&switch_data->timer);
+#endif
 	kfree(switch_data);	
 
 	return 0;
