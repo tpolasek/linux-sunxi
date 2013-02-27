@@ -144,7 +144,7 @@ static void earphone_switch_timer_poll(unsigned long data)
 	struct gpio_switch_data	*switch_data =(struct gpio_switch_data *)data;
 	
 	tmp = hmic_rdreg(SUN6I_HMIC_DATA);
-	SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, (tmp&0x1f));
+	SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, tmp);
 	if ( (tmp & (0x1<<20)) || (headphone_state ==1 && tmp == 0) )  { //plug out
 		SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, (tmp&0x1f));
 		/*if the irq is hmic earphone pull out, when the irq coming, clean the pending bit*/
@@ -176,32 +176,27 @@ static irqreturn_t audio_hmic_irq(int irq, void *dev_id)
 		return IRQ_NONE;
 	}
 
+	hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_DOWN_IRQ_PEND, 0x1);
+	hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_EARPHONE_IN_IRQ_PEND, 0x1);
+	hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_UP_IRQ_PEND, 0x1);
+	hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_DOWN_IRQ_PEND, 0x1);
+	hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_DATA_IRQ_PEND, 0x1);
+
 	tmp = hmic_rdreg(SUN6I_HMIC_DATA);
-	/*bit19 is 1 means the earphone plug in*/
-	if (tmp & (0x1<<19)) {
+	tmp &= 0x1f;
+	if (tmp) {
 		/* if the 17 bit assert 1, it means the three sections earphone has plun in
 		 * if the 17 bit assert 0, it means the four sections earphone has plun in
 		 */
-		tmp = hmic_rdreg(SUN6I_HMIC_DATA);
-		tmp &=(0x1f<<0);
 		SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, tmp);
 		if (!headphone_direct_used) {
 			if (tmp >= 0xb) {/*0xc is from hardware debug, means the three section earphone*/
 				SWITCH_DBG("headphone three HP,HMIC_DAT= %d\n",(tmp&0x1f));
 				switch_data->state = 2;
 				/*clean the pending bit*/
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_DOWN_IRQ_PEND, 0x1);
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_EARPHONE_IN_IRQ_PEND, 0x1);
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_UP_IRQ_PEND, 0x1);
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_DOWN_IRQ_PEND, 0x1);
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_DATA_IRQ_PEND, 0x1);
 			} else {/*the earphone is four section earphone*/
 				SWITCH_DBG("headphone four HP,HMIC_DAT= %d\n",(tmp&0x1f));
-				switch_data->state = 1;
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_EARPHONE_IN_IRQ_PEND, 0x1);
-	
-				tmp = hmic_rdreg(SUN6I_HMIC_DATA);
-				tmp &= (0x1f<<0);
+				switch_data->state = 1;	
 				if (tmp <= 1) {/*debug from hardware(hookkey press)*/
 					SWITCH_DBG("headphone four HP,hookkey press\n");
 					switch_data->state = 3;
@@ -211,19 +206,12 @@ static irqreturn_t audio_hmic_irq(int irq, void *dev_id)
 			if (tmp >= 0x1) {
 				SWITCH_DBG("headphone three or four HP,HMIC_DAT= %d\n",(tmp&0x1f));
 				switch_data->state = 2;
-				/*clean the pending bit*/
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_DOWN_IRQ_PEND, 0x1);
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_EARPHONE_IN_IRQ_PEND, 0x1);
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_UP_IRQ_PEND, 0x1);
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_KEY_DOWN_IRQ_PEND, 0x1);
-				hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_DATA_IRQ_PEND, 0x1);
 			}
 		}
 	        headphone_state = 1;
-	} else if (tmp & (0x1<<20)) {
+	} else if (tmp == 0) {
 		SWITCH_DBG("%s,line:%d,tmp:%x\n", __func__, __LINE__, (tmp&0x1f));
 		/*if the irq is hmic earphone pull out, when the irq coming, clean the pending bit*/
-		hmic_wr_control(SUN6I_HMIC_DATA, 0x1, HMIC_EARPHONE_OUT_IRQ_PEND, 0x1);
 		headphone_state = 0;
 		switch_data->state = 0;
 	}
@@ -271,10 +259,10 @@ static int gpio_switch_probe(struct platform_device *pdev)
 	hmic_wr_control(SUN6I_MIC_CTRL, 0x1, HBIASEN, 0x1);
 	hmic_wr_control(SUN6I_MIC_CTRL, 0x1, HBIASADCEN, 0x1);
 	hmic_wr_control(SUN6I_HMIC_CTL, 0xf, HMIC_M, 0xf);/*0xf should be get from hw_debug 28*/
-	hmic_wr_control(SUN6I_HMIC_CTL, 0xf, HMIC_N, 0xf);/*0xf should be get from hw_debug 24*/
+	hmic_wr_control(SUN6I_HMIC_CTL, 0xf, HMIC_N, 0x1);/*0xf should be get from hw_debug 24 0xf*/
 	hmic_wr_control(SUN6I_HMIC_CTL, 0x1, HMIC_EARPHONE_OUT_IRQ_EN, 0x1); /*20*/
 	hmic_wr_control(SUN6I_HMIC_CTL, 0x1, HMIC_EARPHONE_IN_IRQ_EN, 0x1); /*19*/
-	hmic_wr_control(SUN6I_HMIC_CTL, 0x3, HMIC_DS_SAMP, 0x1); /*14*/
+	hmic_wr_control(SUN6I_HMIC_CTL, 0x3, HMIC_DS_SAMP, 0x3); /*14 */
 	hmic_wr_control(SUN6I_HMIC_CTL, 0x1f, HMIC_TH2_KEY, 0x8);/*0xf should be get from hw_debug 8*/
 	hmic_wr_control(SUN6I_HMIC_CTL, 0x1f, HMIC_TH1_EARPHONE, 0x1);/*0x1 should be get from hw_debug 0*/
 
@@ -308,16 +296,16 @@ static int gpio_switch_probe(struct platform_device *pdev)
 	sema_init(&switch_data->sem, 1);
 
 
-        ret = switch_dev_register(&switch_data->sdev);
+	ret = switch_dev_register(&switch_data->sdev);
 	if (ret < 0) {
 		goto err_switch_dev_register;
 	}
 
 	ret = request_irq(AW_IRQ_CODEC, audio_hmic_irq, 0, "audio_hmic_irq", switch_data);
-    if (ret < 0) {
-        printk("request irq err\n");
-        return -EINVAL;
-    }
+	if (ret < 0) {
+		printk("request irq err\n");
+		return -EINVAL;
+	}
 	return 0;
 
 err_switch_dev_register:
@@ -336,15 +324,15 @@ static int switch_suspend(struct platform_device *pdev,pm_message_t state)
 static int switch_resume(struct platform_device *pdev)
 {
 	if (!phone_actived) {
-	hmic_wr_control(SUN6I_MIC_CTRL, 0x1, HBIASEN, 0x1);
-	hmic_wr_control(SUN6I_MIC_CTRL, 0x1, HBIASADCEN, 0x1);
-	hmic_wr_control(SUN6I_HMIC_CTL, 0xf, HMIC_M, 0xf);/*0xf should be get from hw_debug 28*/
-	hmic_wr_control(SUN6I_HMIC_CTL, 0xf, HMIC_N, 0xf);/*0xf should be get from hw_debug 24*/
-	hmic_wr_control(SUN6I_HMIC_CTL, 0x1, HMIC_EARPHONE_OUT_IRQ_EN, 0x1); /*20*/
-	hmic_wr_control(SUN6I_HMIC_CTL, 0x1, HMIC_EARPHONE_IN_IRQ_EN, 0x1); /*19*/
-	hmic_wr_control(SUN6I_HMIC_CTL, 0x3, HMIC_DS_SAMP, 0x1); /*14*/
-	hmic_wr_control(SUN6I_HMIC_CTL, 0x1f, HMIC_TH2_KEY, 0x8);/*0xf should be get from hw_debug 8*/
-	hmic_wr_control(SUN6I_HMIC_CTL, 0x1f, HMIC_TH1_EARPHONE, 0x1);/*0x1 should be get from hw_debug 0*/
+		hmic_wr_control(SUN6I_MIC_CTRL, 0x1, HBIASEN, 0x1);
+		hmic_wr_control(SUN6I_MIC_CTRL, 0x1, HBIASADCEN, 0x1);
+		hmic_wr_control(SUN6I_HMIC_CTL, 0xf, HMIC_M, 0xf);/*0xf should be get from hw_debug 28*/
+		hmic_wr_control(SUN6I_HMIC_CTL, 0xf, HMIC_N, 0x1);/*0xf should be get from hw_debug 24*/
+		hmic_wr_control(SUN6I_HMIC_CTL, 0x1, HMIC_EARPHONE_OUT_IRQ_EN, 0x1); /*20*/
+		hmic_wr_control(SUN6I_HMIC_CTL, 0x1, HMIC_EARPHONE_IN_IRQ_EN, 0x1); /*19*/
+		hmic_wr_control(SUN6I_HMIC_CTL, 0x3, HMIC_DS_SAMP, 0x3); /*14*/
+		hmic_wr_control(SUN6I_HMIC_CTL, 0x1f, HMIC_TH2_KEY, 0x8);/*0xf should be get from hw_debug 8*/
+		hmic_wr_control(SUN6I_HMIC_CTL, 0x1f, HMIC_TH1_EARPHONE, 0x1);/*0x1 should be get from hw_debug 0*/
 	}
 
 	return 0;
