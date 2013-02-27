@@ -3134,7 +3134,7 @@ qmPopOutDueToFallWithin(
                                   MSEC_TO_SEC(QM_RX_BA_ENTRY_MISS_TIMEOUT_MS))) {
                 DBGLOG(QM, TRACE, ("RX BA timeout, next tid %d, SSN %d\n", 
                         prReorderQueParm->ucTid, prReorderedSwRfb->u2SSN));
-                fgDequeuHead == TRUE;
+                fgDequeuHead = TRUE;
                 prReorderQueParm->u2WinStart = (((prReorderedSwRfb->u2SSN) + 1) % MAX_SEQ_NO_COUNT);
                 fgMissing = FALSE;
              
