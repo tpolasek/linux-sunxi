@@ -132,10 +132,8 @@
 
 extern void wifi_pm_power(int on);
 
-static signed int gpio_eint_wifi = -1;
 static signed int gpio_eint_bgf = -1;
 static u32 eint_bgf_handle = 0;
-static u32 eint_wifi_handle = 0;
 
 extern void sw_mci_rescan_card(unsigned id, unsigned insert);
 
@@ -191,7 +189,6 @@ static INT32 wmt_plat_dump_pin_conf (VOID);
 */
 
 unsigned int bgf_g_balance_flag;
-unsigned int wifi_g_balance_flag;
 spinlock_t g_balance_lock;
 /*******************************************************************************
 *                           P R I V A T E   D A T A
@@ -257,7 +254,7 @@ static int aw_set_eint_mode(__u32 gpio)
 {
 	int ret = 0;	 
   
-	WMT_INFO_FUNC("%s: config %s to eint mode. \n", __func__);
+	WMT_INFO_FUNC("%s: config eint mode. \n", __func__);
 	
 	sw_gpio_setcfg(gpio, R_GPIO_CFG_EINT);
 	sw_gpio_setpull(gpio, 1);
@@ -400,21 +397,6 @@ irqreturn_t bgf_irq_handler(void *arg)
 	return 0;
 }
 
-irqreturn_t wifi_irq_handler(void *arg)
-{
-  int pin_state = 0;
-  
-  pin_state = __gpio_get_value(gpio_eint_wifi);
-  printk("========%s, pin_state:%d =========\n",__func__,pin_state);
-  if (likely(pin_state == 0)) {		
-    wmt_plat_wifi_eirq_cb();
-	} else {			   
-    printk(KERN_INFO "%s bgf_irq false alarm:pin_state(%d)!\n", __FUNCTION__, pin_state);
-  }
-  
-	return 0;
-}
-
 #endif
 
 static VOID
@@ -425,21 +407,6 @@ wmt_plat_bgf_eirq_cb (VOID)
     WMT_INFO_FUNC("WMT-PLAT:BGFInt (++) \n");
     wmt_lib_ps_irq_cb();
     WMT_INFO_FUNC("WMT-PLAT:BGFInt (++) \n");
-
-#else
-    return;
-#endif
-
-}
-
-static VOID
-wmt_plat_wifi_eirq_cb (VOID)
-{
-#if CFG_WMT_PS_SUPPORT
-//#error "need to disable EINT here"
-    WMT_INFO_FUNC("WMT-PLAT:WIFIInt (++) \n");
-    wmt_lib_ps_irq_cb();
-    WMT_INFO_FUNC("WMT-PLAT:WIFIInt (++) \n");
 
 #else
     return;
@@ -652,63 +619,6 @@ wmt_plat_eirq_ctrl (
         iRet = 0;
         break;
 
-    case PIN_WIFI_EINT:
-        if (PIN_STA_INIT == state) {
-          /*request irq,low level triggered*/
-          wifi_g_balance_flag = 1;//do not modify this value
-          WMT_INFO_FUNC("WMT-PLAT:WIFIInt (init) \n");
-          
-          if (eint_wifi_handle){
-          	 iRet = 0;
-             break;
-          }
-          
-          eint_wifi_handle = sw_gpio_irq_request(gpio_eint_wifi, TRIG_LEVL_LOW,(peint_handle)wifi_irq_handler, NULL);
-          if (!eint_wifi_handle) {
-            WMT_INFO_FUNC( "%s: request irq failed err:%d \n",__func__,err);
-            goto exit_irq_request_failed;
-          }
-        } else if (PIN_STA_EINT_EN == state) {
-          /*enable irq*/
-          spin_lock_irqsave(&g_balance_lock,flags);
-          if (wifi_g_balance_flag) {
-            /*if enter this case, the wifi eint has been enabled,so skip it.*/
-            WMT_INFO_FUNC("WIFI_EINT has been enabled,wifi_g_balance_flag(%d)!\n",wifi_g_balance_flag);
-          } else {
-				    /*do real irq enable implement is this case*/
-		        wifi_g_balance_flag++;
-		        
-		        aw_set_eint_mode(gpio_eint_wifi);
-            WMT_INFO_FUNC("WMT-PLAT:WIFIInt (en),wifi_g_balance_flag(%d)\n",wifi_g_balance_flag);
-            aw_enable_irq(gpio_eint_wifi);
-	    	  }
-          spin_unlock_irqrestore(&g_balance_lock,flags);
-        } else if (PIN_STA_EINT_DIS == state) {
-          /*disable irq*/
-          spin_lock_irqsave(&g_balance_lock,flags);
-	 	      if (!wifi_g_balance_flag) {
-            /*if enter this case, the wifi eint has been disabled,so skip it.*/
-            WMT_INFO_FUNC("WIFI_EINT has been disabled,wifi_g_balance_flag(%d)!\n",wifi_g_balance_flag);
-          } else {
-            /*do real irq disable implement is this case*/
-            wifi_g_balance_flag--;
-            WMT_INFO_FUNC("WMT-PLAT:WIFIInt (dis) wifi_g_balance_flag(%d)\n",wifi_g_balance_flag);
-            aw_disable_irq(gpio_eint_wifi);
-            aw_set_gpio_mode(gpio_eint_wifi);
-		      }
-		      spin_unlock_irqrestore(&g_balance_lock,flags);
-        } else {
-          /* de-init: free irq*/
-          WMT_INFO_FUNC("WMT-PLAT:WIFIInt (deinit) \n");
-          aw_set_eint_mode(gpio_eint_wifi);
-          sw_gpio_irq_free(eint_wifi_handle);
-          eint_wifi_handle = 0;
-          gpio_eint_wifi = -1;
-        }
-        iRet = 0;
-        break;
-
-
     case PIN_ALL_EINT:
 #if 0
         if (PIN_STA_INIT == state) {
@@ -857,10 +767,10 @@ wmt_plat_ldo_ctrl (
             {
         	      WMT_ERR_FUNC("failed to set gpio %d to input!\n", gpio_ldo);
         	      return -1;
-             }
+            }
 
-             gpio_free(gpio_ldo);
-             gpio_ldo = -1;
+            gpio_free(gpio_ldo);
+            gpio_ldo = -1;
         }
         
         wifi_pm_power(0);
@@ -1123,7 +1033,7 @@ exit_ioremap_failed:
 
 INT32 wmt_plat_wifi_eint_ctrl(ENUM_PIN_STATE state)
 {
-#if 1
+#if 0
     int ret = 0;
     script_item_u val ;
     script_item_value_type_e type;
@@ -1131,17 +1041,6 @@ INT32 wmt_plat_wifi_eint_ctrl(ENUM_PIN_STATE state)
     switch(state)
     {
         case PIN_STA_INIT:
-        	  /*set to gpio input low, pull down eanble*/
-            WMT_DBG_FUNC("WMT-PLAT:WIFIInt init(in pd) \n");
-            
-						type = script_get_item(COMBO_CONFIG_PARA,"mtk_6620_wifi_int",&val);
-					  if (SCIRPT_ITEM_VALUE_TYPE_PIO!=type){ 
-					    WMT_INFO_FUNC("get mtk mtk_6620_wifi_int gpio failed\n");
-					    ret = -1;
-					  }else{
-					    gpio_eint_wifi = val.gpio.gpio;
-						}
-        	
             break;
         case PIN_STA_MUX:
 
@@ -1152,9 +1051,6 @@ INT32 wmt_plat_wifi_eint_ctrl(ENUM_PIN_STATE state)
             break;
         case PIN_STA_IN_L:
         case PIN_STA_DEINIT:
-            /*set to gpio input low, pull down enable*/
-			      /*do nothing on A31,because sw_gpio_irq_request and sw_gpio_irq_free */
- 	          /*will request and free gpio_eint_wifi */
             break;
         default:
             WMT_WARN_FUNC("WMT-PLAT:Warnning, invalid state(%d) on WIFI EINT\n", state);

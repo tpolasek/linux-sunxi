@@ -106,7 +106,6 @@
 *                    E X T E R N A L   R E F E R E N C E S
 ********************************************************************************
 */
-
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/sdio_func.h>
@@ -118,6 +117,10 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/vmalloc.h>
+
+#include <linux/gpio.h>
+#include <mach/irqs.h>
+#include <mach/sys_config.h>
 
 #include "hif_sdio.h"
 
@@ -323,6 +326,18 @@ MODULE_DESCRIPTION("MediaTek MT6620 HIF SDIO Driver");
 MODULE_DEVICE_TABLE(sdio, mtk_sdio_id_tbl);
 
 UINT32 gHifSdioDbgLvl = HIF_SDIO_LOG_INFO;
+
+/*******************************************************************************
+*          Wi-Fi eint
+*******************************************************************************/
+#ifndef COMBO_CONFIG_PARA
+#define  COMBO_CONFIG_PARA     "wifi_para"
+#endif
+
+static signed int gpio_eint_wifi = -1;
+static u32 eint_wifi_handle = 0;
+int wifi_eint_init_request(struct sdio_func *func);
+void wifi_eint_release(void);
 
 /*******************************************************************************
 *                              F U N C T I O N S
@@ -1558,6 +1573,8 @@ static int hif_sdio_suspend (struct device *dev)
     mmc_pm_flag_t flag;
     int ret;
 
+    printk("hif_sdio_suspend entry!\n");
+
     if (!dev) {
         return -EINVAL;
     }
@@ -1580,12 +1597,24 @@ static int hif_sdio_suspend (struct device *dev)
     }
 
     HIF_SDIO_INFO_FUNC("set MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ ok\n");
+    
+    /* Enable Wi-Fi eint */
+    sw_gpio_setcfg(gpio_eint_wifi, R_GPIO_CFG_EINT);
+    sw_gpio_setpull(gpio_eint_wifi, 1);
+    sw_gpio_eint_set_enable(gpio_eint_wifi, 1);
+    
     return 0;
 }
 
 static int hif_sdio_resume (struct device *dev)
 {
     struct sdio_func* func;
+
+    printk("hif_sdio_resume entry!\n");
+    
+    /* disable Wi-Fi eint */
+    sw_gpio_eint_set_enable(gpio_eint_wifi, 0);
+    sw_gpio_setcfg(gpio_eint_wifi, GPIO_CFG_INPUT);
 
     if (!dev) {
         HIF_SDIO_WARN_FUNC("null dev!\n");
@@ -1766,6 +1795,8 @@ static int hif_sdio_probe (
     sdio_set_host_pm_flags(func, MMC_PM_IGNORE_PM_NOTIFY);
     hif_sdio_dump_probe_list();
 
+    wifi_eint_init_request(func);
+
 out:
     //4 <last> error handling
     return ret;
@@ -1791,8 +1822,10 @@ static void hif_sdio_remove (
 #endif
 
     HIF_SDIO_INFO_FUNC("start!\n");
+    
+    wifi_eint_release();
+    
     HIF_SDIO_ASSERT( func );
-
     //4 <1> check input parameter is valid and has been probed previously
     if (func == NULL) {
         HIF_SDIO_ERR_FUNC("func null(%p)\n", func);
@@ -1898,6 +1931,94 @@ static void hif_sdio_irq (
 }
 
 /*!
+ * \brief Wi-Fi eint handler
+ *
+ * detailed descriptions
+ *
+ * \param handler param
+ *
+ */
+irqreturn_t wifi_irq_handler(void *arg)
+{
+    int pin_state = 0;
+    struct mmc_host	*host = (struct mmc_host	*)arg;
+
+    pin_state = __gpio_get_value(gpio_eint_wifi);
+    printk("========%s, pin_state:%d =========\n",__func__,pin_state);
+    if (likely(pin_state == 0))
+    {
+        printk("do nothing!\n");
+        //mmc_signal_sdio_irq(host);
+    } 
+    else
+    {			   
+        printk(KERN_INFO "%s wifi_irq false alarm:pin_state(%d)!\n", __FUNCTION__, pin_state);
+    }
+    return 0;
+}
+
+/*!
+ * \brief Wi-Fi eint gpio and irq request
+ *
+ * detailed descriptions
+ *
+ *
+ */
+int wifi_eint_init_request(struct sdio_func *func)
+{
+    script_item_u val;
+    script_item_value_type_e type;
+    
+    //HIF_SDIO_INFO_FUNC("Wi-Fi eint init\n");
+    printk("Wi-Fi eint init\n");
+            
+    type = script_get_item(COMBO_CONFIG_PARA,"mtk_6620_wifi_int",&val);
+    if (SCIRPT_ITEM_VALUE_TYPE_PIO!=type)
+    { 
+        HIF_SDIO_ERR_FUNC("get mtk mtk_6620_wifi_int gpio failed\n");
+        return -1;
+		}
+		else
+    {
+        gpio_eint_wifi = val.gpio.gpio;
+    }
+    
+    eint_wifi_handle = sw_gpio_irq_request(gpio_eint_wifi, TRIG_LEVL_LOW,(peint_handle)wifi_irq_handler, func->card->host);
+    if (!eint_wifi_handle)
+    {
+        HIF_SDIO_ERR_FUNC( "%s: request wifi eint irq failed\n",__func__);
+        return -1;
+    }
+    
+    //disable wifi eint
+    sw_gpio_eint_set_enable(gpio_eint_wifi, 0);
+    sw_gpio_setcfg(gpio_eint_wifi, GPIO_CFG_INPUT);
+    return 0; 
+}
+
+/*!
+ * \brief Wi-Fi eint gpio and irq release
+ *
+ * detailed descriptions
+ *
+ *
+ */
+void wifi_eint_release(void)
+{
+    //HIF_SDIO_INFO_FUNC("Wi-Fi eint (deinit) \n");
+    printk("Wi-Fi eint (deinit) \n");
+    
+    sw_gpio_setcfg(gpio_eint_wifi, R_GPIO_CFG_EINT);
+    sw_gpio_setpull(gpio_eint_wifi, 1);
+    
+    sw_gpio_irq_free(eint_wifi_handle);
+    eint_wifi_handle = 0;
+    gpio_eint_wifi = -1;
+    return ;
+}
+
+
+/*!
  * \brief hif_sdio init function
  *
  * detailed descriptions
@@ -1929,7 +2050,7 @@ static int __init hif_sdio_init(void)
     //4 <2> register to mmc driver
     ret = sdio_register_driver(&mtk_sdio_client_drv);
     HIF_SDIO_INFO_FUNC("sdio_register_driver() ret=%d\n", ret);
-
+    
     HIF_SDIO_DBG_FUNC("end!\n");
     return ret;
 }
