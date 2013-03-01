@@ -2311,6 +2311,7 @@ CONFIG_MTK_COMBO_GPS=m
 #
 # gpu
 #
+# CONFIG_GATOR_PERF is not set
 
 #
 # File systems
