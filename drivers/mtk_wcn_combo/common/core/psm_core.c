@@ -47,7 +47,8 @@
 #include "osal.h"
 #include "psm_core.h"
 #include "stp_core.h"
-#include <mach/mtk_wcn_cmb_stub.h>
+//#include <mach/mtk_wcn_cmb_stub.h>
+#include "mtk_wcn_cmb_stub.h"
 
 /*******************************************************************************
 *                              C O N S T A N T S

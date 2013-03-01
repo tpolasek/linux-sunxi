@@ -86,7 +86,8 @@
 #define _WMT_PLAT_H_
 #include "osal_typedef.h"
 #include "osal.h"
-#include <mach/mtk_wcn_cmb_stub.h>
+//#include <mach/mtk_wcn_cmb_stub.h>
+#include "mtk_wcn_cmb_stub.h"
 #include "mtk_wcn_cmb_hw.h"
 
 

@@ -85,7 +85,8 @@
 #ifndef _WMT_EXP_H_
 #define _WMT_EXP_H_
 
-#include <mach/mtk_wcn_cmb_stub.h>
+//#include <mach/mtk_wcn_cmb_stub.h>
+#include "mtk_wcn_cmb_stub.h"
 #include "osal.h"
 
 /*******************************************************************************

@@ -88,7 +88,8 @@
 #include "osal.h"
 #include "wmt_core.h"
 #include "wmt_exp.h"
-#include <mach/mtk_wcn_cmb_stub.h>
+//#include <mach/mtk_wcn_cmb_stub.h>
+#include "mtk_wcn_cmb_stub.h"
 #include "stp_wmt.h"
 
 /*******************************************************************************

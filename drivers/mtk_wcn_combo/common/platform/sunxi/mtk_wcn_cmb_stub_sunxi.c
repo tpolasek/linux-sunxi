@@ -109,7 +109,8 @@
 // when integrate MT6628 & ALPS & other built-in modules, such as AUDIO.
 //#include <mach/mt_combo.h>
 
-#include <mach/mtk_wcn_cmb_stub.h>
+//#include <mach/mtk_wcn_cmb_stub.h>
+#include "mtk_wcn_cmb_stub.h"
 
 /*******************************************************************************
 *                              C O N S T A N T S
