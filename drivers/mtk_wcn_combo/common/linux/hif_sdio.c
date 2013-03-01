@@ -336,7 +336,7 @@ UINT32 gHifSdioDbgLvl = HIF_SDIO_LOG_INFO;
 
 static signed int gpio_eint_wifi = -1;
 static u32 eint_wifi_handle = 0;
-int wifi_eint_init_request(struct sdio_func *func);
+int wifi_eint_init_request(void);
 void wifi_eint_release(void);
 
 /*******************************************************************************
@@ -1573,8 +1573,6 @@ static int hif_sdio_suspend (struct device *dev)
     mmc_pm_flag_t flag;
     int ret;
 
-    printk("hif_sdio_suspend entry!\n");
-
     if (!dev) {
         return -EINVAL;
     }
@@ -1601,6 +1599,7 @@ static int hif_sdio_suspend (struct device *dev)
     /* Enable Wi-Fi eint */
     sw_gpio_setcfg(gpio_eint_wifi, R_GPIO_CFG_EINT);
     sw_gpio_setpull(gpio_eint_wifi, 1);
+    __gpio_set_value(gpio_eint_wifi, 1);
     sw_gpio_eint_set_enable(gpio_eint_wifi, 1);
     
     return 0;
@@ -1609,11 +1608,10 @@ static int hif_sdio_suspend (struct device *dev)
 static int hif_sdio_resume (struct device *dev)
 {
     struct sdio_func* func;
-
-    printk("hif_sdio_resume entry!\n");
     
     /* disable Wi-Fi eint */
     sw_gpio_eint_set_enable(gpio_eint_wifi, 0);
+    __gpio_set_value(gpio_eint_wifi, 1);
     sw_gpio_setcfg(gpio_eint_wifi, GPIO_CFG_INPUT);
 
     if (!dev) {
@@ -1795,7 +1793,7 @@ static int hif_sdio_probe (
     sdio_set_host_pm_flags(func, MMC_PM_IGNORE_PM_NOTIFY);
     hif_sdio_dump_probe_list();
 
-    wifi_eint_init_request(func);
+    wifi_eint_init_request();
 
 out:
     //4 <last> error handling
@@ -1940,20 +1938,7 @@ static void hif_sdio_irq (
  */
 irqreturn_t wifi_irq_handler(void *arg)
 {
-    int pin_state = 0;
-    struct mmc_host	*host = (struct mmc_host	*)arg;
-
-    pin_state = __gpio_get_value(gpio_eint_wifi);
-    printk("========%s, pin_state:%d =========\n",__func__,pin_state);
-    if (likely(pin_state == 0))
-    {
-        printk("do nothing!\n");
-        //mmc_signal_sdio_irq(host);
-    } 
-    else
-    {			   
-        printk(KERN_INFO "%s wifi_irq false alarm:pin_state(%d)!\n", __FUNCTION__, pin_state);
-    }
+    printk("do nothing!\n");
     return 0;
 }
 
@@ -1964,13 +1949,12 @@ irqreturn_t wifi_irq_handler(void *arg)
  *
  *
  */
-int wifi_eint_init_request(struct sdio_func *func)
+int wifi_eint_init_request(void)
 {
     script_item_u val;
     script_item_value_type_e type;
     
-    //HIF_SDIO_INFO_FUNC("Wi-Fi eint init\n");
-    printk("Wi-Fi eint init\n");
+    HIF_SDIO_INFO_FUNC("Wi-Fi eint init\n");
             
     type = script_get_item(COMBO_CONFIG_PARA,"mtk_6620_wifi_int",&val);
     if (SCIRPT_ITEM_VALUE_TYPE_PIO!=type)
@@ -1983,7 +1967,7 @@ int wifi_eint_init_request(struct sdio_func *func)
         gpio_eint_wifi = val.gpio.gpio;
     }
     
-    eint_wifi_handle = sw_gpio_irq_request(gpio_eint_wifi, TRIG_LEVL_LOW,(peint_handle)wifi_irq_handler, func->card->host);
+    eint_wifi_handle = sw_gpio_irq_request(gpio_eint_wifi, TRIG_EDGE_NEGATIVE,(peint_handle)wifi_irq_handler, NULL);
     if (!eint_wifi_handle)
     {
         HIF_SDIO_ERR_FUNC( "%s: request wifi eint irq failed\n",__func__);
@@ -2005,11 +1989,11 @@ int wifi_eint_init_request(struct sdio_func *func)
  */
 void wifi_eint_release(void)
 {
-    //HIF_SDIO_INFO_FUNC("Wi-Fi eint (deinit) \n");
-    printk("Wi-Fi eint (deinit) \n");
+    HIF_SDIO_INFO_FUNC("Wi-Fi eint (deinit) \n");
     
     sw_gpio_setcfg(gpio_eint_wifi, R_GPIO_CFG_EINT);
     sw_gpio_setpull(gpio_eint_wifi, 1);
+    __gpio_set_value(gpio_eint_wifi, 1);
     
     sw_gpio_irq_free(eint_wifi_handle);
     eint_wifi_handle = 0;
