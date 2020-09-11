@@ -187,8 +187,8 @@ static irqreturn_t Scaler_event_proc(int irq, void *parg)
 	DE_SCAL_ClearINT(sel, fe_intflags);
 	DE_BE_ClearINT(sel, be_intflags);
 
-	DE_INF("scaler %d interrupt, scal_int_status:0x%x!\n", sel,
-	       fe_intflags);
+	//DE_INF("scaler %d interrupt, scal_int_status:0x%x!\n", sel,
+	//       fe_intflags);
 
 	if (be_intflags & DE_IMG_REG_LOAD_FINISH)
 		LCD_line_event_proc(sel);

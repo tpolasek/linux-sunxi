@@ -3647,7 +3647,7 @@ rtl8192c_dm_RF_Saving(
 			PHY_SetBBReg(pAdapter, 0xa74, 0xF000, 0x3); //RegA75[7:4]=0x3
 			PHY_SetBBReg(pAdapter, 0x818, BIT28, 0x0); //Reg818[28]=1'b0
 			PHY_SetBBReg(pAdapter, 0x818, BIT28, 0x1); //Reg818[28]=1'b1
-			DBG_8192C("%s(): RF_Save\n", __FUNCTION__);
+			//DBG_8192C("%s(): RF_Save\n", __FUNCTION__);
 		}
 		else
 		{

@@ -258,10 +258,10 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 
 #ifdef PLATFORM_LINUX
 	#define DBG_871X(x, ...) do {} while(0)
-	#define MSG_8192C(x, ...) do {} while(0)
-	#define DBG_8192C(x,...) do {} while(0)
-	#define WRN_8192C(x,...) do {} while(0)
-	#define ERR_8192C(x,...) do {} while(0)
+	#define MSG_8192C printk
+	#define DBG_8192C printk
+	#define WRN_8192C printk
+	#define ERR_8192C printk
 #endif
 
 #if	defined (_dbgdump)

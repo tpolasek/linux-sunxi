@@ -102,7 +102,7 @@ static struct platform_device sunxi_usb_rfkill_dev = {
 static int __init sunxi_usb_rfkill_init(void)
 {
 	user_gpio_set_t gpio = { " ", 0 };
-	int ret, usb_wifi_used = 0;
+	int ret, usb_wifi_used = 1; //modified to 1
 
 	ret = script_parser_fetch("usb_wifi_para", "usb_wifi_used",
 				  &usb_wifi_used, 1);

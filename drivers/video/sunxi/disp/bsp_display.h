@@ -54,8 +54,8 @@ typedef unsigned int __hdle;
 
 #include <video/sunxi_disp_ioctl.h>
 
-#define __inf(msg, ...) pr_debug("[DISP] " msg, ##__VA_ARGS__)
-#define __wrn(msg, ...) pr_warn("[DISP] " msg, ##__VA_ARGS__)
+#define __inf(msg, ...) printk("[DISP] " msg, ##__VA_ARGS__)
+#define __wrn(msg, ...) printk("[DISP] " msg, ##__VA_ARGS__)
 
 typedef struct {
 	__u32 base_image0;

@@ -129,7 +129,8 @@ static int __init reserve_fb_param(char *s)
 {
 	unsigned long size;
 	if (kstrtoul(s, 0, &size) == 0)
-		fb_size = size * SZ_1M;
+		if(size != 0)
+			fb_size = size * SZ_1M;
 	return 0;
 }
 early_param("sunxi_fb_mem_reserve", reserve_fb_param);
@@ -197,7 +198,8 @@ static void reserve_mem(unsigned long *start, unsigned long *size,
 	}
 
 	if ((reserved_start + *size) > reserved_max) {
-		pr_warn("Not enough memory to reserve memory for %s\n", desc);
+		printk("[Mem] Not enough memory to reserve memory for %s\n", desc);
+		printk("[Mem] Memory Request Size: %ld", *size);
 		*start = 0;
 		*size = 0;
 		return;

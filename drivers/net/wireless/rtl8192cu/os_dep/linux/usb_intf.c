@@ -1434,9 +1434,8 @@ static int __init rtw_drv_entry(void)
 	/* ----------get usb_wifi_usbc_num------------- */
 	ret = script_parser_fetch("usb_wifi_para", "usb_wifi_usbc_num", (int *)&usb_wifi_host, 64);
 	if(ret != 0){
-		ERR_8192C("ERR: script_parser_fetch usb_wifi_usbc_num failed\n");
-		ret = -ENOMEM;
-		return ret;
+		ERR_8192C("ERR: script_parser_fetch usb_wifi_usbc_num failed, setting default = 2\n");
+		usb_wifi_host = 2;
 	}
 
 #ifdef CONFIG_USB_SW_SUNXI_USB

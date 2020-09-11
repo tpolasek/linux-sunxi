@@ -264,6 +264,9 @@ static inline void fast_imageblit(const struct fb_image *image, struct fb_info *
 	
 void cfb_imageblit(struct fb_info *p, const struct fb_image *image)
 {
+	if(p == NULL || image == NULL)
+	   return;
+
 	u32 fgcolor, bgcolor, start_index, bitstart, pitch_index = 0;
 	u32 bpl = sizeof(u32), bpp = p->var.bits_per_pixel;
 	u32 width = image->width;

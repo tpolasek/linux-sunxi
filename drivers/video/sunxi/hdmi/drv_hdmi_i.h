@@ -49,8 +49,8 @@
 #include <video/sunxi_disp_ioctl.h>
 #include <linux/drv_hdmi.h>
 
-#define __inf(msg, ...) pr_debug("[DISP] " msg, ##__VA_ARGS__)
-#define __wrn(msg, ...) pr_warn("[DISP] " msg, ##__VA_ARGS__)
+#define __inf(msg, ...) printk("[DISP] " msg, ##__VA_ARGS__)
+#define __wrn(msg, ...) printk("[DISP] " msg, ##__VA_ARGS__)
 
 __s32 Hdmi_init(struct platform_device *dev);
 __s32 Hdmi_exit(struct platform_device *dev);

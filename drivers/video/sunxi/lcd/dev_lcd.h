@@ -53,7 +53,7 @@
 extern void LCD_get_panel_funs_0(__lcd_panel_fun_t *fun);
 extern void LCD_get_panel_funs_1(__lcd_panel_fun_t *fun);
 
-#define __inf(msg, ...) pr_debug("[DISP] " msg, ##__VA_ARGS__)
-#define __wrn(msg, ...) pr_warn("[DISP] " msg, ##__VA_ARGS__)
+#define __inf(msg, ...) printk("[DISP] " msg, ##__VA_ARGS__)
+#define __wrn(msg, ...) printk("[DISP] " msg, ##__VA_ARGS__)
 
 #endif
